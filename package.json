@@ -1,0 +1,19 @@
+{
+  "name": "bigsix-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "죄수 운동법(Convict Conditioning) 빅6 진행 로직 — UI 없는 순수 함수 모듈",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test 'test/*.test.ts'",
+    "gen": "python3 tools/gen_movements.py"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/U-lis/bigsix.git"
+  }
+}
