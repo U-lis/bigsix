@@ -66,13 +66,18 @@ export interface Catalog {
 export interface SessionRecord {
   date: string;
   progressionId: ProgressionId;
+  /** 훈련 중인 단계. 다지기 기록도 이 값은 그대로 둔다. */
   step: number;
+  /** 실제로 수행한 단계. 다지기면 step - 1. 생략하면 step 과 같다. */
+  performedStep?: number;
   /** 세트별 실제 수행값(횟수 또는 초). */
   sets: number[];
   /** 주관적 운동 강도 1~10. 선택 입력. */
   rpe?: number;
-  /** work = 정규 세션, consolidation = 초보자 기준 미달로 이전 단계를 다지는 세션. */
+  /** work = 정규 세션, consolidation = 이전 단계를 다지는 세션. */
   kind: 'work' | 'consolidation';
+  /** abandoned = 사용자가 도중에 '불가능' 을 눌러 중단한 도전. */
+  outcome?: 'completed' | 'abandoned';
 }
 
 export interface AppState {
@@ -93,7 +98,10 @@ export interface TargetSet {
 
 export interface PlannedExercise {
   progressionId: ProgressionId;
+  /** 훈련 중인 단계. */
   step: number;
+  /** 실제로 수행할 단계. 다지기면 step - 1. */
+  performedStep: number;
   stepName: { en: string; ko: string };
   unit: Unit;
   perSide: boolean;

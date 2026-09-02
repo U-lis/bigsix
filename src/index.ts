@@ -3,7 +3,7 @@ export { RULES } from './rules.ts';
 export { fromJSON, loadCatalog, getProgression, getStep, topStandard, topLabel, valueOf } from './catalog.ts';
 export { checkGate, unlockedProgressions, type GateResult } from './gate.ts';
 export { sessionsAt, lastSession, mean, meetsStandard } from './history.ts';
-export { planExercise, planWarmup, withPair } from './plan.ts';
+export { planExercise, planWarmup, planConsolidation, canConsolidate, consolidationCount, withPair } from './plan.ts';
 export { evaluateSession, applySession, type Evaluation } from './evaluate.ts';
 export { planDay, planWeek, getProgram, listPrograms } from './schedule.ts';
 

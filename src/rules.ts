@@ -8,9 +8,8 @@ export const RULES = {
   /** book: 브리지·핸드스탠드는 빅4가 이 단계를 완료해야 시작한다. */
   gateStep: 6,
   /**
-   * true  = 6단계를 '완료'(승급 완료)해야 하므로 currentStep >= 7 필요
-   * false = 6단계에 '도달'하면 되므로 currentStep >= 6 이면 통과
-   * 책의 "6단계 완료" 를 엄격하게 읽으면 true.
+   * 결정: true — 6단계를 완수하고 7단계에 진입해야 해금된다.
+   * (false 로 두면 6단계 도달만으로 해금)
    */
   gateRequiresCompletion: true,
 
@@ -25,6 +24,14 @@ export const RULES = {
 
   /** book: 초보자 기준 미달 시 이전 단계 상급자 기준으로 다지는 세트 수. */
   consolidationSets: 2,
+
+  /**
+   * 정책: 다지기가 이 횟수만큼 쌓일 때마다 수행량을 한 단계 올린다.
+   * 같은 자리에 머무는 동안 자극이 늘지 않는 문제를 막는다.
+   */
+  consolidationBumpEvery: 3,
+  /** 정책: 올릴 때의 증가폭(기준값 대비). 30 → 33 → 36 → 39. */
+  consolidationBumpRatio: 0.1,
 
   /** 정책: 최근 N개 세션의 RPE 평균이 임계 이상이면 승급을 보류한다. */
   rpeVetoWindow: 3,

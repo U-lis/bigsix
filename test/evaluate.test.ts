@@ -25,9 +25,18 @@ test('3세트 기준은 세 세트를 모두 채워야 한다', () => {
 
 test('다지기 세션은 승급 판정 대상이 아니다', () => {
   const e = evaluateSession(stateAt({ pushup: 5 }), catalog,
-    rec('pushup', 5, [25, 25], { kind: 'consolidation' }));
+    rec('pushup', 5, [25, 25], { kind: 'consolidation', performedStep: 4 }));
   assert.equal(e.promote, false);
-  assert.match(e.notes[0], /판정 대상이 아니다/);
+  assert.equal(e.metBeginner, false, '이전 단계 수치를 현재 단계 기준으로 재지 않는다');
+  assert.match(e.notes[0], /4단계를 다지는 세션/);
+});
+
+test('사용자가 중단한 도전은 승급하지 않는다', () => {
+  const e = evaluateSession(stateAt({ pushup: 5 }), catalog,
+    rec('pushup', 5, [3], { outcome: 'abandoned' }));
+  assert.equal(e.promote, false);
+  assert.equal(e.nextStep, 5);
+  assert.match(e.notes[0], /중단한 도전/);
 });
 
 test('마스터 단계는 기준을 채워도 승급하지 않는다', () => {

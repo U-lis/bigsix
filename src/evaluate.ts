@@ -40,13 +40,20 @@ export function evaluateSession(
   const label = topLabel(step);
   const notes: string[] = [];
 
+  if (record.kind === 'consolidation') {
+    notes.push(`${record.performedStep ?? record.step - 1}단계를 다지는 세션 `
+      + '— 현재 단계의 승급 판정 대상이 아니다.');
+    return { metBeginner: false, metIntermediate: false, metTop: false, topLabel: label,
+      promote: false, nextStep: record.step, notes };
+  }
+
   const metBeginner = meetsStandard(record.sets, step.beginner.sets, valueOf(step.beginner));
   const metIntermediate = meetsStandard(
     record.sets, step.intermediate.sets, valueOf(step.intermediate));
   const metTop = meetsStandard(record.sets, top.sets, valueOf(top));
 
-  if (record.kind === 'consolidation') {
-    notes.push('이전 단계를 다지는 세션 — 승급 판정 대상이 아니다.');
+  if (record.outcome === 'abandoned') {
+    notes.push('사용자가 중단한 도전 — 단계 유지.');
     return { metBeginner, metIntermediate, metTop, topLabel: label,
       promote: false, nextStep: record.step, notes };
   }
