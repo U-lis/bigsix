@@ -85,17 +85,17 @@ const snapshot = (s: AppState) => JSON.stringify(s);
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('planOn — 프로그램 미선택 (EC-1, FR-2.5)', () => {
-  it('미선택 상태에서 no-program 을 반환한다', () => {
+  it('EC-1 미선택 상태에서 no-program 을 반환한다', () => {
     const agenda = planOn(initialState(2), catalog, MON);
     assert.equal(agenda.kind, 'no-program');
     assert.equal(agenda.date, MON);
   });
 
-  it('예외를 던지지 않는다', () => {
+  it('EC-1 / FR-2.5 예외를 던지지 않는다', () => {
     assert.doesNotThrow(() => planOn(initialState(2), catalog, MON));
   });
 
-  it('no-program 변형에는 계획 필드가 없다 — 호출자가 분기를 강제받는다', () => {
+  it('EC-1 no-program 변형에는 계획 필드가 없다 — 호출자가 분기를 강제받는다', () => {
     const agenda = planOn(initialState(2), catalog, MON) as Record<string, unknown>;
     assert.equal('exercises' in agenda, false);
     assert.equal('weekday' in agenda, false);
@@ -103,7 +103,7 @@ describe('planOn — 프로그램 미선택 (EC-1, FR-2.5)', () => {
     assert.deepEqual(Object.keys(agenda).sort(), ['date', 'kind']);
   });
 
-  it('모든 구간이 마감된 상태에서도 no-program 이다', () => {
+  it('EC-1 모든 구간이 마감된 상태에서도 no-program 이다', () => {
     const state = stateAt({}, [], [stintFixture('good_behavior', '2026-08-03', '2026-08-03', '2026-09-01')]);
     assert.equal(planOn(state, catalog, MON).kind, 'no-program');
   });
