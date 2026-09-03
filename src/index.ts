@@ -16,7 +16,7 @@ export {
   proposeSwitch, proposeSwitchForCurrent, advanceProposals, commitProposal,
   activeProposal, declineProposal, markAccepted,
   PROGRAM_ORDER, nextProgramId, MAINTENANCE_SESSIONS,
-  maintenanceCount, promotionBaseline, effectiveFloor, lastSetbackDate, programProgressions,
+  maintenanceCount, promotionBaselineIndex, effectiveFloorIndex, lastSetbackIndex, programProgressions,
   type ProposeOptions,
 } from './proposal.ts';
 export {

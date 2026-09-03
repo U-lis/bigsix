@@ -1,5 +1,7 @@
 # Phase 3B: 자동 전환 제안
 
+> **이 문서는 Phase 3B 완료 시점의 기록이다.** 유지 카운트는 이후 W-1 수정으로 날짜 비교에서 인덱스 기반으로 바뀌었다(`lastSetbackIndex` / `effectiveFloorIndex` / `promotionBaselineIndex`). 현재 사양은 `GLOBAL.md` 의 ADR-7 을 보라.
+
 ## Objective
 
 `src/proposal.ts` 를 신설해 FR-4(자동 전환 제안) 전체를 구현한다.

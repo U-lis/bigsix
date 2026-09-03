@@ -7,9 +7,9 @@ import {
   readyForProposal, stateAt, stintFixture,
 } from './helpers.ts';
 import {
-  abandonChallenge, acceptProposal, activeProposal, advanceProposals, commitProposal,
-  currentStint, dayNumber, declineProposal, initialState, proposeSwitch,
-  proposeSwitchForCurrent, recordConsolidation, recordSession, switchProgram,
+  MAINTENANCE_SESSIONS, abandonChallenge, acceptProposal, activeProposal, advanceProposals,
+  commitProposal, currentStint, dayNumber, declineProposal, initialState, maintenanceCount,
+  proposeSwitch, proposeSwitchForCurrent, recordConsolidation, recordSession, switchProgram,
 } from '../src/index.ts';
 import * as api from '../src/index.ts';
 import type { AppState, IsoDate, SwitchProposal } from '../src/types.ts';
@@ -28,6 +28,16 @@ const ready = () => readyForProposal('good_behavior', '2026-08-31', '2026-09-01'
 
 const src = (name: string) =>
   readFileSync(new URL(`../src/${name}`, import.meta.url).pathname, 'utf8');
+
+/**
+ * 모듈이 **정적 import** 하는 지정자 목록.
+ * 주석이나 문자열에 모듈 이름이 언급되는 것만으로는 잡히지 않는다.
+ */
+const importsOf = (name: string): string[] =>
+  [...src(name).matchAll(/^\s*import\s[\s\S]*?from\s*'([^']+)'/gm)].map((m) => m[1]);
+
+/** good_behavior / veterano 가 다루는 빅6 전부. */
+const BIG6 = ['pushup', 'squat', 'pullup', 'legraise', 'bridge', 'hspu'] as const;
 
 // ── proposeSwitchForCurrent (EC-7 배선) ──────────────────────────────────────
 
@@ -109,8 +119,21 @@ describe('activeProposal — 현재 구간 필터 (W-3 (a))', () => {
     assert.equal(activeProposal(stateAt({}, [], [], [proposal])), null);
   });
 
-  it('FR-4.6a 시그니처가 여전히 1인자 — 날짜를 받지 않는다', () => {
-    assert.equal(activeProposal.length, 1);
+  it('FR-4.6a 미결 제안은 날짜와 무관하게 계속 노출된다', () => {
+    const state = withPending();
+    const p = activeProposal(state);
+    assert.notEqual(p, null);
+    assert.equal(p!.proposedAt, MON_14);
+
+    // 제안일로부터 한 달 뒤까지 세션이 쌓여도 같은 제안이 그대로 노출된다.
+    const later: AppState = {
+      ...state,
+      history: [...state.history, plainSession('pushup', 5, '2026-10-14')],
+    };
+    assert.deepEqual(activeProposal(later), p);
+
+    // 사라지는 유일한 조건은 승인·거절이다 — 날짜가 아니다.
+    assert.equal(activeProposal(declineProposal(later, '2026-10-15')), null);
   });
 
   it('원래 프로그램으로 되돌아오면 그 pending 이 다시 보인다 — 필터는 가시성 조건이다', () => {
@@ -163,15 +186,22 @@ describe('advanceProposals', () => {
     assert.equal(state.proposals.length, 0);
   });
 
-  it('proposeSwitch 와 commitProposal 이 여전히 개별 함수로 남아 있다', () => {
-    assert.equal(typeof proposeSwitch, 'function');
-    assert.equal(typeof commitProposal, 'function');
+  it('advanceProposals 와 별개로, opts 를 직접 주는 2단계 경로도 그대로 동작한다', () => {
     const state = ready();
     const p = proposeSwitch(state, catalog, MON_14, {
       floorDate: '2026-08-31', programId: 'good_behavior',
     });
     assert.notEqual(p, null);
     assert.equal(commitProposal(state, p!).proposals.length, 1);
+
+    // 넘긴 opts 가 실제로 판정에 쓰인다 — 하한을 승급일 뒤로 옮기면 같은 상태에서도 null 이다.
+    assert.equal(proposeSwitch(state, catalog, MON_14, {
+      floorDate: '2026-09-08', programId: 'good_behavior',
+    }), null);
+    // programId 도 마찬가지다 — supermax 는 다음 순번이 없다 (FR-4.7).
+    assert.equal(proposeSwitch(state, catalog, MON_14, {
+      floorDate: '2026-08-31', programId: 'supermax',
+    }), null);
   });
 });
 
@@ -297,15 +327,25 @@ describe('EC-7 프로그램 전환 시 카운트 리셋', () => {
     assert.deepEqual(after.history, before.history);
   });
 
-  it('카운트를 0 으로 만드는 전용 리셋 코드가 없다 (코드 감사)', () => {
-    const code = src('proposal.ts') + src('program.ts');
-    // 주석을 제외한 실행 코드에 리셋 대입이 없어야 한다.
-    const executable = code
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-      .join('\n');
-    assert.equal(/count\s*=\s*0/.test(executable), false);
-    assert.equal(/reset/i.test(executable), false);
+  it('EC-7 리셋은 데이터 삭제가 아니라 판정 범위 축소다 (ADR-7)', () => {
+    // 전용 리셋 코드가 없다는 것을 소스 문자열이 아니라 동작으로 확인한다.
+    // 카운트가 파생 계산이라면, 같은 history 를 옛 하한으로 계산했을 때
+    // 전환 이전의 카운트가 그대로 되살아나야 한다.
+    const before = ready();
+    const oldFloor = currentStint(before)!.startedAt;
+    const after = switchProgram(before, catalog, 'veterano', '2026-09-15');
+    const newFloor = currentStint(after)!.startedAt;
+
+    assert.deepEqual(after.history, before.history);
+    for (const id of BIG6) {
+      // 새 구간 하한으로는 0 — 이것이 EC-7 의 "리셋" 이다.
+      assert.equal(maintenanceCount(after.history, id, newFloor), 0, `${id} 새 하한`);
+      // 옛 하한으로는 전환 전 카운트가 그대로다 — 지워진 데이터가 없다.
+      assert.ok(
+        maintenanceCount(after.history, id, oldFloor) >= MAINTENANCE_SESSIONS,
+        `${id} 옛 하한`,
+      );
+    }
   });
 });
 
@@ -415,8 +455,21 @@ describe('병합 정합성', () => {
     assert.equal(afterSession.proposals.length, 1);
   });
 
-  it('program.ts 가 proposal.ts 를 import 하지 않는다 (순환 없음)', () => {
-    assert.equal(src('program.ts').includes('proposal'), false);
+  it('program.ts 는 proposals 를 읽지도 쓰지도 않는다 — 의존 방향이 단방향이다', () => {
+    // 순환 없음의 실체는 "program 이 proposal 을 모른다" 이다.
+    // 주석에 단어가 있는지가 아니라, 정적 import 지정자와 실제 동작으로 확인한다.
+    assert.equal(importsOf('program.ts').some((spec) => spec.includes('proposal')), false);
+    assert.ok(importsOf('proposal.ts').includes('./program.ts'));
+
+    // pending 이 있는 상태를 program.ts 의 전이에 통과시켜도 proposals 는 손대지 않는다.
+    const state = advanceProposals(ready(), catalog, MON_14);
+    assert.equal(state.proposals.length, 1);
+    const after = switchProgram(state, catalog, 'veterano', '2026-09-15');
+    assert.equal(after.proposals, state.proposals, 'proposals 배열이 같은 참조여야 한다');
+
+    // proposals 를 비운 상태에서도 program.ts 의 전이는 동일한 stints 를 만든다.
+    const without = switchProgram({ ...state, proposals: [] }, catalog, 'veterano', '2026-09-15');
+    assert.deepEqual(without.stints, after.stints);
   });
 
   it('index.ts 가 세 모듈의 공개 함수를 전부 export 한다', () => {

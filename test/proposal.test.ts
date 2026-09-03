@@ -8,13 +8,13 @@ import {
   activeProposal,
   commitProposal,
   declineProposal,
-  effectiveFloor,
-  lastSetbackDate,
+  effectiveFloorIndex,
+  lastSetbackIndex,
   maintenanceCount,
   markAccepted,
   nextProgramId,
   programProgressions,
-  promotionBaseline,
+  promotionBaselineIndex,
   proposeSwitch,
 } from '../src/proposal.ts';
 import type {
@@ -123,78 +123,97 @@ describe('nextProgramId', () => {
   });
 });
 
-// ── lastSetbackDate (FR-4.3, EC-5) ───────────────────────────────────────────
+// ── lastSetbackIndex (FR-4.3, EC-5) ──────────────────────────────────────────
+//
+// 반환값은 날짜가 아니라 `history` 인덱스다 (W-1 수정).
+// 같은 날 안에서의 순서를 구분해야 EC-4(같은 날 2회)가 정확해지기 때문이다.
 
-describe('lastSetbackDate', () => {
+describe('lastSetbackIndex', () => {
   it('강등 기록이 없으면 null', () => {
     const h = [promoted('pushup', 3, MON), plainSession('pushup', 4, '2026-09-09')];
-    assert.equal(lastSetbackDate(h, 'pushup', FLOOR), null);
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), null);
   });
 
-  it("outcome: 'abandoned' 의 날짜를 반환한다", () => {
-    const h = [abandoned('pushup', 4, '2026-09-09')];
-    assert.equal(lastSetbackDate(h, 'pushup', FLOOR), '2026-09-09');
+  it("outcome: 'abandoned' 세션의 인덱스를 반환한다", () => {
+    const h = [plainSession('pushup', 4, '2026-09-07'), abandoned('pushup', 4, '2026-09-09')];
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), 1);
+    assert.equal(h[1].date, '2026-09-09');
   });
 
-  it("kind: 'consolidation' 의 날짜를 반환한다", () => {
-    const h = [consolidation('pushup', 4, '2026-09-09')];
-    assert.equal(lastSetbackDate(h, 'pushup', FLOOR), '2026-09-09');
+  it("kind: 'consolidation' 세션의 인덱스를 반환한다", () => {
+    const h = [plainSession('pushup', 4, '2026-09-07'), consolidation('pushup', 4, '2026-09-09')];
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), 1);
+    assert.equal(h[1].date, '2026-09-09');
   });
 
   it('강등이 2개면 가장 늦은 것을 반환한다', () => {
     const h = [abandoned('pushup', 4, '2026-09-09'), consolidation('pushup', 4, '2026-09-15')];
-    assert.equal(lastSetbackDate(h, 'pushup', FLOOR), '2026-09-15');
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), 1);
+  });
+
+  it('같은 날 강등이 2개면 뒤에 기록된 것을 반환한다', () => {
+    // 날짜만으로는 구분되지 않는 경계다 — 인덱스라서 구분된다.
+    const h = [abandoned('pushup', 4, MON), consolidation('pushup', 4, MON)];
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), 1);
   });
 
   it('floorDate 이전의 강등은 무시된다', () => {
     const h = [abandoned('pushup', 4, '2026-09-09')];
-    assert.equal(lastSetbackDate(h, 'pushup', '2026-09-14'), null);
+    assert.equal(lastSetbackIndex(h, 'pushup', '2026-09-14'), null);
   });
 
   it('다른 종목의 강등은 무시된다', () => {
     const h = [abandoned('squat', 4, '2026-09-09')];
-    assert.equal(lastSetbackDate(h, 'pushup', FLOOR), null);
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), null);
   });
 });
 
-// ── effectiveFloor (EC-5 하한 승격) ──────────────────────────────────────────
+// ── effectiveFloorIndex (EC-5 하한 승격) ─────────────────────────────────────
+//
+// 날짜 하한(`floorDate`)이 아니라 **인덱스 하한**을 돌려준다.
+// 날짜 하한은 조회 시점에 따로 적용되므로, 여기서 검증하는 것은
+// "강등 바로 다음 세션부터 다시 본다" 하나다.
 
-describe('effectiveFloor', () => {
-  it('강등이 없으면 floorDate 를 그대로 반환한다', () => {
-    assert.equal(effectiveFloor([], 'pushup', FLOOR), FLOOR);
+describe('effectiveFloorIndex', () => {
+  it('강등이 없으면 인덱스 제약이 없다 (0)', () => {
+    assert.equal(effectiveFloorIndex([], 'pushup', FLOOR), 0);
+    const h = [promoted('pushup', 3, MON), plainSession('pushup', 4, '2026-09-09')];
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 0);
   });
 
-  it('강등이 있으면 강등 다음날을 반환한다', () => {
-    const h = [abandoned('pushup', 4, '2026-09-09')];
-    assert.equal(effectiveFloor(h, 'pushup', FLOOR), '2026-09-10');
+  it('강등이 있으면 그 다음 인덱스부터 본다', () => {
+    const h = [promoted('pushup', 3, MON), abandoned('pushup', 4, '2026-09-09')];
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 2);
   });
 
-  it('강등이 floorDate 보다 이르면 floorDate 가 이긴다', () => {
-    const h = [abandoned('pushup', 4, '2026-09-09')];
-    assert.equal(effectiveFloor(h, 'pushup', '2026-09-14'), '2026-09-14');
+  it('강등이 floorDate 보다 이르면 무시되어 하한이 오르지 않는다', () => {
+    const h = [abandoned('pushup', 4, '2026-09-09'), promoted('pushup', 3, '2026-09-16')];
+    assert.equal(effectiveFloorIndex(h, 'pushup', '2026-09-14'), 0);
+    // 날짜 하한은 조회 시점에 적용되므로 09-09 세션은 어차피 후보가 아니다.
+    assert.equal(promotionBaselineIndex(h, 'pushup', '2026-09-14'), 1);
   });
 
   it('강등이 여러 개면 마지막 것 기준이다', () => {
     const h = [abandoned('pushup', 4, '2026-09-09'), consolidation('pushup', 4, '2026-09-15')];
-    assert.equal(effectiveFloor(h, 'pushup', FLOOR), '2026-09-16');
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 2);
   });
 });
 
-// ── promotionBaseline (ADR-7, EC-5, EC-6, EC-11) ─────────────────────────────
+// ── promotionBaselineIndex (ADR-7, EC-5, EC-6, EC-11) ────────────────────────
 
-describe('promotionBaseline', () => {
+describe('promotionBaselineIndex', () => {
   it('승급 레코드가 없으면 null', () => {
     const h = [
       plainSession('pushup', 3, MON),
       plainSession('pushup', 3, '2026-09-09'),
       plainSession('pushup', 3, '2026-09-11'),
     ];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), null);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), null);
   });
 
-  it('승급 레코드 1개의 날짜를 반환한다', () => {
-    const h = [promoted('pushup', 3, MON)];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), MON);
+  it('승급 레코드 1개의 인덱스를 반환한다', () => {
+    const h = [plainSession('pushup', 3, FLOOR), promoted('pushup', 3, MON)];
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 1);
   });
 
   it('EC-6 승급이 2개면 가장 이른 것이 기준점이다', () => {
@@ -203,12 +222,13 @@ describe('promotionBaseline', () => {
       plainSession('pushup', 4, '2026-09-09'),
       promoted('pushup', 4, '2026-09-11'),
     ];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), '2026-09-07');
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 0);
+    assert.equal(h[0].date, MON);
   });
 
   it('floorDate 이전의 승급은 무시된다', () => {
     const h = [promoted('pushup', 3, '2026-09-01')];
-    assert.equal(promotionBaseline(h, 'pushup', MON), null);
+    assert.equal(promotionBaselineIndex(h, 'pushup', MON), null);
   });
 
   it('EC-5 강등 이전의 승급은 기준점이 되지 않는다', () => {
@@ -217,27 +237,39 @@ describe('promotionBaseline', () => {
       abandoned('pushup', 4, '2026-09-09'),
       promoted('pushup', 3, '2026-09-20'),
     ];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), '2026-09-20');
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(h[2].date, '2026-09-20');
   });
 
   it('floorDate 당일의 승급은 포함된다', () => {
     const h = [promoted('pushup', 3, MON)];
-    assert.equal(promotionBaseline(h, 'pushup', MON), MON);
+    assert.equal(promotionBaselineIndex(h, 'pushup', MON), 0);
   });
 
   it('다른 종목의 승급은 무시된다', () => {
     const h = [promoted('pushup', 3, MON)];
-    assert.equal(promotionBaseline(h, 'squat', FLOOR), null);
+    assert.equal(promotionBaselineIndex(h, 'squat', FLOOR), null);
   });
 
   it('EC-11 RPE 보류 세션은 기준점이 되지 않는다', () => {
     const h = [rpeBlocked('pushup', 3, MON), plainSession('pushup', 3, '2026-09-09')];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), null);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), null);
   });
 
   it("blockedBy: 'master' 세션도 기준점이 되지 않는다", () => {
     const h = [masterBlocked('pushup', 10, MON)];
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), null);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), null);
+  });
+
+  it('W-1 강등 당일의 재승급도 기준점이 된다', () => {
+    // 날짜 하한(강등일 + 1일)이었을 때는 같은 날 재승급이 통째로 밀려났다.
+    const h = [
+      promoted('pushup', 3, MON),
+      abandoned('pushup', 4, MON),
+      promoted('pushup', 3, MON),
+    ];
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 2);
   });
 });
 
@@ -263,17 +295,33 @@ describe('maintenanceCount', () => {
     assert.equal(maintenanceCount([promoted('pushup', 3, MON)], 'pushup', FLOOR), 0);
   });
 
-  it('FR-4.2 kind 가 consolidation 인 세션도 카운트된다', () => {
-    // 필터 문언에 kind 조건이 없음을 동작으로 확인한다.
-    // (강등이 하한을 밀어 올리므로 다른 종목의 다지기로 검증한다)
+  it('FR-4.3 이 FR-4.2 보다 우선한다 — 대상 종목의 다지기는 하한을 올리므로 카운트되지 않는다', () => {
+    // maintenanceCount 의 필터에 kind 조건은 없지만, 그 종목의 consolidation 은
+    // FR-4.3 이 강등으로 보아 effectiveFloorIndex 를 그 뒤로 밀어 올린다 (ADR-7).
+    // 결과적으로 기준점 자체가 사라져 카운트가 0 이 된다 — 절대 세어지지 않는다.
+    const h = [
+      promoted('pushup', 3, MON),
+      plainSession('pushup', 4, '2026-09-09'),
+      consolidation('pushup', 4, '2026-09-10'),
+      plainSession('pushup', 3, '2026-09-11'),
+      plainSession('pushup', 3, NEXT_MON),
+    ];
+    assert.equal(lastSetbackIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 3);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), null);
+    assert.equal(maintenanceCount(h, 'pushup', FLOOR), 0);
+  });
+
+  it('다른 종목의 다지기는 이 종목의 하한도 카운트도 건드리지 않는다', () => {
     const h = [
       promoted('pushup', 3, MON),
       plainSession('pushup', 4, '2026-09-09'),
       consolidation('squat', 4, '2026-09-10'),
       plainSession('pushup', 4, '2026-09-11'),
     ];
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 0);
     assert.equal(maintenanceCount(h, 'pushup', FLOOR), 2);
-    // squat 의 다지기는 pushup 카운트에 섞이지 않는다
+    // squat 은 승급이 없으므로 0 이다 — pushup 의 세션이 섞이지 않는다.
     assert.equal(maintenanceCount(h, 'squat', FLOOR), 0);
   });
 
@@ -284,6 +332,56 @@ describe('maintenanceCount', () => {
       plainSession('pushup', 4, '2026-09-09'),
     ];
     assert.equal(maintenanceCount(h, 'pushup', FLOOR), 2);
+  });
+
+  it('EC-4/W-1 승급 당일의 두 번째 세션도 카운트된다', () => {
+    // 날짜 비교(`date > baseline`)였을 때 통째로 누락되던 경계다.
+    // FR-4.2 는 날짜 3일이 아니라 세션 3회를 요구한다.
+    const h = [
+      promoted('pushup', 3, MON),
+      plainSession('pushup', 4, MON),
+      plainSession('pushup', 4, '2026-09-09'),
+      plainSession('pushup', 4, '2026-09-11'),
+    ];
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 0);
+    assert.equal(maintenanceCount(h, 'pushup', FLOOR), 3);
+  });
+
+  it('EC-4/W-1 승급 당일에 같은 종목을 세 번 더 하면 3이다', () => {
+    const h = [
+      promoted('pushup', 3, MON),
+      plainSession('pushup', 4, MON),
+      plainSession('pushup', 4, MON),
+      plainSession('pushup', 4, MON),
+    ];
+    assert.equal(maintenanceCount(h, 'pushup', FLOOR), 3);
+  });
+
+  it('W-1 승급 당일의 강등은 그 승급을 기준점에서 밀어낸다', () => {
+    const h = [
+      promoted('pushup', 3, MON),
+      consolidation('pushup', 4, MON),
+      plainSession('pushup', 3, '2026-09-09'),
+      plainSession('pushup', 3, '2026-09-11'),
+      plainSession('pushup', 3, NEXT_MON),
+    ];
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), null);
+    assert.equal(maintenanceCount(h, 'pushup', FLOOR), 0);
+  });
+
+  it('W-1 승급 → 당일 강등 → 당일 재승급이면 재승급이 기준점이다', () => {
+    // 날짜 하한(강등일 + 1일)이었을 때는 같은 날 재승급까지 밀려나 0 이 되었다.
+    const h = [
+      promoted('pushup', 3, MON),
+      abandoned('pushup', 4, MON),
+      promoted('pushup', 3, MON),
+      plainSession('pushup', 4, MON),
+      plainSession('pushup', 4, '2026-09-09'),
+      plainSession('pushup', 4, '2026-09-11'),
+    ];
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(maintenanceCount(h, 'pushup', FLOOR), 3);
   });
 
   it('EC-5 승급 직후 abandoned 가 있고 재승급이 없으면 0', () => {
@@ -317,8 +415,9 @@ describe('maintenanceCount', () => {
       plainSession('pushup', 4, '2026-09-24'),
       plainSession('pushup', 4, '2026-09-26'),
     ];
-    assert.equal(effectiveFloor(h, 'pushup', FLOOR), '2026-09-10');
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), '2026-09-20');
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 2);
+    assert.equal(h[2].date, '2026-09-20');
     assert.equal(maintenanceCount(h, 'pushup', FLOOR), 3);
   });
 
@@ -345,8 +444,9 @@ describe('maintenanceCount', () => {
       plainSession('pushup', 4, '2026-10-05'),
       plainSession('pushup', 4, '2026-10-07'),
     ];
-    assert.equal(effectiveFloor(h, 'pushup', FLOOR), '2026-09-25');
-    assert.equal(promotionBaseline(h, 'pushup', FLOOR), '2026-10-01');
+    assert.equal(effectiveFloorIndex(h, 'pushup', FLOOR), 5);
+    assert.equal(promotionBaselineIndex(h, 'pushup', FLOOR), 5);
+    assert.equal(h[5].date, '2026-10-01');
     assert.equal(maintenanceCount(h, 'pushup', FLOOR), 3);
   });
 
@@ -602,8 +702,27 @@ describe('activeProposal (FR-4.6a)', () => {
     assert.equal(activeProposal(state), null);
   });
 
-  it('시그니처에 날짜 인자가 없다', () => {
-    assert.equal(activeProposal.length, 1);
+  it('날짜에 의존하지 않는다 — 제안일 전후로 멀리 떨어진 상태에서도 같은 결과다', () => {
+    // 함수 arity 는 동작이 아니다. 기본값 인자 하나로 깨지고, 날짜를 받아 쓰더라도
+    // 인자 이름만 바꾸면 통과한다. 날짜 무관성 자체를 동작으로 단언한다 (FR-4.6a).
+    const base = big4State([], [sample]);
+    assert.equal(sample.proposedAt, MON);
+
+    // 제안일 한참 이전의 세션만 있는 상태
+    const before = big4State([plainSession('pushup', 4, '2026-06-01')], [sample]);
+    // 제안일 한참 이후까지 세션이 쌓인 상태
+    const after = big4State([
+      plainSession('pushup', 4, '2026-06-01'),
+      plainSession('pushup', 4, NEXT_MON),
+      plainSession('pushup', 4, '2026-12-25'),
+    ], [sample]);
+
+    for (const state of [base, before, after]) {
+      assert.deepEqual(activeProposal(state), sample);
+    }
+
+    // 결과를 바꾸는 것은 날짜가 아니라 승인·거절뿐이다.
+    assert.equal(activeProposal(declineProposal(after, '2026-12-26')), null);
   });
 
   it('월요일에 생성된 제안이 화·수·목에도 그대로 반환된다', () => {

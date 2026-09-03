@@ -1,4 +1,4 @@
-import { addDays, diffDays, isMonday } from './date.ts';
+import { diffDays, isMonday } from './date.ts';
 import { checkGate } from './gate.ts';
 // Phase 3.5 에서 처음 허용되는 의존이다. 방향은 proposal → program 단방향이며
 // program.ts 는 proposal.ts 를 import 하지 않는다 (순환 없음).
@@ -35,54 +35,68 @@ function onOrAfter(a: IsoDate, b: IsoDate): boolean {
   return diffDays(b, a) >= 0;
 }
 
-/** a 가 b 보다 뒤인 날짜인지. */
-function after(a: IsoDate, b: IsoDate): boolean {
-  return diffDays(b, a) > 0;
-}
-
-/** 해당 종목의, `floorDate` 이상인 세션들. */
-function sessionsFrom(
-  history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
-): SessionRecord[] {
-  return history.filter(
-    (r) => r.progressionId === progressionId && onOrAfter(r.date, floorDate),
-  );
+/**
+ * 해당 종목의, `floorDate` 이상이고 `fromIndex` 이상인 세션들의 **history 인덱스**.
+ *
+ * 기준점 전후 판정을 날짜가 아니라 인덱스로 하는 이유는 EC-4 때문이다.
+ * 날짜로 비교하면 "승급 당일에 같은 종목을 한 번 더 한" 세션이
+ * `date > baseline` 을 만족하지 못해 통째로 누락된다. FR-4.2 는 날짜 3일이 아니라
+ * **세션 3회**를 요구하므로, 시간순 배열인 `history` 안의 위치로 비교한다.
+ *
+ * `floorDate`(구간 시작일, EC-7)는 구간 경계라 그대로 날짜 비교를 쓴다 — 당일은 포함이다.
+ */
+function sessionIndices(
+  history: SessionRecord[], progressionId: ProgressionId,
+  floorDate: IsoDate, fromIndex: number = 0,
+): number[] {
+  const out: number[] = [];
+  for (let i = fromIndex; i < history.length; i += 1) {
+    const r = history[i];
+    if (r.progressionId === progressionId && onOrAfter(r.date, floorDate)) out.push(i);
+  }
+  return out;
 }
 
 /**
- * `floorDate` 이후의 마지막 강등 세션 날짜. 없으면 null (FR-4.3).
+ * `floorDate` 이후의 마지막 강등 세션의 **history 인덱스**. 없으면 null (FR-4.3).
  * 강등은 `outcome: 'abandoned'` 기록 또는 그로 인한 `kind: 'consolidation'` 세션이다.
  * 스키마 변경 없이 기존 필드 조합으로 판정한다.
+ *
+ * 날짜가 아니라 인덱스를 돌려주므로 **같은 날 안에서의 순서**까지 구분된다 —
+ * 승급 당일의 강등, 강등 당일의 재승급이 정확히 판정된다.
  */
-export function lastSetbackDate(
+export function lastSetbackIndex(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
-): IsoDate | null {
-  const dates = sessionsFrom(history, progressionId, floorDate)
-    .filter((r) => r.outcome === 'abandoned' || r.kind === 'consolidation')
-    .map((r) => r.date);
-  if (dates.length === 0) return null;
-  return dates.reduce((latest, d) => (after(d, latest) ? d : latest));
+): number | null {
+  const found = sessionIndices(history, progressionId, floorDate)
+    .filter((i) => history[i].outcome === 'abandoned' || history[i].kind === 'consolidation');
+  return found.at(-1) ?? null;
 }
 
 /**
- * 기준점 계산의 유효 하한 (EC-5).
+ * 기준점 계산의 유효 하한 — `history` 의 **인덱스 하한**이다 (EC-5).
+ * 이 인덱스 **이상**인 세션만 기준점 후보가 된다. 강등이 없으면 0 (제약 없음).
  *
  * 강등을 "기준점 이후에 강등이 있으면 카운트 0" 이라는 **사후 무효화**로 다루면
  * "가장 이른 승급이 기준점"(EC-6)과 충돌해 구간 내 카운트가 영구 0 이 된다.
  * 그래서 강등은 무효화가 아니라 **기준점의 하한**으로 승격시킨다.
- * 강등 다음날부터 다시 보므로 재승급이 새 기준점이 되고 카운트가 다시 쌓인다.
+ * 강등 **바로 다음 세션부터** 다시 보므로 재승급이 새 기준점이 되고 카운트가 다시 쌓인다.
+ *
+ * 날짜(강등일 + 1일)가 아니라 인덱스(강등 + 1)를 쓰므로,
+ * 강등 당일에 재승급한 경우에도 그 재승급이 기준점이 된다.
+ *
+ * `floorDate` 하한은 이 함수가 아니라 `sessionIndices` 의 날짜 필터가 담당한다 —
+ * 두 하한은 서로 독립이며 조회할 때 함께 적용된다.
  */
-export function effectiveFloor(
+export function effectiveFloorIndex(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
-): IsoDate {
-  const setback = lastSetbackDate(history, progressionId, floorDate);
-  if (setback === null) return floorDate;
-  const resume = addDays(setback, 1);
-  return after(resume, floorDate) ? resume : floorDate;
+): number {
+  const setback = lastSetbackIndex(history, progressionId, floorDate);
+  return setback === null ? 0 : setback + 1;
 }
 
 /**
- * 유효 하한 이후 **가장 이른** 승급 세션의 날짜. 없으면 null (ADR-7).
+ * 유효 하한 이후 **가장 이른** 승급 세션의 history 인덱스. 없으면 null (ADR-7).
  *
  * 가장 이른 것을 쓰는 이유는 EC-6(추가 승급 시 카운트 유지, FR-4.4) 때문이다.
  * 마지막 승급을 쓰면 추가 승급마다 카운트가 리셋된다.
@@ -90,34 +104,33 @@ export function effectiveFloor(
  * RPE 거부권으로 보류된 세션(EC-11)은 `promotedTo` 가 없으므로
  * 별도 조건문 없이 후보에서 빠진다.
  */
-export function promotionBaseline(
+export function promotionBaselineIndex(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
-): IsoDate | null {
-  const floor = effectiveFloor(history, progressionId, floorDate);
-  const dates = sessionsFrom(history, progressionId, floor)
-    .filter((r) => r.promotedTo !== undefined)
-    .map((r) => r.date);
-  if (dates.length === 0) return null;
-  return dates.reduce((earliest, d) => (after(earliest, d) ? d : earliest));
+): number | null {
+  const floor = effectiveFloorIndex(history, progressionId, floorDate);
+  return sessionIndices(history, progressionId, floorDate, floor)
+    .find((i) => history[i].promotedTo !== undefined) ?? null;
 }
 
 /**
  * 승급 이후 그 종목의 세션 수 (FR-4.1, FR-4.2).
  *
  * 날짜 수가 아니라 **세션 수**다 — 같은 날 2회는 2로 센다 (EC-4).
- * `kind` 는 필터에 넣지 않는다 — work 든 consolidation 이든 그 종목의 세션이면 센다 (FR-4.2).
+ * 기준점 비교가 인덱스이므로 **승급 당일의 두 번째 세션도 포함된다.**
  *
- * **여기서 강등을 다시 검사하지 않는다.** 강등은 `effectiveFloor` 에서 하한으로 이미 처리되었다.
+ * `kind` 는 필터에 넣지 않는다 (FR-4.2). 다만 **대상 종목의 `consolidation` 은
+ * 실제로는 절대 세어지지 않는다** — FR-4.3 이 그것을 강등으로 보아
+ * `effectiveFloorIndex` 를 그 뒤로 밀어 올리기 때문이다. FR-4.3 이 FR-4.2 보다 우선한다 (ADR-7).
+ *
+ * **여기서 강등을 다시 검사하지 않는다.** 강등은 `effectiveFloorIndex` 에서 하한으로 이미 처리되었다.
  * 여기서 재검사하면 구간 내 카운트가 영구 0 이 되는 결함이 되살아난다.
  */
 export function maintenanceCount(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
 ): number {
-  const baseline = promotionBaseline(history, progressionId, floorDate);
+  const baseline = promotionBaselineIndex(history, progressionId, floorDate);
   if (baseline === null) return 0;
-  return history.filter(
-    (r) => r.progressionId === progressionId && after(r.date, baseline),
-  ).length;
+  return sessionIndices(history, progressionId, floorDate, baseline + 1).length;
 }
 
 /** 프로그램 요일표가 다루는 빅6 종목 목록(중복 제거, 표에 등장한 순서). */

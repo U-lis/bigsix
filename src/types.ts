@@ -119,7 +119,9 @@ export interface ProgramStint {
 /**
  * 자동 전환 제안 1건. 생성·승인·거절 이력을 한 레코드로 담는다.
  * 불변식: `proposedAt` 은 항상 월요일이다 (FR-4.6).
- * 불변식: `status === 'pending'` 인 레코드는 최대 1개다 (FR-4.6b).
+ * 불변식: `status === 'pending'` 인 레코드는 **구간(`fromProgramId`) 당** 최대 1개다 (FR-4.6b).
+ * 전역으로 1개가 아니다 — 미결 상태에서 수동 전환하면 이전 구간의 고아 pending 이
+ * 삭제되지 않고 남으므로, 서로 다른 `fromProgramId` 의 pending 이 동시에 존재할 수 있다 (W-3 (a)).
  */
 export interface SwitchProposal {
   proposedAt: IsoDate;
