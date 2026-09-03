@@ -1,7 +1,7 @@
 import { RULES } from './rules.ts';
 import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
 import { meetsStandard, sessionsAt } from './history.ts';
-import type { AppState, Catalog, SessionRecord, StandardLabel } from './types.ts';
+import type { AppState, Catalog, SessionInput, SessionRecord, StandardLabel } from './types.ts';
 
 export interface Evaluation {
   metBeginner: boolean;
@@ -22,7 +22,7 @@ export interface Evaluation {
  * RPE 를 입력하지 않았으면 거부권은 작동하지 않는다.
  */
 function rpeVeto(
-  state: AppState, record: SessionRecord,
+  state: AppState, record: SessionInput,
 ): { blocked: boolean; mean: number; n: number } {
   const recent = [...sessionsAt(state, record.progressionId, record.step), record]
     .filter((r) => r.kind === 'work' && r.rpe !== undefined)
@@ -33,7 +33,7 @@ function rpeVeto(
 }
 
 export function evaluateSession(
-  state: AppState, catalog: Catalog, record: SessionRecord,
+  state: AppState, catalog: Catalog, record: SessionInput,
 ): Evaluation {
   const step = getStep(catalog, record.progressionId, record.step);
   const top = topStandard(step);
@@ -84,16 +84,30 @@ export function evaluateSession(
     promote: true, nextStep: step.n + 1, notes };
 }
 
-/** 기록을 반영한 새 상태를 돌려준다. 원본은 건드리지 않는다. */
+/**
+ * 기록을 반영한 새 상태를 돌려준다. 원본은 건드리지 않는다 (NFR-2).
+ *
+ * 입력(`SessionInput`)에 엔진이 계산한 파생 필드를 붙여 `SessionRecord` 를 만들고,
+ * 그것을 history 에 넣는다 (ADR-3). `promotedTo` / `blockedBy` 는 여기서만 채운다.
+ */
 export function applySession(
-  state: AppState, catalog: Catalog, record: SessionRecord,
-): { state: AppState; evaluation: Evaluation } {
-  const evaluation = evaluateSession(state, catalog, record);
+  state: AppState, catalog: Catalog, input: SessionInput,
+): { state: AppState; evaluation: Evaluation; record: SessionRecord } {
+  const evaluation = evaluateSession(state, catalog, input);
+
+  // 값이 없을 때 undefined 를 명시 대입하지 않는다 — 필드 자체를 만들지 않는다.
+  const record: SessionRecord = { ...input };
+  if (evaluation.promote) record.promotedTo = evaluation.nextStep;
+  if (evaluation.blockedBy !== undefined) record.blockedBy = evaluation.blockedBy;
+
   return {
+    // ...state 스프레드 필수 — stints / proposals 를 잃지 않기 위함 (C-2).
     state: {
-      steps: { ...state.steps, [record.progressionId]: evaluation.nextStep },
+      ...state,
+      steps: { ...state.steps, [input.progressionId]: evaluation.nextStep },
       history: [...state.history, record],
     },
     evaluation,
+    record,
   };
 }
