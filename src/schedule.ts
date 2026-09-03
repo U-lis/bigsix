@@ -5,7 +5,7 @@ import type {
 } from './types.ts';
 
 /** 프로그램 표의 한국어 종목명 → 종목 id. 여기에 없으면 보조 운동으로 분류한다. */
-const LABEL_TO_ID: Record<string, ProgressionId> = {
+export const LABEL_TO_ID: Record<string, ProgressionId> = {
   '푸시업': 'pushup',
   '스쿼트': 'squat',
   '풀업': 'pullup',
