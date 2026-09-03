@@ -95,7 +95,8 @@ node --experimental-strip-types --test test/
 export { describeProgram, describePrograms, firstTrainingDay,
          selectProgram, switchProgram, currentStint, stintAt,
          dayNumber, dayNumberOn, type ProgramDescription } from './program.ts';
-export { proposeSwitch, commitProposal, activeProposal,
+export { proposeSwitch, proposeSwitchForCurrent, advanceProposals,
+         commitProposal, activeProposal,
          declineProposal, markAccepted, PROGRAM_ORDER, nextProgramId } from './proposal.ts';
 export { abandonChallenge, recordSession, recordConsolidation } from './session.ts';
 ```
@@ -127,6 +128,59 @@ proposeSwitchForCurrent(state, catalog, date: IsoDate): SwitchProposal | null
 **주의**: 이제 `src/proposal.ts` 가 `src/program.ts` 를 import 한다.
 Phase 3B 에서 금지했던 의존이 여기서 처음 허용된다. 방향은 `proposal → program` 단방향이며
 `program.ts` 는 `proposal.ts` 를 import 하지 않는다 (순환 없음).
+
+### Step 2-1: `activeProposal` 을 현재 구간 기준으로 좁힌다 (W-3 (a) — 고아 pending 제거)
+
+**Files**: `src/proposal.ts`
+
+**결함**: `pending` 제안이 있는 상태에서 사용자가 FR-3.1 로 **직접** 다른 프로그램으로 전환하면,
+`fromProgramId` 가 이미 끝난 구간을 가리키는 제안이 `pending` 으로 남는다. 그러면
+- `activeProposal` 은 그 제안을 계속 노출하고 (FR-4.6a)
+- `proposeSwitch` 는 "`pending` 이 있으면 `null`" 이므로 (FR-4.6b) **새 제안이 영원히 생성되지 않는다**
+
+SPEC 에 이 상황에 대한 조항이 없다. 수동 전환과 자동 제안이 만나는 틈이다.
+
+**Action**: `activeProposal` 이 `pending` 중에서도
+**`currentStint(state)?.programId === proposal.fromProgramId` 인 것만** 반환하도록 좁힌다.
+조건에 맞는 것이 없으면 `null`.
+
+- 이력은 **보존된다** — 고아 제안은 `proposals` 배열에 `pending` 인 채로 남고 삭제되지 않는다
+- 재제안 차단이 풀린다 — `proposeSwitch` 의 "`pending` 있으면 `null`" 검사도 같은 필터를 쓴다.
+  즉 현재 구간에 해당하는 `pending` 만 새 제안을 막는다
+- 프로그램 미선택(`currentStint` 가 `null`)이면 `null` 을 반환한다
+
+**Phase 3B 의 시그니처는 그대로 유지한다** — `activeProposal(state)` 는 여전히 1인자다.
+날짜를 받지 않으므로 FR-4.6a(매일 노출)는 계속 구조로 보장된다.
+`currentStint` 를 읽게 되므로 이 변경은 **3.5 에서만** 가능하다 (3B 는 `program.ts` 를 import 할 수 없었다).
+
+### Step 2-2: `advanceProposals` — 부팅용 단일 전이 함수 (W-3 (b))
+
+**Files**: `src/proposal.ts`
+
+**결함**: ADR-6 의 2단계 API(`proposeSwitch` → `commitProposal`)는 호출자가 순서를 지켜야 한다.
+`commitProposal` 을 빠뜨리면 제안이 생성되었다가 버려지고, 순서를 뒤집으면 동작하지 않는다.
+정상 경로가 호출자의 규율에 의존하는 것은 취약하다.
+
+**Action**: 부팅 시 한 번만 호출하면 되는 전이 함수를 추가한다.
+
+```
+advanceProposals(state, catalog, date: IsoDate): AppState
+```
+
+1. `proposal = proposeSwitchForCurrent(state, catalog, date)`
+2. `null` 이면 `state` 를 **그대로 반환** (변경 없음)
+3. non-null 이면 `commitProposal(state, proposal)` 결과를 반환
+
+**호출자는 앱 부팅 시 이것 하나만 호출한다. 순서를 틀릴 여지가 없다.**
+
+`proposeSwitch`(순수, FR-4.10 의 `null` 반환 계약 유지)와 `commitProposal`(전이)은
+**그대로 남긴다** — 단위 테스트 가능성을 보존하기 위함이다.
+**호출자에게 노출되는 정상 경로만 하나로 만든다.**
+
+이것은 3B 코드를 건드리지 않는 **순수 증분**이다. ADR-6 의 분리 자체는 유지된다 —
+분리는 선택이 아니라 필수였다. FR-4.6b 가 "제안은 상태에 저장되어야 하며 매 조회마다
+새로 계산되는 휘발성 값이 아니다" 를 요구하고 NFR-2/FR-5.5 가 조회의 순수성을 요구하므로,
+"조회가 필요할 때 알아서 만드는" 형태는 SPEC 하에서 구성이 불가능하다.
 
 ### Step 3: `acceptProposal` 배선 (FR-4.8)
 
@@ -183,7 +237,10 @@ acceptProposal(state, catalog, onDate: IsoDate): AppState
 ```bash
 cd /home/ulismoon/Documents/bigsix-feature-program-session
 
-# 타입 체크 (타입 스트리핑 모드에서 실행 자체가 1차 검증)
+# 전체 테스트. 주의: 타입 검사는 수행되지 않는다 —
+# --experimental-strip-types 는 타입 애너테이션을 지울 뿐 검사하지 않으며,
+# tsconfig.json 도 typescript 패키지도 없다 (NFR-1 이 패키지 추가를 금지).
+# 따라서 필드 소실 같은 구조 오류는 테스트로만 잡힌다 (C-2 참조).
 node --experimental-strip-types --test test/
 
 # 커버리지
@@ -200,6 +257,8 @@ grep -rn "new Date()" src/
 - [ ] 3A / 3B / 3C 의 기능이 함께 동작한다
 - [ ] `src/index.ts` 에서 세 모듈의 공개 함수가 전부 export 된다
 - [ ] `proposeSwitchForCurrent` 가 `currentStint.startedAt` 을 `floorDate` 로 주입한다 (EC-7)
+- [ ] `advanceProposals` 한 번 호출로 생성·저장이 끝난다 (W-3 (b))
+- [ ] 수동 전환 후 고아 pending 이 새 제안을 막지 않는다 (W-3 (a))
 - [ ] `acceptProposal` 이 제안 승인과 구간 전환을 한 번에 처리한다 (FR-4.8)
 - [ ] 기존 기능 회귀 없음 — Phase 1/2 시점 테스트 전량 통과
 - [ ] `program.ts` → `proposal.ts` 역방향 import 없음 (순환 없음)
@@ -235,13 +294,19 @@ git push origin --delete feature/program-session-3C
 - [ ] 충돌 전부 해소 (`src/schedule.ts` 외 충돌이 있었다면 원인 기록)
 - [ ] `src/index.ts` 에 세 모듈 export 통합
 - [ ] `proposeSwitchForCurrent` 추가 — `currentStint.startedAt` 을 `floorDate` 로 주입 (EC-7)
+- [ ] **`activeProposal` 이 `currentStint.programId === fromProgramId` 인 pending 만 반환** (W-3 (a))
+- [ ] `activeProposal` 시그니처가 여전히 1인자 — 날짜를 받지 않음 (FR-4.6a 유지)
+- [ ] 고아 pending 이 `proposals` 에서 삭제되지 않고 보존됨
+- [ ] `proposeSwitch` 의 pending 검사도 같은 필터를 사용 — 재제안 차단이 풀림 (FR-4.6b)
+- [ ] **`advanceProposals(state, catalog, date)` 추가** — 부팅용 단일 전이 함수 (W-3 (b))
+- [ ] `proposeSwitch` / `commitProposal` 은 그대로 남아 단위 테스트 가능
 - [ ] `acceptProposal` 배선 — `markAccepted` → `switchProgram` 순서 (FR-4.8)
 - [ ] `acceptProposal` 에 요일 검사 **없음** (FR-4.8: 월요일이 아니어도 승인 가능)
 - [ ] `test/helpers.ts` 공통 픽스처 추가, `stateAt` 시그니처 불변
 - [ ] `test/integration.test.ts` 작성 — **EC-7 포함**
 - [ ] `program.ts` 가 `proposal.ts` 를 import 하지 않음 (순환 없음)
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 - [ ] 워크트리 및 브랜치 정리
 
 ---

@@ -22,6 +22,21 @@
   - Action: `applySession`
   - Verify: 원본 `state.history.length` 불변, `state.steps` 불변
 
+#### 필드 보존 (C-2) — 타입 검사가 없으므로 테스트가 유일한 방어선
+- [ ] Test case: **`applySession` 후 `stints` 가 입력과 동일하다**
+  - Setup: `stints` 에 구간 2개가 담긴 `AppState`
+  - Action: `applySession`
+  - Verify: `result.state.stints` 가 입력과 **같은 길이·같은 내용**.
+    `undefined` 가 아니다
+- [ ] Test case: **`applySession` 후 `proposals` 가 입력과 동일하다**
+  - Setup: `proposals` 에 `pending` 1건 + `declined` 2건
+  - Verify: `result.state.proposals.length === 3`, 각 `status` 보존
+- [ ] Test case: 반환 상태가 `AppState` 의 4필드를 모두 가진다
+  - Verify: `steps` / `history` / `stints` / `proposals` 전부 존재
+- [ ] Test case: `applySession` 을 10회 연속 적용해도 `stints` / `proposals` 가 살아 있다
+  - Verify: 누적 호출에서도 소실되지 않는다.
+    **한 번만 검사하면 "첫 호출만 보존" 같은 부분 구현을 놓친다**
+
 #### `promotedTo` (FR-8)
 - [ ] Test case: 승급 시 `promotedTo` 가 채워진다
   - Input: 상급자 기준을 충족하는 세션 (RPE 미입력)

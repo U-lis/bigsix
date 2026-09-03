@@ -3,11 +3,15 @@
 ## Test Coverage Target
 
 **Minimum**: 70% (전체 누적)
-이 Phase 의 신규 코드는 `proposeSwitchForCurrent` 와 `acceptProposal` 두 함수뿐이며, 둘 다 100% 커버한다.
+이 Phase 의 신규 코드는 `proposeSwitchForCurrent` / `advanceProposals` / `acceptProposal` 세 함수와
+`activeProposal` 의 현재 구간 필터다. 전부 100% 커버한다.
 
 ---
 
 ## Unit Tests
+
+이 Phase 의 신규 코드는 `proposeSwitchForCurrent`, `advanceProposals`, `acceptProposal`
+세 함수와 `activeProposal` 의 필터 변경이다.
 
 ### `proposeSwitchForCurrent` (EC-7 배선)
 
@@ -25,6 +29,47 @@
   - Expected: `null` — **구간 이전의 승급이 카운트되지 않는다**
 - [ ] Test case: 화요일에는 여전히 `null` (FR-4.6 유지)
 - [ ] Test case: **NFR-2** 원본 `state` 불변
+
+### `activeProposal` — 현재 구간 필터 (W-3 (a))
+
+- [ ] Test case: 현재 구간과 `fromProgramId` 가 일치하는 pending 을 반환한다
+  - Setup: `good_behavior` 구간, `fromProgramId: 'good_behavior'` 인 pending
+  - Expected: 그 제안
+- [ ] Test case: **고아 pending 은 반환하지 않는다**
+  - Setup: `fromProgramId: 'good_behavior'` 인 pending 이 있는 상태에서
+    사용자가 수동으로 `veterano` 로 전환 (FR-3.1)
+  - Action: `activeProposal(state)`
+  - Expected: `null`
+- [ ] Test case: **고아 pending 이 `proposals` 에서 삭제되지 않는다**
+  - Verify: 배열에 `status: 'pending'` 인 채로 남아 있다. 이력 보존
+- [ ] Test case: **고아 pending 이 새 제안 생성을 막지 않는다** (FR-4.6b 재제안 차단 해제)
+  - Setup: 위 상태에서 `veterano` 의 조건이 충족됨
+  - Action: 월요일에 `proposeSwitchForCurrent`
+  - Verify: 새 제안이 생성된다 (`null` 이 아니다)
+  - **이 필터가 없으면 새 제안이 영원히 생성되지 않는다**
+- [ ] Test case: 프로그램 미선택 상태에서 `null`
+- [ ] Test case: **FR-4.6a** 시그니처가 여전히 1인자 — 날짜를 받지 않는다
+  - Verify: 매일 노출이 구조로 보장된다
+- [ ] Test case: 수동 전환 후 다시 원래 프로그램으로 돌아오면 그 pending 이 다시 보인다
+  - Setup: `good_behavior` pending → `veterano` 전환 → `good_behavior` 재전환
+  - Verify: `activeProposal` 이 그 pending 을 반환한다.
+    **필터는 삭제가 아니라 가시성 조건이다**
+
+### `advanceProposals` (W-3 (b))
+
+- [ ] Test case: 조건 미달이면 상태를 그대로 반환한다
+  - Verify: `proposals` 길이 불변. 참조까지 동일해도 무방
+- [ ] Test case: 화요일에는 상태가 변하지 않는다 (FR-4.6)
+- [ ] Test case: 월요일에 조건이 충족되면 pending 이 적재된다
+  - Verify: `proposals` 길이 +1, 마지막이 `pending`
+- [ ] Test case: `proposeSwitchForCurrent` + `commitProposal` 을 순서대로 호출한 결과와 동일하다
+  - Verify: 단일 함수가 2단계 시퀀스를 정확히 대체한다
+- [ ] Test case: 같은 날 두 번 호출해도 pending 이 1개다
+  - Verify: 두 번째 호출에서 `proposeSwitch` 가 "pending 있으면 null" 로 걸린다 (FR-4.6b)
+- [ ] Test case: 프로그램 미선택 상태에서 no-op
+- [ ] Test case: **NFR-2** 원본 `state` 불변
+- [ ] Test case: `proposeSwitch` 와 `commitProposal` 이 여전히 개별 export 된다
+  - Verify: 단위 테스트 가능성 보존. `advanceProposals` 는 정상 경로를 하나로 만들 뿐이다
 
 ### `acceptProposal` (FR-4.8)
 
@@ -168,6 +213,8 @@ readyForProposal(programId, startedAt, promoteDate): AppState
 test/
 ├── integration.test.ts   # 신규 — 이 Phase 의 주 산출물
 │   ├── proposeSwitchForCurrent
+│   ├── activeProposal — 현재 구간 필터    (W-3 (a) 고아 pending)
+│   ├── advanceProposals                  (W-3 (b) 부팅 단일 진입점)
 │   ├── acceptProposal                    (FR-4.8)
 │   ├── EC-7 카운트 리셋                  ★ 이 Phase 에서만 검증 가능
 │   ├── 제안 승인 → 새 구간 1일차 전체 흐름

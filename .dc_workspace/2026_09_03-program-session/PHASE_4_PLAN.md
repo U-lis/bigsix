@@ -65,11 +65,18 @@ ADR-1(계층 구조)과 ADR-4(미수행일 파생)를 구현한다.
 **Action**: `reviewDay(state, catalog, date: IsoDate): DayReview`
 
 1. `stint = stintAt(state, date)`. `null` 이면
-   `{ date, programId: null, dayNumber: 0, status: 'rest', planned: [], performed: [] }`
+   `{ date, programId: null, dayNumber: 0, status: 'rest', planned: [], plannedExercises: [], accessories: [], performed: [] }`
 2. `dayPlan = planDay(state, catalog, stint.programId, weekdayOf(date))`
 3. `planned = dayPlan.exercises.map(e => e.progressionId)`
-   **`dayPlan.locked` 는 포함하지 않는다** (ADR-4 부수 결정 a — 잠긴 종목은 판정 대상 아님).
-   **`dayPlan.accessories` 도 포함하지 않는다** (부수 결정 b — 기록 모델이 표현하지 못함)
+   **`dayPlan.locked` 는 `planned` 에 포함하지 않는다** (ADR-4 부수 결정 a — 잠긴 종목은 판정 대상 아님).
+   **`dayPlan.accessories` 도 `planned` 에 포함하지 않는다** (부수 결정 b — 기록 모델이 표현하지 못함)
+3-1. `plannedExercises = dayPlan.exercises` 를 **그대로 담는다** (W-2 (c), FR-5.1 "목표").
+   이 값은 조회 시점의 `state.steps` 로 재계산된 것이며 그날 당시의 목표가 아니다.
+   Phase 1 에서 붙인 JSDoc 이 이 사실을 명시한다. **과거 목표를 복원하려 시도하지 않는다** —
+   계획 스냅샷 저장이 필요하고 SPEC 이 요구하지 않는다
+3-2. `accessories = dayPlan.accessories` 를 **그대로 담는다** (W-2 (a), FR-5.1 "종목").
+   보조 운동도 그날 계획의 일부이므로 조회 결과에 남긴다.
+   **단 status 판정에는 쓰지 않는다** — 판정 제외와 결과 삭제는 다른 문제다
 4. `performed = state.history.filter(r => r.date === date)`
 5. 상태 판정:
 
@@ -127,11 +134,26 @@ ADR-1(계층 구조)과 ADR-4(미수행일 파생)를 구현한다.
 `good_behavior` 금요일처럼 계획된 종목이 **전부** 잠긴 날은 `planned.length === 0` 이 되어
 `rest` 로 판정된다. 이것이 의도된 동작이다.
 
-### 왜 `accessories` 를 빼는가 (ADR-4 부수 결정 b)
+### 왜 `accessories` 를 **판정에서만** 빼는가 (ADR-4 부수 결정 b, W-2)
 `SessionRecord.progressionId` 는 `ProgressionId`(빅6) 타입이다.
 악력·종아리·목 운동을 기록할 수단이 **타입 수준에서 없다.**
-따라서 수행 여부를 알 수 없고, 포함하면 `solitary_confinement` 사용자는 매일 `partial` 이 된다.
+따라서 수행 여부를 알 수 없고, 판정에 포함하면 `solitary_confinement` 사용자는
+빅6 를 완벽히 수행해도 **매일 `partial`** 이 되어 4상태가 사실상 2상태로 붕괴한다.
 보조 운동만 있는 날은 `planned.length === 0` → `rest` 다.
+
+**그러나 조회 결과에서 지우지는 않는다.** FR-5.1 은 "그날 계획되어 있던 종목" 을 요구하고
+보조 운동도 그날 계획의 일부다. `DayReview.accessories` 에 참고 필드로 담는다.
+
+**알려진 한계 (GLOBAL.md ADR-4 에 기록됨)**: 사용자가 보조 운동을 전부 건너뛰어도
+그날은 `done` 으로 표시된다. UI 는 `accessories` 를 별도 표시하되 status 로 판단하지 않아야 한다.
+
+### 왜 `plannedExercises` 가 "현재 단계 기준" 일 수밖에 없는가 (W-2 (c))
+`planDay` → `planExercise` 는 `state.steps`(현재값)로 목표를 계산한다.
+`planOn(과거일)` 로 우회할 수 없다 — 같은 이유로 그것도 현재 단계 기준이다.
+그날 당시의 목표를 복원하려면 세션마다 계획 스냅샷을 저장해야 하는데
+SPEC 은 그런 필드를 요구하지 않는다(FR-8 이 요구한 것은 승급 결과뿐이다).
+따라서 **FR-5.1 의 "목표" 는 현재 단계 기준 재계산값으로 충족**하고,
+그 사실을 타입 JSDoc 과 GLOBAL.md 한계 절에 명시했다. 묵시적으로 넘기지 않는다.
 
 ### 왜 `planOn` 이 `DayPlan` 을 상속하지 않고 스프레드하는가
 `DayPlan` 은 `weekday`/`rest`/`exercises`/`accessories`/`locked` 를 갖는다.
@@ -162,7 +184,10 @@ EC-10 / FR-5.4 는 며칠차가 0 임을 요구할 뿐 계획을 만들지 말�
 - [ ] `planOn` 이 `activeProposal` 을 **읽기만** 함. `proposeSwitch` 호출 0건 (ADR-6)
 - [ ] `reviewDay` 4상태 판정 구현 (FR-5.3)
 - [ ] `reviewDay` 가 `locked` 를 `planned` 에서 제외 (ADR-4 부수 결정 a)
-- [ ] `reviewDay` 가 `accessories` 를 `planned` 에서 제외 (ADR-4 부수 결정 b)
+- [ ] `reviewDay` 가 `accessories` 를 `planned`(판정)에서 제외 (ADR-4 부수 결정 b)
+- [ ] **`reviewDay` 가 `accessories` 를 별도 필드로 반환** — 판정 제외 ≠ 결과 삭제 (W-2 (a), FR-5.1)
+- [ ] **`reviewDay` 가 `plannedExercises` 를 반환** (W-2 (c), FR-5.1 "목표")
+- [ ] `plannedExercises` 가 현재 단계 기준 재계산값임이 JSDoc 에 명시됨 — 과거 목표 복원 시도 없음
 - [ ] `reviewRange` 가 `dateRange` 의 모든 날짜를 반환 (FR-5.2, EC-8)
 - [ ] **FR-5.5 / NFR-2** 세 함수 전부 순수 — `AppState` 를 반환하지 않고 변형하지 않음
 - [ ] `AppState` 에 미수행 관련 필드 없음 (ADR-4)
@@ -170,7 +195,7 @@ EC-10 / FR-5.4 는 며칠차가 0 임을 요구할 뿐 계획을 만들지 말�
 - [ ] `test/calendar.test.ts` 작성 — EC-1 / EC-8 / EC-10 포함
 - [ ] `test/schedule.test.ts` 무수정 통과 (ADR-1 최종 확인)
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 

@@ -119,6 +119,32 @@
   - **미수행은 "기록이 없는 것" 이지 "실패한 것" 이 아니다**
 - [ ] Test case: `kind: 'consolidation'` 기록도 "수행" 으로 친다
 
+#### `accessories` 참고 필드 (W-2 (a), FR-5.1)
+- [ ] Test case: `solitary_confinement` 의 월요일에 `accessories` 가 채워진다
+  - Expected: `[{ name: '악력 운동', prescription: '제한 없음' }]`
+- [ ] Test case: `accessories` 가 `planned` 에 섞이지 않는다
+  - Verify: `planned` 의 모든 원소가 빅6 `ProgressionId`
+- [ ] Test case: **보조 운동을 건너뛰어도 status 가 `done` 이다** (알려진 한계 고정)
+  - Setup: `solitary_confinement` 월요일, 풀업·스쿼트만 기록 (악력 운동 없음)
+  - Expected: `status === 'done'`, `accessories.length === 1`
+  - **한계를 테스트로 고정한다 — 나중에 이 동작이 바뀌면 의도된 변경이어야 한다**
+- [ ] Test case: 보조 운동이 없는 프로그램은 `accessories` 가 빈 배열
+  - Input: `good_behavior` 의 모든 요일
+
+#### `plannedExercises` (W-2 (c), FR-5.1 "목표")
+- [ ] Test case: `plannedExercises` 가 `planned` 와 같은 종목 집합을 갖는다
+  - Verify: `plannedExercises.map(e => e.progressionId)` 이 `planned` 와 일치
+- [ ] Test case: `plannedExercises` 에 `work` / `goal` / `warmup` 이 담긴다
+  - Verify: `planDay` 의 `exercises` 원소가 그대로 들어간다
+- [ ] Test case: **`plannedExercises` 는 현재 단계 기준 재계산값이다** (한계 고정)
+  - Setup: `09-07` 에 `pushup` 5단계로 기록. 이후 승급해 현재 7단계
+  - Action: `reviewDay(state, catalog, '2026-09-07')`
+  - Verify: `plannedExercises` 의 `pushup` `step` 이 **7** (그날의 5 가 아니다)
+  - Verify: `performed[0].step` 은 **5** — 실제 기록은 정확하다
+  - **과거 목표 복원 불가라는 한계를 테스트로 고정한다**
+- [ ] Test case: `rest` 인 날은 `plannedExercises` 가 빈 배열
+- [ ] Test case: 활성 구간이 없으면 `plannedExercises` / `accessories` 둘 다 빈 배열
+
 #### 기타 필드 (FR-5.1)
 - [ ] Test case: `programId` 가 그날의 구간 프로그램이다
 - [ ] Test case: `performed` 에 세트별 수치·RPE·`kind`·`outcome` 이 전부 담긴다

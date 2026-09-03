@@ -57,7 +57,33 @@ applySession(state, catalog, input: SessionInput)
 5. 반환하는 `state.history` 에는 **`input` 이 아니라 `record`** 를 push 한다.
 6. 반환 객체에 `record` 를 포함한다.
 
-NFR-2: 인자 `state` 를 변형하지 않는다. 기존의 스프레드 방식을 그대로 유지한다.
+NFR-2: 인자 `state` 를 변형하지 않는다. 새 객체를 반환한다.
+
+**반드시 `...state` 를 스프레드한다 — 이것이 이 Step 의 가장 큰 위험 지점이다.**
+
+현행 `src/evaluate.ts:92-98` 은 반환값을 객체 리터럴 `{ steps, history }` 로 만든다.
+Phase 1 에서 `AppState` 에 `stints` / `proposals` 가 **필수 필드**로 추가되므로,
+이 리터럴을 그대로 두면 **세션을 기록할 때마다 프로그램 구간과 제안이 통째로 사라진다.**
+
+```
+// 금지 — stints/proposals 소실
+return { state: { steps: {...}, history: [...] }, evaluation, record };
+
+// 필수 — 나머지 필드를 보존한다
+return {
+  state: { ...state, steps: { ...state.steps, [input.progressionId]: evaluation.nextStep },
+           history: [...state.history, record] },
+  evaluation, record,
+};
+```
+
+**이 결함은 자동으로 잡히지 않는다.** 아래 4가지가 전부 통과시킨다.
+1. `--experimental-strip-types` 는 타입을 **지울 뿐 검사하지 않는다**
+2. `tsconfig.json` 도 `typescript` 의존성도 없다 (NFR-1 이 패키지 추가를 금지한다)
+3. 필드 소실은 런타임 예외를 일으키지 않는다 — 조용히 `undefined` 가 될 뿐이다
+4. NFR-2 감사는 "인자를 변형하지 않는가" 만 보고 "필드를 잃지 않는가" 는 보지 않는다
+
+따라서 **`PHASE_2_TEST.md` 의 필드 보존 테스트가 유일한 방어선이다.** 반드시 작성한다.
 
 ### Step 2: `evaluateSession` 인자 타입 완화
 
@@ -189,6 +215,8 @@ if (evaluation.blockedBy !== undefined) record.blockedBy = evaluation.blockedBy;
 - [ ] `evaluation.promote` 일 때만 `record.promotedTo = evaluation.nextStep`
 - [ ] `evaluation.blockedBy` 가 `record.blockedBy` 로 전사됨
 - [ ] `state.history` 에 `input` 이 아니라 `record` 가 들어감
+- [ ] **`applySession` 반환 상태가 `...state` 스프레드로 `stints` / `proposals` 를 보존함** (C-2)
+- [ ] `applySession` 후 `stints` / `proposals` 보존 테스트 존재
 - [ ] `evaluateSession` 판정 로직 무변경 (git diff 로 확인)
 - [ ] `sideNoteFor` 헬퍼 추가 — `state`/`sets` 를 인자로 받지 않음
 - [ ] `planExercise` / `planConsolidation` / `withPair` 세 곳 모두 `sideNote` 채움
@@ -199,7 +227,7 @@ if (evaluation.blockedBy !== undefined) record.blockedBy = evaluation.blockedBy;
 - [ ] `test/plan.test.ts` 기존 케이스 전량 유지 + `sideNote` 케이스 추가
 - [ ] `test/schedule.test.ts` / `test/gate.test.ts` / `test/data.test.ts` 무수정 통과
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 

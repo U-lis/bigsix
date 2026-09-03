@@ -85,7 +85,8 @@ plan.ts      planExercise / planWarmup / planConsolidation           ← 동작 
 - SPEC 충돌 1 이 필드명·중첩 구조를 "예시일 뿐이며 설계 단계에서 확정한다" 고 명시했다.
 - 하위 호환 없음(충돌 1 결정). 신규 필드는 **optional 이 아니다.**
 
-> **설계 결정 — 확인 대기 (1/3)**: SPEC 예시의 3필드를 2필드(`stints`/`proposals`)로 통합한다.
+> **설계 결정 — 합의 완료 (1/3)**: SPEC 예시의 3필드를 2필드(`stints`/`proposals`)로 통합한다.
+> 근거와 확정 경위는 아래 "설계 결정 — 합의 완료" 절 참조.
 
 ---
 
@@ -134,10 +135,30 @@ plan.ts      planExercise / planWarmup / planConsolidation           ← 동작 
 **부수 결정 2건**
 - (a) `checkGate` 로 잠긴 종목은 계획에서 빠지므로 **missed 판정 대상이 아니다.**
   잠긴 종목 때문에 그날이 영영 `partial` 이 되는 것을 막는다 (FR-4.5 와 같은 취지).
-- (b) **보조 운동(악력·종아리·목)은 판정에서 제외한다.** 기록 모델(`SessionRecord.progressionId`)이
+- (b) **보조 운동(악력·종아리·목)은 status 판정에서 제외한다.** 기록 모델(`SessionRecord.progressionId`)이
   빅6만 표현하므로 수행 여부를 알 방법이 없다. 보조 운동만 있는 날은 빅6 계획이 0개이므로 `rest` 다.
+  **다만 조회 결과에서 지우지는 않는다** — `DayReview.accessories` 에 참고 필드로 남긴다 (FR-5.1).
 
-> **설계 결정 — 확인 대기 (2/3)**: 보조 운동(악력·종아리·목)을 `missed` 판정에서 제외한다.
+#### ADR-4 의 명시적 한계 — 다음 UI 작업이 알아야 할 전제
+
+1. **보조 운동 미수행이 감지되지 않는다.**
+   `solitary_confinement` 사용자가 빅6만 하고 악력·종아리·목 운동을 전부 건너뛰어도
+   그날은 `done` 으로 표시된다. status 는 **빅6 수행 여부만** 말한다.
+   보조 운동을 판정에 넣으려면 `SessionRecord` 가 보조 운동을 표현할 수 있어야 하는데,
+   SPEC 은 그 확장을 요구하지 않는다(FR-1.1 이 기록 모델을 빅6로 한정).
+   포함하면 `solitary_confinement` 사용자는 **매일 `partial`** 이 되어 4상태가 사실상 2상태로 붕괴한다.
+   UI 는 `accessories` 필드를 별도로 표시하되 status 로 판단하지 않아야 한다.
+
+2. **과거 시점의 목표 수치를 복원할 수 없다.**
+   `DayReview.plannedExercises` 는 조회 시점의 `state.steps` 로 재계산된다.
+   "그날 목표가 3×15 였다" 를 정확히 되살리려면 계획 스냅샷 저장이 필요하며 이번 범위 밖이다.
+
+3. **`'missed'` 는 저장되지 않는다.** 파생 상태이므로 `AppState` 를 지나간 뒤에는
+   `stints` + `history` 로부터 매번 다시 계산된다. 상태 자체를 UI 가 캐싱하면 부정합이 생긴다.
+
+> **설계 결정 — 합의 완료 (2/3)**: 보조 운동(악력·종아리·목)을 `missed` **판정**에서 제외하되,
+> `DayReview.accessories` 참고 필드로 **조회 결과에는 남긴다.**
+> 근거와 확정 경위는 아래 "설계 결정 — 합의 완료" 절 참조.
 
 ---
 
@@ -179,12 +200,33 @@ UTC-N 타임존에서 `getDay()` / `getDate()` 가 하루 밀린다.
 | `proposeSwitch(state, catalog, date): SwitchProposal \| null` | 순수 판정 (FR-4.10) | 월요일이 아니면 `null`. 조건 미달이면 `null`. `supermax` 면 `null` |
 | `commitProposal(state, proposal): AppState` | 상태 전이 | `pending` 으로 `proposals` 에 적재 |
 | `activeProposal(state): SwitchProposal \| null` | 순수 조회 | 저장된 `pending` 을 반환 — **날짜 무관, 매일 노출** |
+| `advanceProposals(state, catalog, date): AppState` | 전이 (부팅용) | 위 두 단계를 하나로 묶는다 — 호출자가 순서를 틀릴 여지를 없앤다 (Phase 3.5) |
 
 `planOn` 은 `activeProposal` 만 읽고 **절대 생성하지 않는다.**
-앱 부팅 시퀀스가 `proposeSwitch` → (non-null 이면) `commitProposal` 을 명시적으로 호출한다.
+앱 부팅 시퀀스는 **`advanceProposals` 하나만** 호출한다.
+`proposeSwitch`(순수, FR-4.10 의 `null` 반환 계약)와 `commitProposal`(전이)은
+단위 테스트 가능성을 위해 개별 함수로 남기되, **호출자에게 노출되는 정상 경로는 하나다.**
 
-> **설계 결정 — 확인 대기 (3/3)**: 제안 생성이 `proposeSwitch` + `commitProposal` 2회 호출로 분리된다.
-> 호출자(UI)가 이 시퀀스를 지켜야 한다.
+**분리 자체는 선택이 아니라 필수다.** FR-4.6b 가 "제안은 상태에 저장되어야 하며
+매 조회마다 새로 계산되는 휘발성 값이 아니다" 를 요구하고 NFR-2 / FR-5.5 가 조회의 순수성을
+요구하므로, "조회가 필요할 때 알아서 만드는" 형태는 SPEC 하에서 구성이 불가능하다.
+
+#### `activeProposal` 의 현재 구간 필터 (Phase 3.5 에서 적용)
+
+`pending` 제안이 있는 상태에서 사용자가 FR-3.1 로 **수동 전환**하면
+`fromProgramId` 가 이미 끝난 구간을 가리키는 **고아 pending** 이 남는다. 그러면
+`activeProposal` 이 그것을 계속 노출하고(FR-4.6a), `proposeSwitch` 는
+"`pending` 이 있으면 `null`"(FR-4.6b) 이라 **새 제안이 영원히 생성되지 않는다.**
+SPEC 에 이 상황에 대한 조항이 없으므로 설계에서 메운다.
+
+→ `activeProposal` 은 `currentStint.programId === proposal.fromProgramId` 인 `pending` 만 반환한다.
+`proposeSwitch` 의 pending 검사도 같은 필터를 쓴다.
+**이력은 보존되고**(고아 pending 을 삭제하지 않는다) **재제안 차단만 풀린다.**
+시그니처는 여전히 1인자이므로 FR-4.6a(날짜 무관 매일 노출)는 구조로 유지된다.
+
+> **설계 결정 — 합의 완료 (3/3)**: 제안 생성이 `proposeSwitch` + `commitProposal` 로 분리되되,
+> 호출자에게 노출되는 정상 경로는 `advanceProposals` 하나다.
+> 근거와 확정 경위는 아래 "설계 결정 — 합의 완료" 절 참조.
 
 ---
 
@@ -194,19 +236,39 @@ UTC-N 타임존에서 `getDay()` / `getDate()` 가 하루 밀린다.
 카운트를 `AppState` 필드로 두지 않고 `history` 에서 파생 계산한다.
 
 ```
-종목별 기준점 = max( 마지막 promotedTo 보유 세션의 날짜, currentStint.startedAt )
-카운트 = 기준점 이후 그 종목의 세션 수 (kind 무관 — FR-4.2)
+effectiveFloor = max( currentStint.startedAt, 마지막 강등 세션 날짜 + 1일 )
+baseline       = effectiveFloor 이후 그 종목의 가장 이른 promotedTo 보유 세션의 날짜
+카운트         = baseline 이후 그 종목의 세션 수 (kind 무관 — FR-4.2)
 ```
+
+**강등은 사후 무효화가 아니라 기준점의 하한(floor)으로 처리한다.**
+"`baseline` 이후에 강등이 있으면 카운트 0" 이라는 사후 무효화 방식은
+"`baseline` 은 가장 이른 승급"(EC-6 대응)과 충돌해 **구간 내 영구 0** 을 만든다.
+
+```
+09-07 승급(기준점) → 09-09 abandoned → 09-20 재승급 → 09-22, 24, 26 세션
+사후 무효화: baseline 은 여전히 09-07, 그 이후 강등 존재 ⇒ 카운트가 영원히 0
+하한 승격  : effectiveFloor = 09-10, baseline = 09-20 ⇒ 카운트 3 (정상 재계수)
+```
+
+SPEC EC-5 는 **"카운트 리셋"** 이지 "구간 내 영구 무효화" 가 아니다.
+사후 무효화로 두면 FR-4.1 제안이 그 구간에서 다시는 생성되지 않고,
+"조건이 만족되는 한 매주 월요일에 계속 제안한다"는 **FR-4.9 도 함께 무너진다.**
 
 **Rationale**
 저장 필드로 두면 EC-5(강등 리셋) · EC-6(추가 승급 시 유지) · EC-7(전환 시 리셋)이
 전부 **서로 다른 갱신 경로**가 되어 어긋난다. 파생이면 규칙 하나로 셋 다 나온다.
 
+**EC-5 와 EC-6 은 서로 다른 층에서 처리된다** — 이 분리가 핵심이다.
+강등(EC-5)은 baseline 을 정하기 **전에** 하한으로 적용되고,
+추가 승급 무시(EC-6)는 baseline 을 정한 **후에** 적용된다.
+둘을 같은 층(둘 다 baseline 이후 스캔)에서 처리하면 서로를 무력화한다.
+
 | EC | 파생 계산에서의 처리 |
 |---|---|
-| EC-5 승급 직후 강등 → 리셋 | 기준점 이후에 `outcome: 'abandoned'` 또는 그로 인한 `kind: 'consolidation'` 이 있으면 **카운트 무효**. SPEC 충돌 4 대로 스키마 변경 불필요 |
-| EC-6 3회 전 추가 승급 → 유지 | 기준점은 **카운트가 시작된 승급**이어야 한다. 기준점 이후 구간에서 뒤로 스캔하되 **중간의 `promotedTo` 는 기준점을 갱신하지 않는다** |
-| EC-7 전환 시 리셋 | `currentStint.startedAt` 을 기준점의 **하한**으로 쓰는 것만으로 자동 충족. **전용 리셋 코드 없음** |
+| EC-5 승급 직후 강등 → 리셋 | `outcome: 'abandoned'` 또는 `kind: 'consolidation'` 중 **마지막 것의 다음날**을 하한으로 승격. 강등 이전 승급이 조회 범위 밖으로 밀려나고, **재승급하면 새 기준점이 잡혀 재계수된다.** SPEC 충돌 4 대로 스키마 변경 불필요 |
+| EC-6 3회 전 추가 승급 → 유지 | 기준점은 **카운트가 시작된 승급**이어야 한다. `effectiveFloor` 이후 **가장 이른** 승급이 기준점이며 **중간의 `promotedTo` 는 기준점을 갱신하지 않는다** |
+| EC-7 전환 시 리셋 | `currentStint.startedAt` 을 `effectiveFloor` 의 **하한**으로 쓰는 것만으로 자동 충족. **전용 리셋 코드 없음** |
 | EC-11 RPE 보류 | `promotedTo` 가 없으므로 기준점 후보가 아니다 (ADR-3) |
 
 ---
@@ -304,10 +366,36 @@ export interface DayReview {
   programId: string | null;
   dayNumber: number;                     // 활성 구간 없거나 startedAt 이전이면 0
   status: 'rest' | 'done' | 'partial' | 'missed';
-  planned: ProgressionId[];              // 그날 계획된 빅6 (잠긴 종목 제외)
+
+  /** 그날 계획된 빅6 (잠긴 종목 제외). status 판정의 유일한 근거다. */
+  planned: ProgressionId[];
+
+  /**
+   * 그날 계획된 빅6 의 목표 수치.
+   * 주의 — 이 값은 **조회 시점의 state.steps 로 재계산한 값**이지
+   * 그날 당시의 목표가 아니다. 그날 이후 단계가 오르내렸다면 수치가 다르다.
+   * 과거 시점 목표의 정확한 복원은 이번 범위에서 지원하지 않는다 (아래 한계 참조).
+   */
+  plannedExercises: PlannedExercise[];
+
+  /**
+   * 그날 계획된 보조 운동(악력·종아리·목).
+   * **참고 필드다 — status 판정에 쓰지 않는다.**
+   * 기록 모델이 보조 운동을 표현하지 못하므로 수행 여부를 알 수 없다 (ADR-4 부수 결정 b).
+   */
+  accessories: AccessoryItem[];
+
   performed: SessionRecord[];            // 그날 history
 }
 ```
+
+**FR-5.1 "그날 계획되어 있던 종목·목표" 의 충족 범위**
+- 종목: `planned` + `accessories` 로 **완전히 충족**한다. 보조 운동도 그날 계획의 일부이므로
+  판정에서 빼되 **조회 결과에서는 지우지 않는다** — 판정 제외와 결과 삭제는 다른 문제다.
+- 목표: `plannedExercises` 로 제공하되 **현재 단계 기준 재계산값**이다.
+  `planDay` 가 `state.steps`(현재값)로 목표를 계산하므로 과거 시점 목표를 복원할 수 없다.
+  이것은 **알려진 한계**이며, 복원하려면 세션마다 계획 스냅샷을 저장해야 하는데
+  SPEC 이 그런 필드를 요구하지 않는다. 정확한 과거 목표가 필요하면 별도 작업으로 다룬다.
 
 ### Relationships
 ```
@@ -338,6 +426,8 @@ Catalog (data/progressions.json, 변경 금지)
 | `program.ts` | `currentStint` / `stintAt` / `dayNumber` | 순수 | FR-2.7, FR-5.4 |
 | `proposal.ts` | `proposeSwitch(state, catalog, date)` | 순수 판정 | FR-4.1~4.7, FR-4.10 |
 | `proposal.ts` | `commitProposal` / `activeProposal` / `declineProposal` / `markAccepted` | 전이/조회 | FR-4.6a, FR-4.6b, FR-4.9 |
+| `proposal.ts` | `proposeSwitchForCurrent(state, catalog, date)` | 순수 판정 | EC-7 배선 (Phase 3.5) |
+| `proposal.ts` | `advanceProposals(state, catalog, date)` | 전이 (부팅용) | ADR-6 정상 경로 단일화 (Phase 3.5) |
 | `session.ts` | `abandonChallenge(state, catalog, id, date)` | 전이 | FR-7.1~7.4 |
 | `session.ts` | `recordSession(state, catalog, input)` | 전이 | FR-7.5 |
 | `calendar.ts` | `planOn(state, catalog, date): DayAgenda` | 순수 | FR-2.5, FR-6.1 |
@@ -366,7 +456,7 @@ Catalog (data/progressions.json, 변경 금지)
 | `src/catalog.ts` | 무변경 | 데이터 로딩 | — |
 | `src/gate.ts` | 무변경 | 해금 판정 (동작 보존) | — |
 | `src/history.ts` | 무변경 | 조회 헬퍼 | — |
-| `src/schedule.ts` | 무변경 | 저수준 요일 계획 (ADR-1) | — |
+| `src/schedule.ts` | 최소 변경 | 저수준 요일 계획 (ADR-1). **`LABEL_TO_ID` 를 export 로 바꾸는 한 줄만** — `planDay`/`planWeek` 시그니처·본문 불변 | 1 |
 | `src/plan.ts` | 소폭 확장 | `sideNote` 채우기만 추가. **수치 로직 무변경** (FR-1.5) | 2 |
 | `src/evaluate.ts` | 시그니처 변경 | `applySession` 이 `SessionInput` 받아 `record` 반환 (ADR-3) | 2 |
 | `src/program.ts` | **신규** | 구간 관리 + 프로그램 설명 파생 | 3A |
@@ -396,6 +486,7 @@ bigsix/
 ### Files to Modify
 ```
 src/types.ts             # 신규 타입 추가 + AppState / SessionRecord 재정의
+src/schedule.ts          # LABEL_TO_ID 를 export 로 (한 줄). planDay/planWeek 불변
 src/plan.ts              # sideNote 필드 채우기 (수치 로직 무변경)
 src/evaluate.ts          # applySession 시그니처 변경, promotedTo/blockedBy 전사
 src/index.ts             # export 통합, initialState 갱신, acceptProposal
@@ -429,7 +520,7 @@ test/plan.test.ts        # sideNote 케이스 추가 (기존 케이스 전량 �
 
 | Phase | 신규/수정 파일 |
 |---|---|
-| 1 | `src/types.ts`, `src/date.ts`(신규), `src/index.ts`, `test/helpers.ts`, `test/date.test.ts`(신규) |
+| 1 | `src/types.ts`, `src/date.ts`(신규), `src/index.ts`, `src/schedule.ts`(`LABEL_TO_ID` export 만), `test/helpers.ts`, `test/date.test.ts`(신규) |
 | 2 | `src/evaluate.ts`, `src/plan.ts`, `test/evaluate.test.ts`(재작성), `test/plan.test.ts` |
 | 3A | `src/program.ts`(신규), `test/program.test.ts`(신규) |
 | 3B | `src/proposal.ts`(신규), `test/proposal.test.ts`(신규) |
@@ -460,6 +551,13 @@ Phase 1 ──→ Phase 2 ──┬─→ Phase 3A ──┐
 | 3B | `src/proposal.ts` | `test/proposal.test.ts` |
 | 3C | `src/session.ts` | `test/session.test.ts` |
 
+**겹침이 0건인 것은 저절로 그런 것이 아니라 두 건을 사전에 이관했기 때문이다.**
+
+1. **`src/schedule.ts` 의 `LABEL_TO_ID` export** — 3A(종목·보조 운동 목록)와 3B(판정 대상 종목)가
+   둘 다 이 매핑을 필요로 한다. 각자 export 로 바꾸면 같은 파일을 동시에 고쳐 충돌한다.
+   → **Phase 1 Step 10 에서 미리 export 로 바꾼다.** 3A·3B 는 `schedule.ts` 를 수정하지 않고 import 만 한다.
+2. **`src/index.ts` export 통합** — 세 Phase 모두 금지. Phase 3.5 에서 일괄 처리.
+
 ### 모듈 의존 — 상호 import 0건
 셋 다 Phase 1/2 산출물(`types.ts`, `date.ts`, `evaluate.ts`, `plan.ts`, `schedule.ts`, `gate.ts`)만 import 한다.
 유일한 잠재 의존이던 **3B 의 `acceptProposal → switchProgram`** 은 **의도적으로 Phase 3.5 로 분리**했다.
@@ -473,6 +571,7 @@ Phase 1 ──→ Phase 2 ──┬─→ Phase 3A ──┐
 | 범주 | 지점 | 대응 |
 |---|---|---|
 | 머지 충돌 | `src/index.ts` — 세 Phase 모두 export 를 추가하려 함 (**최고 확률**) | 3A/3B/3C 는 `index.ts` 를 **건드리지 않는다.** export 는 전부 Phase 3.5 에서 일괄 처리 |
+| 머지 충돌 | `src/schedule.ts` — 3A·3B 가 둘 다 `LABEL_TO_ID` 를 export 로 바꾸려 함 | **Phase 1 Step 10 으로 이관해 사전 제거.** 3A/3B 는 `schedule.ts` 를 수정하지 않는다 |
 | 머지 충돌 | `test/helpers.ts` 공유 픽스처 | Phase 1 에서 확정, 3단계는 수정 금지, 필요분은 Phase 3.5 |
 | 통합 | 3B `acceptProposal` ↔ 3A `switchProgram` | Phase 3.5 에서 배선. 3B 는 `markAccepted` 까지만 |
 | 통합 | 3B 카운트 하한 ↔ 3A `currentStint.startedAt` (EC-7) | 3B 는 `startedAt` 을 **파라미터로 받는 형태**로 구현, Phase 3.5 에서 결합 |
@@ -499,7 +598,7 @@ NFR-3 은 기존 테스트 통과를 의무화하지 않지만, **동작 보존 
 | `test/gate.test.ts` | 37 | **유지** | 1 | `AppState.steps` 만 사용. `helpers.ts` 갱신으로 자동 통과 |
 | `test/plan.test.ts` | 149 | **유지 + 추가** | 2 | 수치 로직 무변경. `sideNote` 케이스만 추가 |
 | `test/evaluate.test.ts` | 98 | **재작성** | 2 | `applySession` 반환 형태 변경(ADR-3)으로 **유일하게 깨진다** |
-| `test/schedule.test.ts` | 52 | **유지** | — | ADR-1 안 A 채택으로 `planDay` 시그니처 불변 |
+| `test/schedule.test.ts` | 52 | **유지** | — | ADR-1 안 A 채택으로 `planDay` 시그니처 불변. `LABEL_TO_ID` export 는 동작에 영향 없음 |
 | `test/helpers.ts` | 20 | **확장** | 1, 3.5 | `stateAt` 에 `stints`/`proposals` 기본값 추가 |
 
 ### 동작 보존 사양 5항목 — 어디서 계속 검증되는가
@@ -534,6 +633,61 @@ Phase 5 에서 **각 EC 가 정확히 하나 이상의 `test()` 이름에 매핑
 
 ---
 
+## 설계 결정 — 합의 완료
+
+아래 3건은 **사용자 부재 중에 확정된 항목**이다.
+`SPEC.md` 를 유일한 Source of Truth 로 삼아 **Designer 와 spec-validator 의 합의**로 결정했으며,
+사용자의 직접 승인을 받은 것이 아니다. 사용자가 이견을 낼 경우 재검토 대상이다.
+SPEC 본문은 정본이므로 **수정하지 않았다.**
+
+### 1. ADR-2 — `stints` / `proposals` 2필드 통합 → **승인**
+
+**결정**: SPEC 예시의 `program` / `pastPrograms` / `declinedSwitches` 3필드를
+`stints`(현재+과거 단일 배열) / `proposals`(생성·승인·거절 통합) 2필드로 통합한다.
+
+**근거**
+- SPEC:282-283 이 "필드 이름과 중첩 구조(`program` / `pastPrograms` / `declinedSwitches` / 제안 상태)는
+  **예시일 뿐이며 설계 단계에서 확정한다**" 고 명시했다. 통합은 SPEC 이 허용한 범위 안이다.
+- **3필드안보다 낫다**: 현재/과거를 나누면 FR-5.1 의 모든 조회(임의 과거 날짜의 programId·며칠차)가
+  두 소스를 병합해야 하고, 전환마다 "현재 → 과거로 이동" 로직이 붙어 부정합 지점이 생긴다.
+  단일 배열이면 `stintAt(state, date)` 하나로 과거·현재가 동일하게 처리된다.
+- FR-3.4(구간 이력 보존) / FR-3.6(무제한 누적) / FR-4.9(거절 이력 보존하되 재제안 차단에 미사용) /
+  FR-5.1(임의 날짜 조회) 전부 충족한다.
+
+### 2. ADR-4(b) — 보조 운동을 status 판정에서 제외 → **조건부 승인**
+
+**결정**: 악력·종아리·목 운동을 `rest`/`done`/`partial`/`missed` 판정에서 제외한다.
+**조건**: 아래 두 가지 반영을 전제로 승인되었으며, 본 문서에 반영 완료다.
+- (a) `DayReview.accessories: AccessoryItem[]` 를 **참고 필드로 추가** — 판정에서 빼는 것과
+  조회 결과에서 지우는 것은 다른 문제다. FR-5.1 은 "그날 계획되어 있던 종목" 을 요구하고
+  보조 운동도 그날 계획의 일부다.
+- (b) **명시적 한계 기록** — ADR-4 의 "명시적 한계" 절에 기록 완료.
+  다음 UI 작업이 이 전제를 알아야 한다.
+
+**근거**
+- 기록 수단이 SPEC 상 존재하지 않는다. `SessionRecord.progressionId` 는 `ProgressionId`(빅6) 타입이며
+  FR-1.1 이 기록 모델을 빅6 로 한정한다. 수행 여부를 알 방법이 타입 수준에서 없다.
+- 포함하면 `solitary_confinement` 사용자는 빅6 를 완벽히 수행해도 **매일 `partial`** 이 되어
+  FR-5.3 이 요구한 4상태가 사실상 2상태로 붕괴한다.
+- FR-4.5("아직 해금되지 않은 종목은 판정 대상에서 제외한다 — 잠긴 종목 때문에 제안이 영영
+  뜨지 않는 상황을 막는다")가 세운 **"판정 불가 대상은 판정에서 제외한다" 원칙의 확장**이다.
+
+### 3. ADR-6 — 2단계 API → **조건부 승인**
+
+**결정**: 제안 생성(`proposeSwitch`)과 저장(`commitProposal`)을 분리한다.
+**조건**: 부팅용 단일 전이 함수 `advanceProposals(state, catalog, date)` 추가.
+Phase 3.5 Step 2-2 에 반영 완료. 호출자는 부팅 시 이것 하나만 호출하며 순서를 틀릴 여지가 없다.
+
+**근거**
+- **분리 자체는 선택이 아니라 필수다.** FR-4.6b 가 "제안은 미결/승인/거절 상태를 갖는 데이터로
+  **상태에 저장되어야 한다. 매 조회마다 새로 계산되는 휘발성 값이 아니다**" 를 요구하고,
+  NFR-2 / FR-5.5 가 조회의 순수성을 요구한다.
+  따라서 "조회가 필요할 때 알아서 만들어 저장하는" 형태는 SPEC 하에서 구성이 불가능하다.
+- `proposeSwitch`(순수, FR-4.10 의 `null` 반환 계약)와 `commitProposal`(전이)을 개별 함수로 남기면
+  단위 테스트 가능성이 보존된다. `advanceProposals` 는 **정상 경로만** 하나로 만드는 순수 증분이다.
+
+---
+
 ## Risk Mitigation
 
 ### Risk 1: `src/index.ts` 3중 머지 충돌
@@ -557,7 +711,26 @@ Phase 1 에서 `stateAt` 하나만 갱신하면 `gate`/`plan`/`schedule`/`data` 
 **Mitigation**: ADR-7 대로 "기준점 이후 중간 `promotedTo` 는 기준점을 갱신하지 않는다".
 Phase 3B 에서 EC-5 / EC-6 을 **서로 반대 방향의 케이스 쌍**으로 테스트한다.
 
-### Risk 5: 미수행일을 저장 필드로 구현하려는 유혹
+### Risk 5: `applySession` 이 `stints` / `proposals` 를 소리 없이 버린다 (C-2)
+**Impact**: High (세션을 기록할 때마다 프로그램 구간과 제안이 통째로 사라진다)
+**원인**: 현행 `src/evaluate.ts:92-98` 이 반환값을 객체 리터럴 `{ steps, history }` 로 만든다.
+Phase 1 에서 `AppState` 에 필수 필드 2개가 추가되면 이 리터럴이 그것들을 누락시킨다.
+**자동으로 잡히지 않는다**: `--experimental-strip-types` 는 타입을 지울 뿐 **검사하지 않고**,
+`tsconfig.json` 도 `typescript` 패키지도 없으며(NFR-1 이 추가를 금지), 필드 소실은
+런타임 예외를 내지 않는다.
+**Mitigation**: Phase 2 Step 1 에서 `{ ...state, steps, history }` 스프레드를 명시.
+Phase 2 / Phase 3C 테스트에 "`stints`/`proposals` 가 입력과 동일" 케이스를 필수로 둔다.
+**타입 검사가 없으므로 테스트가 유일한 방어선이다.**
+
+### Risk 6: 강등 1회로 카운트가 구간 내 영구 0 이 된다 (C-1)
+**Impact**: High (한 번 포기하면 그 구간에서 전환 제안이 다시는 뜨지 않는다 — FR-4.1·FR-4.9 위반)
+**원인**: EC-6 대응으로 기준점을 "가장 이른 승급" 에 고정한 상태에서
+EC-5 를 "기준점 이후에 강등이 있으면 카운트 0" 이라는 **사후 무효화**로 구현하면
+재승급해도 기준점이 강등 이전에 머물러 카운트가 영원히 0 이 된다.
+**Mitigation**: ADR-7 의 `effectiveFloor` — 강등을 사후 무효화가 아니라 **기준점의 하한**으로 승격.
+Phase 3B 에 "강등 후 재승급하면 카운트가 0 이 아니라 새로 시작된다" 테스트를 필수로 둔다.
+
+### Risk 7: 미수행일을 저장 필드로 구현하려는 유혹
 **Impact**: Medium (NFR-2 순수성 위반, EC-8 미충족)
 **Mitigation**: ADR-4 를 각 Phase PLAN 의 "Out of Scope" 에 명시. Phase 4 에서
 `AppState` 에 `missed` 관련 필드가 없음을 코드 리뷰 항목으로 둔다.

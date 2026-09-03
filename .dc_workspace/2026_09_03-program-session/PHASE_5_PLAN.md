@@ -177,6 +177,18 @@ node --experimental-strip-types --test --experimental-test-coverage test/
 | FR-7.3 | 다지기 로직 재구현 | `session.ts` 에 증량 상수 부재 |
 | ADR-4 | `'missed'` 저장 | `AppState` 에 미수행 필드 부재 |
 | ADR-6 | 조회가 제안 생성 | `calendar.ts` 에 `proposeSwitch` 부재 |
+| C-1 | 강등 사후 무효화 | `maintenanceCount` 안에 강등 재검사 부재 — `effectiveFloor` 로만 처리 |
+| C-2 | 필드 소실 | `applySession` / `session.ts` 3함수가 `...state` 스프레드 사용 |
+
+**추적성 보강 (W-5)** — 아래 3개 FR 은 다른 문서에 명시적 인용이 없다. 실질 커버 지점을 확인한다.
+
+| FR | 요구 | 실질 커버 지점 | 확인 방법 |
+|---|---|---|---|
+| **FR-3.4** 지난 구간 이력을 `AppState` 에 보존. 각 구간은 최소 `{ programId, startDate, endDate }` | `ProgramStint` 의 `programId` / `startedAt` / `endedAt` 3필드 (`selectedAt` 이 추가로 있다) | `test/program.test.ts` 의 "3구간 연속 전환 후 각 날짜의 구간 조회" + FR-3.6 무제한 누적 케이스. **필드명이 SPEC 예시와 다른 것은 SPEC:282-283 이 허용한 범위다** |
+| **FR-6.4** `planDay` 의 요일 문자열 인터페이스는 내부용으로 유지 가능하나 외부 진입점은 날짜 기반 | ADR-1 안 A — `planDay` 시그니처 불변 + `planOn` 신규 | `test/schedule.test.ts` 무수정 통과(내부 유지) + `test/calendar.test.ts` 의 "계획 내용이 `planDay` 직접 호출과 동일"(위임 증명). `src/index.ts` 의 저수준 API 주석 존재 확인 |
+| **FR-9** 기존 RPE 규칙 유지 — 거부권(최근 3회 평균 ≥ 8), 목표 하향(직전 ≥ 9), 심박수 미사용 | 동작 보존 사양 5항목 중 "RPE 정책" | Step 2 의 동작 보존 표. `test/evaluate.test.ts`(거부권 경계 8.0) + `test/plan.test.ts`(하향 −1). **심박수 관련 필드·코드가 어디에도 없음을 grep 으로 확인** |
+
+`grep -rn "심박\|heartRate\|heart_rate\|bpm" src/ test/` → 0건이어야 한다 (FR-9).
 
 ---
 
@@ -211,6 +223,8 @@ NFR-4 의 70% 는 **하한**이다. 커버리지를 채우기 위해 의미 없�
 - [ ] `LABEL_TO_ID` 가 전 프로그램 요일표의 빅6 라벨을 커버
 - [ ] `perSide` 단계 16개 확인
 - [ ] FR "하지 않을 것" 7항목 전부 미구현 확인
+- [ ] **FR-3.4 / FR-6.4 / FR-9 추적성 확인** (W-5) — 실질 커버 지점이 실제로 검증되고 있음
+- [ ] FR-9 — 심박수 관련 코드·필드 0건 (grep)
 - [ ] 전체 테스트 통과
 - [ ] `data/progressions.json` 무변경 (제약 c)
 
@@ -267,8 +281,10 @@ EC-1 ~ EC-11 전부 파일 매핑 있음
 - 발견된 위반은 이 문서의 아래 표에 기록하고, 수정 후 다시 감사한다.
 - Phase 5 완료 후 `/dotclaude:update-docs` 로 `CHANGELOG.md`(신규 생성, 0.1.0)와
   `README.md` 를 갱신한다. Target Version 은 0.1.0 이다.
-- GLOBAL.md 의 "설계 결정 — 확인 대기" 3건(ADR-2 필드명 통합, ADR-4 보조 운동 제외,
-  ADR-6 2단계 API)이 사용자 확인을 받았는지 이 시점에 최종 확인한다.
+- GLOBAL.md 의 **"설계 결정 — 합의 완료"** 3건(ADR-2 필드명 통합, ADR-4 보조 운동 제외,
+  ADR-6 2단계 API)은 사용자 부재 중 SPEC 을 SoT 로 삼아 Designer·validator 합의로 확정한 것이다.
+  **사용자의 직접 승인을 받은 것이 아니므로**, 사용자가 복귀하면 이 3건을 먼저 알린다.
+  ADR-4(b)와 ADR-6 은 조건부 승인이며 조건(참고 필드 추가 / `advanceProposals`)이 반영되었는지 확인한다.
 
 ### 감사 결과 기록
 

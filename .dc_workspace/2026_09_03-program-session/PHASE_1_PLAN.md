@@ -95,6 +95,15 @@ JSDoc: "`perSide` 단계에서만 채운다. 표시용 사실 문구이며 계�
 
 **Action**: GLOBAL.md Data Model 절의 `DayAgenda` 판별 유니온과 `DayReview` 인터페이스를 선언한다.
 `DayAgenda` 는 `kind: 'no-program' | 'plan'` 로 갈리며, 호출자가 `kind` 로 분기하도록 설계된다 (FR-2.5).
+
+`DayReview` 에는 아래 세 필드의 JSDoc 을 **반드시** 붙인다 (W-2).
+- `planned: ProgressionId[]` — "status 판정의 유일한 근거"
+- `plannedExercises: PlannedExercise[]` — "**조회 시점의 `state.steps` 로 재계산한 값**이지
+  그날 당시의 목표가 아니다. 과거 시점 목표의 정확한 복원은 이번 범위에서 지원하지 않는다"
+- `accessories: AccessoryItem[]` — "**참고 필드다. status 판정에 쓰지 않는다** (ADR-4 부수 결정 b)"
+
+주석 없이 필드만 두면 호출자가 `plannedExercises` 를 과거 목표로 오해한다.
+
 **생성 로직은 Phase 4 다.**
 
 ### Step 7: `src/date.ts` 신규 작성
@@ -135,7 +144,24 @@ JSDoc: "`perSide` 단계에서만 채운다. 표시용 사실 문구이며 계�
 또한 기존 `planDay` / `planWeek` export 줄 위에 ADR-1 을 반영한 주석을 단다:
 **"요일 미리보기용 저수준 API. 날짜 기반 진입점은 `planOn` (Phase 4)."**
 
-### Step 10: `test/helpers.ts` 확장
+### Step 10: `LABEL_TO_ID` 를 export 로 변경 (W-1 — 병렬 겹침 사전 제거)
+
+**Files**: `src/schedule.ts`
+
+**Action**: 모듈-private 상수 `LABEL_TO_ID`(8~15줄)를 `export const` 로 바꾼다.
+**그 외에는 아무것도 바꾸지 않는다** — `planDay` / `planWeek` 의 시그니처와 본문은 불변이다 (ADR-1).
+
+**왜 Phase 1 인가**: 이 상수(프로그램 요일표의 한국어 라벨 → 종목 id 매핑)를
+Phase 3A(`describeProgram` 의 종목·보조 운동 목록)와 Phase 3B(`proposeSwitch` 의 판정 대상 종목)가
+**둘 다** 필요로 한다. 각 Phase 에서 export 로 바꾸면 `src/schedule.ts` 가 두 병렬 브랜치에서
+동시에 수정되어 머지 충돌이 난다. **Phase 1 에서 미리 바꿔 두면 3A/3B 의 파일 겹침이 실제로 0건이 된다.**
+
+매핑을 각 모듈에 복제하는 대안은 택하지 않는다 — 두 벌이 어긋나면 종목이 조용히
+보조 운동으로 분류되는 버그가 생긴다.
+
+`src/index.ts` 에서 export 할 필요는 없다. 내부 모듈 간 공유용이다.
+
+### Step 11: `test/helpers.ts` 확장
 
 **Files**: `test/helpers.ts`
 
@@ -152,7 +178,7 @@ stateAt(steps, history = [], stints = [], proposals = [])
 `rec` 헬퍼는 시그니처를 유지하되 반환 타입만 `SessionRecord` 로 그대로 둔다
 (`promotedTo`/`blockedBy` 는 optional 이므로 기존 호출부가 깨지지 않는다).
 
-### Step 11: 기존 테스트 통과 확인
+### Step 12: 기존 테스트 통과 확인
 
 **Action**: `node --experimental-strip-types --test test/` 를 실행한다.
 `data` / `gate` / `plan` / `schedule` / `evaluate` 47개가 전부 통과해야 한다.
@@ -209,15 +235,17 @@ function toIso(ms: number): IsoDate {
 - [ ] `AppState` 에 `stints` / `proposals` 필수 필드 추가
 - [ ] `PlannedExercise.sideNote?: string` 선언
 - [ ] `DayAgenda` 판별 유니온 / `DayReview` 선언
+- [ ] `DayReview` 에 `plannedExercises` / `accessories` 필드 + 한계 JSDoc 포함 (W-2)
 - [ ] `src/date.ts` 5함수 작성, 프로젝트 모듈 import 0건
 - [ ] `src/date.ts` 에 ISO 문자열 파싱(`new Date('...')`) 0건
 - [ ] `initialState()` 가 `stints: []`, `proposals: []` 반환 (FR-10)
 - [ ] `src/index.ts` 에 date 유틸 export 및 `planDay` 저수준 주석 추가
+- [ ] `src/schedule.ts` 의 `LABEL_TO_ID` 를 `export const` 로 변경 (W-1). 그 외 변경 0
 - [ ] `test/helpers.ts` `stateAt` 4인자 시그니처로 확장
 - [ ] `test/date.test.ts` 작성 (PHASE_1_TEST.md 참조)
 - [ ] 기존 47개 테스트 전부 통과
 - [ ] 신규 date 테스트 전부 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 

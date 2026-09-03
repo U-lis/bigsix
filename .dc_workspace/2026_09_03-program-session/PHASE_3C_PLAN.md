@@ -124,7 +124,7 @@ FR-7.2 는 `'불가능' → 확인 → 승인 → 다지기 수행` 이라는 **
 따라서 **포기 기록(저장) + 다지기 계획(제안)** 까지가 이 함수의 경계다.
 
 ### 이 분리가 EC-5 판정에 미치는 영향
-Phase 3B 의 `hasSetback` 은 `outcome: 'abandoned'` **또는** `kind: 'consolidation'` 을 본다.
+Phase 3B 의 `lastSetbackDate` 는 `outcome: 'abandoned'` **또는** `kind: 'consolidation'` 을 본다.
 사용자가 포기만 하고 다지기를 거절해도 `abandoned` 기록이 남으므로 EC-5 리셋이 작동한다.
 **둘 중 하나만 있어도 강등으로 판정된다** — FR-4.3 의 "조합으로 판정한다" 를 그렇게 해석한다.
 
@@ -157,13 +157,15 @@ SPEC 이 명시적으로 "이미 구현되어 있다. 재구현하지 않는다"
 - [ ] `recordSession` — 중복 검사 없음 (FR-7.5)
 - [ ] `recordConsolidation` — `kind: 'consolidation'`, `performedStep = step - 1` (FR-7.2)
 - [ ] `recordConsolidation` — 1단계에서 예외
+- [ ] **세 함수 전부 `stints` / `proposals` 를 보존함** (C-2 — `applySession` 위임 시 자동 보존되나,
+      중간에 객체 리터럴로 상태를 재구성하지 않았는지 확인)
 - [ ] `src/plan.ts` 의 다지기 로직 무변경 (git diff 로 확인)
 - [ ] `src/program.ts` / `src/proposal.ts` import 0건
 - [ ] `src/index.ts` 를 **건드리지 않았음**
 - [ ] `test/helpers.ts` 를 **건드리지 않았음**
 - [ ] `test/session.test.ts` 작성 — EC-4 / EC-9 포함
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 

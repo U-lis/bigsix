@@ -68,6 +68,23 @@
 - [ ] **EC-11** RPE 보류 → `test/evaluate.test.ts`, `test/proposal.test.ts`
 - [ ] Test case: 11개 EC 전부 최소 1건 매핑 (0건인 EC 없음)
 
+### FR 추적성 보강 (W-5) — 인용 0회였던 3건
+
+- [ ] **FR-3.4** 지난 구간 이력이 `AppState` 에 보존된다
+  - Verify: `ProgramStint` 가 `programId` / `startedAt` / `endedAt` 을 갖는다
+    (SPEC 예시의 `startDate`/`endDate` 와 이름만 다르며 SPEC:282-283 이 허용)
+  - Verify: 전환 후 이전 구간이 `endedAt` 이 채워진 채 배열에 남아 있다
+  - 확인 위치: `test/program.test.ts`
+- [ ] **FR-6.4** `planDay` 의 요일 인터페이스가 내부용으로 유지된다
+  - Verify: `planDay` 시그니처가 기준 커밋과 동일 (`test/schedule.test.ts` 무수정 통과)
+  - Verify: 외부 진입점 `planOn` 이 날짜 기반이고 `planDay` 에 위임한다
+  - Verify: `src/index.ts` 에 저수준 API 임을 밝히는 주석이 있다
+  - 확인 위치: `test/schedule.test.ts`, `test/calendar.test.ts`
+- [ ] **FR-9** RPE 규칙 3항목이 유지된다
+  - Verify: 승급 거부권 — 최근 3회 평균 ≥ 8 이면 보류 (`test/evaluate.test.ts`)
+  - Verify: 목표 하향 — 직전 RPE ≥ 9 이면 유지세트 −1 (`test/plan.test.ts`)
+  - Verify: **심박수 미사용** — `grep -rn "심박\|heartRate\|bpm" src/ test/` 0건
+
 ### 동작 보존 사양 5항목 (NFR-3 단서) — 메타 검증
 
 - [ ] **해금 게이트**: 빅4 가 전부 7단계 이상일 때만 `bridge`/`hspu` 해금
@@ -118,6 +135,20 @@
 - [ ] `package.json` 의 `dependencies` 가 비어 있다
 - [ ] `src/` 의 외부 import 가 Node 내장 모듈(`node:fs`)뿐이다
 - [ ] `node_modules` 에 런타임 의존이 없다
+
+#### C-1 / C-2 회귀 방지 (validator 지적 사항)
+- [ ] **C-1** `maintenanceCount` 안에 강등 재검사가 없다
+  - Verify: 강등은 `effectiveFloor` 에서만 처리된다 (코드 감사)
+  - Verify: "강등 후 재승급하면 카운트가 새로 시작된다" 테스트가 `test/proposal.test.ts` 에 존재
+- [ ] **C-2** `applySession` 반환문이 `...state` 를 스프레드한다
+  - Verify: `src/evaluate.ts` 코드 감사
+- [ ] **C-2** `session.ts` 3함수가 `stints`/`proposals` 를 보존한다
+  - Verify: `test/session.test.ts` 의 필드 보존 케이스가 존재하고 통과
+- [ ] **C-2** 전 상태 전이 함수에 필드 보존 테스트가 있다
+  - 대상: `applySession`, `abandonChallenge`, `recordSession`, `recordConsolidation`,
+    `selectProgram`, `switchProgram`, `commitProposal`, `declineProposal`, `markAccepted`,
+    `acceptProposal`, `advanceProposals`
+  - **타입 검사가 없으므로(NFR-1: `typescript` 미설치) 테스트가 유일한 방어선이다**
 
 #### NFR-2 — 순수성
 - [ ] 인자로 받은 배열에 대한 `.push` / `.splice` / `.sort` / `.reverse` 0건

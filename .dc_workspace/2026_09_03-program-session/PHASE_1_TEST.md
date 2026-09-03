@@ -128,6 +128,13 @@
 - [ ] Test case: `test/evaluate.test.ts` 무수정 통과 (Phase 1 시점)
   - Verify: 실패 0. 시그니처 변경은 Phase 2 이므로 아직 깨지지 않아야 한다
 
+### `LABEL_TO_ID` export (W-1)
+- [ ] Test case: `src/schedule.ts` 에서 `LABEL_TO_ID` 를 import 할 수 있다
+  - Verify: 3A / 3B 가 복제 없이 재사용 가능
+- [ ] Test case: 매핑에 빅6 6종목이 전부 있다
+- [ ] Test case: `test/schedule.test.ts` 무수정 통과
+  - Verify: export 변경이 `planDay` 동작에 영향을 주지 않았다
+
 ### 타입 레벨 검증
 - [ ] Test case: `SessionInput` 객체를 `SessionRecord` 자리에 넣어도 컴파일된다
   - Verify: `SessionInput` 이 `SessionRecord` 의 구조적 부분집합임

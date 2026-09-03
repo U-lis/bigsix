@@ -27,6 +27,7 @@ ADR-6(생성과 노출의 분리)과 ADR-7(카운트는 파생 계산)이 이 Ph
 ### Out of Scope — 병렬 안전을 위한 절대 규칙
 - **`src/index.ts` 를 읽지도 쓰지도 않는다.** export 통합은 Phase 3.5 단독 책임
 - **`test/helpers.ts` 를 수정하지 않는다.** 고유 픽스처는 `test/proposal.test.ts` 안에 로컬로
+- **`src/schedule.ts` 를 수정하지 않는다.** `LABEL_TO_ID` export 는 Phase 1 에서 완료됨 (W-1). import 만 한다
 - **`src/program.ts` 를 import 하지 않는다.** 3A 와 동시 진행 중이므로 존재를 가정하지 않는다
 - **`acceptProposal` 의 실제 구간 전환** → Phase 3.5. 이 Phase 는 `proposals` 배열 갱신까지만 한다
 - 제안을 화면에 붙이는 것(`planOn` 의 `proposal` 필드) → Phase 4
@@ -35,45 +36,69 @@ ADR-6(생성과 노출의 분리)과 ADR-7(카운트는 파생 계산)이 이 Ph
 
 ## Instructions
 
-### Step 1: 승급 기준점 계산 (ADR-7 핵심)
+### Step 1: 강등 하한 계산 (EC-5)
 
 **Files**: `src/proposal.ts`
 
 **Action**: 모듈 내부 함수를 만든다.
 
 ```
-promotionBaseline(history, progressionId, floorDate: IsoDate): IsoDate | null
+lastSetbackDate(history, progressionId, floorDate: IsoDate): IsoDate | null
 ```
 
-`history` 에서 해당 종목의 세션을 **`floorDate` 이상인 것만** 추려, 그중
-`promotedTo !== undefined` 인 **가장 이른** 레코드의 `date` 를 반환한다. 없으면 `null`.
-
-**"가장 이른" 인 이유가 EC-6 이다.** SPEC FR-4.4 는 "카운트 도중 추가 승급이 일어나도
-카운트를 리셋하지 않는다" 고 한다. 기준점을 매번 **마지막** 승급으로 잡으면 추가 승급마다 리셋된다.
-따라서 **카운트가 시작된 승급**, 즉 `floorDate` 이후 구간에서 **처음 나타나는** 승급이 기준점이다.
-
-`floorDate` 인자는 Phase 3.5 에서 `currentStint.startedAt` 이 주입될 자리다 (EC-7).
-**3B 는 `program.ts` 를 import 하지 않고 이 값을 파라미터로 받는다.**
-
-### Step 2: 강등 무효화 판정 (EC-5)
-
-**Files**: `src/proposal.ts`
-
-**Action**: 모듈 내부 함수를 만든다.
-
-```
-hasSetback(history, progressionId, since: IsoDate): boolean
-```
-
-`since` **이후**(경계 포함)의 해당 종목 세션 중 하나라도 아래에 해당하면 `true`:
+`floorDate` 이상인 해당 종목 세션 중 아래에 해당하는 **가장 늦은** 것의 `date` 를 반환한다.
+하나도 없으면 `null`.
 - `outcome === 'abandoned'`
 - `kind === 'consolidation'`
 
 FR-4.3 이 강등을 "`outcome: 'abandoned'` 기록 또는 그로 인해 발생한 `kind: 'consolidation'` 세션의 조합"
 으로 정의한다. SPEC 충돌 4 대로 **스키마 변경이 필요 없다.**
 
-**주의**: 기준점 세션 자신은 승급 세션이므로 `abandoned` 도 `consolidation` 도 아니다.
-경계 포함이어도 문제가 없다.
+### Step 2: 유효 하한 + 승급 기준점 계산 (ADR-7 핵심, EC-5 · EC-6 동시 충족)
+
+**Files**: `src/proposal.ts`
+
+**Action**: 모듈 내부 함수 두 개를 만든다.
+
+```
+effectiveFloor(history, progressionId, floorDate: IsoDate): IsoDate
+promotionBaseline(history, progressionId, floorDate: IsoDate): IsoDate | null
+```
+
+`effectiveFloor` 는 아래를 계산한다.
+```
+setback = lastSetbackDate(history, progressionId, floorDate)
+return setback === null ? floorDate : max(floorDate, addDays(setback, 1))
+```
+
+`promotionBaseline` 은 `effectiveFloor` **이상**인 해당 종목 세션 중
+`promotedTo !== undefined` 인 **가장 이른** 레코드의 `date` 를 반환한다. 없으면 `null`.
+
+**두 규칙이 왜 이 형태여야 하는가 — 이것이 이 Phase 의 가장 중요한 설계 지점이다.**
+
+- **EC-6 (추가 승급 시 카운트 유지, FR-4.4)** 때문에 기준점은 **가장 이른** 승급이어야 한다.
+  매번 **마지막** 승급으로 잡으면 추가 승급마다 카운트가 리셋된다.
+- **EC-5 (강등 시 리셋)** 때문에 강등 이후는 다시 세야 한다.
+  그런데 강등을 "`baseline` 이후에 강등이 있으면 카운트 0" 이라는 **사후 무효화**로 구현하면
+  위의 "가장 이른 승급" 규칙과 충돌해 **구간 내 영구 0** 이 된다.
+
+  ```
+  09-07 승급(기준점) → 09-09 abandoned → 09-20 재승급 → 09-22, 24, 26 세션
+  사후 무효화 방식: baseline 은 여전히 09-07, 그 이후 강등이 존재 ⇒ count 가 영원히 0
+  ```
+
+  SPEC EC-5 는 **"카운트 리셋"** 이지 "구간 내 영구 무효화" 가 아니다.
+  이 상태로 두면 FR-4.1 제안이 그 구간에서 다시는 생성되지 않고,
+  "조건이 만족되는 한 매주 월요일에 계속 제안한다"는 **FR-4.9 도 함께 무너진다.**
+
+- **따라서 강등은 사후 무효화가 아니라 기준점의 하한(floor)으로 승격시킨다.**
+  강등 다음날부터 다시 보므로, 재승급이 새 기준점이 되고 카운트가 정상적으로 다시 쌓인다.
+  위 예시에서 `effectiveFloor = 09-10`, `baseline = 09-20`, `count = 3` 이 된다.
+
+`floorDate` 인자는 Phase 3.5 에서 `currentStint.startedAt` 이 주입될 자리다 (EC-7).
+**3B 는 `program.ts` 를 import 하지 않고 이 값을 파라미터로 받는다.**
+
+`addDays` 는 Phase 1 의 `src/date.ts` 에서 가져온다.
 
 ### Step 3: 종목별 카운트 (FR-4.1, FR-4.2)
 
@@ -86,12 +111,14 @@ maintenanceCount(history, progressionId, floorDate: IsoDate): number
 ```
 
 1. `baseline = promotionBaseline(history, progressionId, floorDate)`. `null` 이면 `0` 반환
-2. `hasSetback(history, progressionId, baseline)` 이면 **`0` 반환** (EC-5 리셋)
-3. `baseline` **이후**(그 승급 세션 자신은 제외)의 해당 종목 세션 수를 반환한다
+2. `baseline` **이후**(그 승급 세션 자신은 제외)의 해당 종목 세션 수를 반환한다
+
+**강등을 여기서 다시 검사하지 않는다.** 강등은 Step 2 의 `effectiveFloor` 에서 이미 처리되었다.
+여기서 다시 검사하면 C-1 결함(구간 내 영구 0)이 그대로 되살아난다.
 
 FR-4.2: `kind` 가 `work` 든 `consolidation` 든 **그 종목의 세션이면 카운트한다.**
-다만 `consolidation` 이 있으면 2번에서 이미 `0` 이 되므로 실질적으로는 `work` 만 남는다.
-그래도 **필터 조건에 `kind` 를 넣지 않는다** — FR-4.2 의 문언을 코드로 그대로 표현한다.
+`baseline` 이 강등 이후로 밀려 있으므로 카운트 구간에 `consolidation` 이 들어올 여지는 사실상 없지만,
+**필터 조건에 `kind` 를 넣지 않는다** — FR-4.2 의 문언을 코드로 그대로 표현한다.
 
 날짜가 아니라 **세션 수**다. 같은 날 2회는 2로 센다 (FR-4.2, EC-4).
 
@@ -145,11 +172,10 @@ proposeSwitch(state, catalog, date: IsoDate, opts: { floorDate: IsoDate; program
 Phase 3.5 에서 이 두 값을 `currentStint` 에서 뽑아 주입하는 래퍼를 만든다.
 `opts` 형태를 유지하면 3.5 의 배선이 순수한 추가가 되고 3B 코드를 다시 고칠 필요가 없다.
 
-**대상 종목 추출 시 `LABEL_TO_ID` 가 필요하다.** 3A 가 `schedule.ts` 에서 이것을 export 하지만
-3B 는 3A 에 의존할 수 없다. **`src/schedule.ts` 에서 export 하는 변경은 3A·3B 양쪽이 동일하게 수행한다.**
-같은 줄을 같은 내용으로 고치므로 머지 시 충돌이 나더라도 해소가 자명하다.
-대안으로 `catalog.progressions.map(p => p.id)` 와 프로그램 요일표의 라벨을 대조해도 되지만,
-매핑 중복을 피하기 위해 export 방식을 택한다.
+**대상 종목 추출 시 `LABEL_TO_ID` 가 필요하다.** `src/schedule.ts` 에서 import 한다 —
+**Phase 1 Step 10 에서 이미 export 로 바뀌어 있다** (W-1: 3A·3B 가 같은 파일을 동시에 고치는 것을
+사전에 제거하기 위한 이관). **이 Phase 는 `src/schedule.ts` 를 수정하지 않는다.**
+매핑을 `proposal.ts` 안에 복제하지 않는다.
 
 ### Step 6: 상태 전이 함수 3종 (ADR-6, FR-4.6a, FR-4.6b, FR-4.9)
 
@@ -183,12 +209,16 @@ FR-4.6(생성은 월요일) + FR-4.6a(노출은 매일) + FR-5.5/NFR-2(조회는
 날짜를 받으면 "월요일에만 보여준다" 같은 구현이 슬쩍 들어갈 수 있다.
 FR-4.6a 는 정확히 그것을 금지한다. **시그니처에 날짜가 없는 것이 사양을 강제한다.**
 
-### EC-5 와 EC-6 이 서로 반대 방향인 이유
-- EC-6: 기준점 **이후**의 승급은 무시한다 → 기준점을 **가장 이른** 승급으로 잡는다
-- EC-5: 기준점 이후의 **강등**은 카운트를 무효화한다 → `hasSetback` 이 `true` 면 0
+### EC-5 와 EC-6 은 서로 다른 층에서 처리된다
+- **EC-6**(추가 승급 시 유지): `baseline` **이후**의 승급을 무시한다 → 기준점은 **가장 이른** 승급
+- **EC-5**(강등 시 리셋): 강등을 **기준점 계산의 하한**으로 승격시킨다 → `effectiveFloor`
 
-두 규칙이 같은 스캔 구간(`baseline` 이후)을 보면서 승급은 무시하고 강등은 반영한다.
-구현 시 이 비대칭을 헷갈리지 않도록 주석을 남긴다.
+두 규칙을 **같은 층에서** 처리하려 하면(둘 다 `baseline` 이후 스캔) 서로 충돌한다.
+강등을 사후 무효화로 두면 "가장 이른 승급" 이 강등 이전에 고정되어 카운트가 구간 내 영구 0 이 된다.
+**하한 승격은 이 충돌을 층을 나눠 해소한다** — 강등은 baseline 을 정하기 *전에* 적용되고,
+승급 무시는 baseline 을 정한 *후에* 적용된다.
+
+구현 시 `maintenanceCount` 안에서 강등을 다시 검사하지 않도록 주석을 남긴다.
 
 ### EC-11 은 별도 코드가 필요 없다
 RPE 거부권으로 보류된 세션은 `promotedTo === undefined` 다 (Phase 2, ADR-3).
@@ -206,9 +236,12 @@ RPE 거부권으로 보류된 세션은 `promotedTo === undefined` 다 (Phase 2,
 ## Completion Checklist
 
 - [ ] `src/proposal.ts` 신규 작성
-- [ ] `promotionBaseline` — `floorDate` 이후 **가장 이른** 승급 (EC-6)
-- [ ] `hasSetback` — `abandoned` 또는 `consolidation` (FR-4.3, EC-5)
+- [ ] `lastSetbackDate` — `abandoned` 또는 `consolidation` 중 **가장 늦은** 날짜 (FR-4.3)
+- [ ] `effectiveFloor` — `max(floorDate, 마지막 강등일 + 1일)` (EC-5 하한 승격)
+- [ ] `promotionBaseline` — `effectiveFloor` 이후 **가장 이른** 승급 (EC-6)
 - [ ] `maintenanceCount` — 세션 수 기준, `kind` 무관 필터 (FR-4.2)
+- [ ] `maintenanceCount` 안에 **강등 재검사 없음** (C-1 결함 방지 — 있으면 구간 내 영구 0)
+- [ ] **EC-5** 강등 후 재승급하면 카운트가 0 이 아니라 새로 시작된다
 - [ ] `PROGRAM_ORDER` 상수 + `nextProgramId` — `supermax` → `null` (FR-4.7)
 - [ ] `proposeSwitch` — 월요일 아니면 `null` (FR-4.6)
 - [ ] `proposeSwitch` — 잠긴 종목 제외 (FR-4.5)
@@ -225,7 +258,7 @@ RPE 거부권으로 보류된 세션은 `promotedTo === undefined` 다 (Phase 2,
 - [ ] `test/helpers.ts` 를 **건드리지 않았음**
 - [ ] `test/proposal.test.ts` 작성 — EC-5 / EC-6 / EC-11 포함
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 
@@ -239,7 +272,7 @@ node --experimental-strip-types --test test/proposal.test.ts
 node --experimental-strip-types --test test/
 
 # 병렬 안전 규칙
-git diff --name-only feature/program-session | grep -E 'src/index.ts|test/helpers.ts|src/program.ts'
+git diff --name-only feature/program-session | grep -E 'src/index.ts|test/helpers.ts|src/program.ts|src/schedule.ts'
 
 # FR-4.9 — 거절 이력이 재제안을 막지 않음
 grep -n "declined" src/proposal.ts
@@ -263,8 +296,8 @@ grep -n "program.ts" src/proposal.ts
 - 이 Phase 의 함수들은 `floorDate` 를 파라미터로 받으므로 **EC-7(전환 시 리셋)을 단독 검증할 수 없다.**
   3B 는 "`floorDate` 를 주면 그 이후만 본다" 까지만 증명하고,
   실제로 `currentStint.startedAt` 이 주입되는지는 Phase 3.5 의 통합 테스트가 본다.
-- `proposeSwitch` 의 대상 종목 추출을 위해 `schedule.ts` 의 `LABEL_TO_ID` export 가 필요하다.
-  3A 도 같은 변경을 하므로 머지 시 동일 내용 충돌이 날 수 있다. **해소는 자명하다 — 한쪽을 취하면 된다.**
+- `proposeSwitch` 의 대상 종목 추출에 필요한 `LABEL_TO_ID` 는 Phase 1 에서 이미 export 되었다 (W-1).
+  **따라서 3A 와 3B 의 파일 겹침은 0건이며, `src/schedule.ts` 머지 충돌이 발생하지 않는다.**
 - FR-4.1 의 "상급자 기준 충족 → 승급" 은 `promotedTo` 존재가 곧 증명이다.
   승급은 상급자 기준 충족 없이는 일어나지 않기 때문이다 (Phase 2 `evaluateSession`).
   **별도로 상급자 기준을 재판정하지 않는다** — SPEC 충돌 3 이 금지하는 재평가다.

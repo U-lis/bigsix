@@ -27,6 +27,7 @@ FR-2(프로그램 선택)와 FR-3(수동 전환)을 담당한다.
 ### Out of Scope — 병렬 안전을 위한 절대 규칙
 - **`src/index.ts` 를 읽지도 쓰지도 않는다.** export 통합은 Phase 3.5 단독 책임 (머지 충돌 최고 위험 지점)
 - **`test/helpers.ts` 를 수정하지 않는다.** Phase 1 에서 확정됨. 고유 픽스처는 `test/program.test.ts` 안에 로컬로 둔다
+- **`src/schedule.ts` 를 수정하지 않는다.** `LABEL_TO_ID` export 는 Phase 1 에서 완료됨 (W-1). import 만 한다
 - 자동 전환 제안 → Phase 3B
 - 세션 흐름 → Phase 3C
 - `planOn` / `reviewDay` → Phase 4
@@ -58,10 +59,11 @@ FR-2(프로그램 선택)와 FR-3(수동 전환)을 담당한다.
 
 `describePrograms(catalog)` 는 5종 전부를 `catalog.programs` 순서대로 반환한다 (FR-2.2).
 
-**한국어 라벨 → 종목 id 매핑 주의**: 이 매핑은 현재 `src/schedule.ts` 의 모듈-private
-`LABEL_TO_ID` 에만 있다. 두 곳에 복제하면 어긋난다. **`src/schedule.ts` 에서 `LABEL_TO_ID` 를
-export 하고 `program.ts` 가 import 한다.** 이는 `schedule.ts` 의 유일한 변경이며
-`planDay` 시그니처와 동작에는 영향이 없다 (ADR-1 유지).
+**한국어 라벨 → 종목 id 매핑**: `src/schedule.ts` 의 `LABEL_TO_ID` 를 import 해서 쓴다.
+**Phase 1 Step 10 에서 이미 export 로 바뀌어 있다** — 이 Phase 는 `src/schedule.ts` 를
+**수정하지 않는다** (W-1: 3A·3B 의 파일 겹침을 사전 제거하기 위한 이관).
+매핑을 `program.ts` 안에 복제하지 않는다 — 두 벌이 어긋나면 종목이 조용히
+보조 운동으로 분류된다.
 
 **참고 — 기대되는 파생값** (`data/progressions.json` 현재 값 기준, 테스트 기대치로 사용):
 
@@ -191,7 +193,7 @@ FR-3.6 이 "오래된 구간을 잘라내는 로직을 구현해서는 안 된�
 - [ ] `src/program.ts` 신규 작성
 - [ ] `describeProgram` / `describePrograms` — 5종 전부 파생값 정확 (FR-2.3)
 - [ ] 설명 데이터가 전부 카탈로그 파생 — `data/progressions.json` 무변경 (제약 c)
-- [ ] `LABEL_TO_ID` 를 `schedule.ts` 에서 export 해 재사용 (복제 금지)
+- [ ] `LABEL_TO_ID` 를 `schedule.ts` 에서 **import 해 재사용** (복제 금지, `schedule.ts` 수정 금지)
 - [ ] `firstTrainingDay` — 최대 7일 전방 탐색, `from` 자신 포함 (FR-2.6)
 - [ ] `selectProgram` — 이전 구간 마감 + 새 구간 push
 - [ ] `switchProgram` — `selectProgram` 과 동일 내부 구현 공유 (FR-3.1~3.3)
@@ -203,7 +205,7 @@ FR-3.6 이 "오래된 구간을 잘라내는 로직을 구현해서는 안 된�
 - [ ] `test/helpers.ts` 를 **건드리지 않았음** (git diff 로 확인)
 - [ ] `test/program.test.ts` 작성, EC-2 / EC-3 / EC-10 포함
 - [ ] 전체 테스트 통과
-- [ ] 타입 체크 통과
+- [ ] 런타임 통과 (타입 검사는 수행되지 않음 — `--experimental-strip-types` 는 타입을 지울 뿐 검사하지 않는다. 구조 변경은 테스트로 검증한다)
 
 ---
 
@@ -217,7 +219,7 @@ node --experimental-strip-types --test test/program.test.ts
 node --experimental-strip-types --test test/
 
 # 병렬 안전 규칙 준수 확인 — 두 파일이 diff 에 나오면 안 된다
-git diff --name-only feature/program-session | grep -E 'src/index.ts|test/helpers.ts'
+git diff --name-only feature/program-session | grep -E 'src/index.ts|test/helpers.ts|src/schedule.ts'
 
 # FR-3.6 — pruning 로직 부재 확인
 grep -nE '\.slice\(|\.splice\(|\.shift\(|MAX_|limit' src/program.ts
@@ -238,8 +240,8 @@ git diff --name-only | grep 'data/progressions.json'
 
 ## Notes
 
-- `schedule.ts` 에서 `LABEL_TO_ID` 를 export 하는 것은 **이 Phase 가 `schedule.ts` 를 건드리는 유일한 이유**다.
-  `planDay` / `planWeek` 의 본문과 시그니처는 손대지 않는다. `test/schedule.test.ts` 가 계속 통과해야 한다.
+- **이 Phase 는 `src/schedule.ts` 를 수정하지 않는다.** `LABEL_TO_ID` export 는 Phase 1 에서 끝났다 (W-1).
+  `planDay` / `planWeek` 의 본문과 시그니처는 이번에도 손대지 않는다. `test/schedule.test.ts` 가 계속 통과해야 한다.
 - Phase 3B 가 `switchProgram` 을 필요로 하지만 **Phase 3.5 에서 배선한다.**
   이 Phase 는 3B 의 존재를 모른 채 독립적으로 완결되어야 한다.
 - EC-7(전환 시 카운트 리셋)은 3A 단독으로 검증할 수 없다. `startedAt` 을 정확히 세팅하는 것까지가 3A 의 책임이고,

@@ -27,7 +27,31 @@
 - [ ] Test case: `PROGRAM_ORDER` 가 카탈로그의 5종 id 와 정확히 일치한다
   - Verify: 집합 비교. 누락·오타가 없음
 
-### `promotionBaseline` (ADR-7, EC-6, EC-11)
+### `lastSetbackDate` (FR-4.3, EC-5)
+
+- [ ] Test case: 강등 기록이 없으면 `null`
+- [ ] Test case: `outcome: 'abandoned'` 의 날짜를 반환한다
+- [ ] Test case: `kind: 'consolidation'` 의 날짜를 반환한다
+- [ ] Test case: 강등이 2개면 **가장 늦은** 것을 반환한다
+  - Setup: `09-09` `abandoned`, `09-15` `consolidation`
+  - Expected: `'2026-09-15'`
+- [ ] Test case: `floorDate` 이전의 강등은 무시된다
+- [ ] Test case: 다른 종목의 강등은 무시된다
+
+### `effectiveFloor` (EC-5 하한 승격 — C-1 수정의 핵심)
+
+- [ ] Test case: 강등이 없으면 `floorDate` 를 그대로 반환한다
+- [ ] Test case: 강등이 있으면 **강등 다음날**을 반환한다
+  - Setup: `floorDate = '2026-09-01'`, 강등 `'2026-09-09'`
+  - Expected: `'2026-09-10'`
+- [ ] Test case: 강등이 `floorDate` 보다 이르면 `floorDate` 가 이긴다
+  - Setup: `floorDate = '2026-09-14'`, 강등 `'2026-09-09'`
+  - Expected: `'2026-09-14'` (강등이 `floorDate` 이전이라 애초에 조회되지 않는다)
+- [ ] Test case: 강등이 여러 개면 마지막 것 기준이다
+  - Setup: 강등 `09-09`, `09-15`
+  - Expected: `'2026-09-16'`
+
+### `promotionBaseline` (ADR-7, EC-5, EC-6, EC-11)
 
 - [ ] Test case: 승급 레코드가 없으면 `null`
   - Setup: `promotedTo` 없는 세션만 3개
@@ -40,6 +64,10 @@
 - [ ] Test case: `floorDate` 이전의 승급은 무시된다
   - Setup: `09-01` 승급, `floorDate = '2026-09-07'`
   - Expected: `null`
+- [ ] Test case: **EC-5** 강등 이전의 승급은 기준점이 되지 않는다
+  - Setup: `09-07` 승급, `09-09` `abandoned`, `09-20` 재승급. `floorDate = '2026-09-01'`
+  - Expected: `'2026-09-20'` (`'2026-09-07'` 이 아니다)
+  - **`effectiveFloor` 가 `09-10` 으로 밀려 강등 이전 승급이 조회 범위 밖이다**
 - [ ] Test case: `floorDate` 당일의 승급은 포함된다 (경계 포함)
 - [ ] Test case: 다른 종목의 승급은 무시된다
   - Setup: `pushup` 승급만 있고 `squat` 을 조회
@@ -50,17 +78,6 @@
   - **`proposal.ts` 에 RPE 관련 조건문이 없어도 통과해야 한다**
 - [ ] Test case: `blockedBy: 'master'` 세션도 기준점이 되지 않는다
 
-### `hasSetback` (FR-4.3, EC-5)
-
-- [ ] Test case: `outcome: 'abandoned'` 가 있으면 `true`
-- [ ] Test case: `kind: 'consolidation'` 이 있으면 `true`
-- [ ] Test case: 정상 `work` 세션만 있으면 `false`
-- [ ] Test case: `since` 이전의 강등은 무시된다
-  - Setup: `09-01` 에 `abandoned`, `since = '2026-09-07'`
-  - Expected: `false`
-- [ ] Test case: 다른 종목의 강등은 무시된다
-- [ ] Test case: `since` 당일의 강등은 포함된다 (경계 포함)
-
 ### `maintenanceCount` (FR-4.1, FR-4.2)
 
 - [ ] Test case: 승급이 없으면 0
@@ -70,16 +87,28 @@
 - [ ] Test case: 승급 세션 자신은 카운트에 포함되지 않는다
   - Setup: `09-07` 승급 1개뿐
   - Expected: `0`
-- [ ] Test case: **FR-4.2** `kind: 'consolidation'` 세션도 종목 세션으로 센다
-  - Verify: 카운트 필터에 `kind` 조건이 없다
-  - 주: 실제로는 `hasSetback` 이 먼저 0 을 만들지만, 필터 조건 자체를 코드 리뷰로 확인
+- [ ] Test case: **FR-4.2** 카운트 필터에 `kind` 조건이 없다
+  - Verify: 코드 리뷰. `baseline` 이 강등 이후로 밀리므로 실제로 `consolidation` 이
+    카운트 구간에 들어올 여지는 거의 없지만, 필터 문언 자체가 FR-4.2 를 따라야 한다
 - [ ] Test case: **FR-4.2 / EC-4** 같은 날 2회 세션은 2로 센다
   - Setup: `09-09` 에 같은 종목 세션 2개
   - Expected: `2` (날짜 기준 1 이 아니다)
-- [ ] Test case: **EC-5** 승급 직후 `abandoned` 가 있으면 0
-  - Setup: `09-07` 승급, `09-09` `abandoned`, `09-11`/`09-14`/`09-16` 세션
-  - Expected: `0` (**세션 3회를 채웠어도 무효**)
-- [ ] Test case: **EC-5** 승급 직후 `consolidation` 이 있으면 0
+- [ ] Test case: **EC-5** 승급 직후 `abandoned` 가 있고 **재승급이 없으면** 0
+  - Setup: `09-07` 승급, `09-09` `abandoned`, `09-11`/`09-14`/`09-16` 세션 (재승급 없음)
+  - Expected: `0` (**세션 3회를 채웠어도 무효 — 카운트가 리셋되었다**)
+- [ ] Test case: **EC-5** 승급 직후 `consolidation` 이 있고 재승급이 없으면 0
+- [ ] Test case: **EC-5 — 강등 후 재승급하면 카운트가 0 이 아니라 새로 시작된다** ★ C-1 회귀 방지
+  - Setup: `09-07` 승급 → `09-09` `abandoned` → `09-20` 재승급 → `09-22`/`09-24`/`09-26` 세션.
+    `floorDate = '2026-09-01'`
+  - Expected: `3` (**`0` 이 아니다**)
+  - Verify: `effectiveFloor === '2026-09-10'`, `baseline === '2026-09-20'`
+  - **강등을 사후 무효화로 구현하면 이 케이스가 0 이 되어 그 구간에서 제안이 영영 생성되지 않는다.
+    SPEC EC-5 는 "리셋" 이지 "구간 내 영구 무효화" 가 아니다**
+- [ ] Test case: **EC-5** 재승급 후 세션이 2회뿐이면 2 (3 미만)
+  - Verify: 재계수가 정상 동작하되 임계를 넘지 못한 경우
+- [ ] Test case: **EC-5** 강등 → 재승급 → 또 강등 → 또 재승급 도 정상 재계수된다
+  - Setup: 강등·재승급 2회 반복 후 세션 3회
+  - Expected: `3`. **하한이 마지막 강등 기준으로 계속 갱신된다**
 - [ ] Test case: **EC-6** 카운트 도중 추가 승급이 있어도 유지된다
   - Setup: `09-07` 승급, `09-09` 세션, `09-11` 승급(=세션), `09-14` 세션
   - Expected: `3` (`09-07` 기준으로 이후 세션 3개). **리셋되지 않았다**
@@ -184,6 +213,14 @@
 - [ ] Test case: 거절 다음날(화요일)에는 재제안되지 않는다
   - Verify: FR-4.6(월요일만 생성)이 여전히 작동
 
+### FR-4.9 + EC-5 결합 — 강등이 제안을 영구 차단하지 않는다 ★ C-1 회귀 방지
+- [ ] Test case: 강등으로 제안이 막혔다가, 재승급 + 세션 3회 후 다시 제안된다
+  - Setup: 전 종목 조건 충족 상태에서 한 종목에 `abandoned` 기록
+  - Action 1: 다음 월요일 `proposeSwitch` → `null` (EC-5 리셋)
+  - Setup 2: 그 종목이 재승급하고 이후 세션 3회 수행
+  - Action 2: 그 다음 월요일 `proposeSwitch`
+  - Verify: 제안이 생성된다. **한 번의 강등이 구간 전체를 막지 않는다 (FR-4.9)**
+
 ### 주간 흐름
 - [ ] Test case: 주중에 조건을 채워도 그 주에는 제안이 안 생긴다 (FR-4.6)
   - Setup: `09-07`(월) 시점에는 미달, `09-09`(수) 에 마지막 종목 3회 달성
@@ -238,8 +275,9 @@ maintained(ids, promoteDate, n): SessionRecord[]  // 여러 종목 승급 + n회
 test/
 ├── proposal.test.ts    # 신규 — 이 Phase 의 유일한 테스트 파일
 │   ├── nextProgramId               (FR-4.7)
-│   ├── promotionBaseline           (EC-6, EC-11)
-│   ├── hasSetback                  (FR-4.3, EC-5)
+│   ├── lastSetbackDate             (FR-4.3)
+│   ├── effectiveFloor              (EC-5 하한 승격)
+│   ├── promotionBaseline           (EC-5, EC-6, EC-11)
 │   ├── maintenanceCount            (FR-4.1, FR-4.2, EC-4, EC-5, EC-6)
 │   ├── proposeSwitch — 요일        (FR-4.6)
 │   ├── proposeSwitch — 잠긴 종목   (FR-4.5)

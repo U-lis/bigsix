@@ -102,6 +102,24 @@
 
 ---
 
+### 필드 보존 (C-2) — `session.ts` 3함수 전부
+
+`session.ts` 의 세 함수는 모두 `applySession` 을 경유해 새 `AppState` 를 만든다.
+중간에 객체 리터럴로 상태를 재구성하면 `stints` / `proposals` 가 소실된다.
+**타입 검사가 수행되지 않으므로(NFR-1: `typescript` 미설치) 테스트가 유일한 방어선이다.**
+
+- [ ] Test case: `abandonChallenge` 후 `stints` / `proposals` 가 입력과 동일하다
+  - Setup: 구간 1개 + `pending` 제안 1건이 담긴 `AppState`
+  - Verify: 둘 다 길이·내용 보존. `undefined` 가 아니다
+- [ ] Test case: `recordSession` 후 `stints` / `proposals` 가 입력과 동일하다
+- [ ] Test case: `recordConsolidation` 후 `stints` / `proposals` 가 입력과 동일하다
+- [ ] Test case: 세 함수를 연속 호출해도 보존된다
+  - Action: `abandonChallenge` → `recordConsolidation` → `recordSession`
+  - Verify: 최종 상태의 `stints` / `proposals` 가 최초 입력과 동일
+- [ ] Test case: 세 함수의 반환 상태가 `AppState` 4필드를 모두 가진다
+
+---
+
 ## Integration Tests
 
 ### FR-7 전체 흐름 — 포기 → 확인 → 승인 → 다지기
