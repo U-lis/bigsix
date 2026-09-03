@@ -18,7 +18,7 @@ import {
   proposeSwitch,
 } from '../src/proposal.ts';
 import type {
-  AppState, IsoDate, ProgressionId, SessionRecord, SwitchProposal,
+  AppState, IsoDate, ProgramStint, ProgressionId, SessionRecord, SwitchProposal,
 } from '../src/types.ts';
 
 // ── 로컬 픽스처 (test/helpers.ts 는 수정하지 않는다) ──────────────────────────
@@ -73,14 +73,25 @@ const FLOOR = '2026-09-01';
 /** good_behavior 는 빅6 전부를 다룬다. 빅4 만 해금된 상태의 픽스처. */
 const BIG4: ProgressionId[] = ['pushup', 'squat', 'pullup', 'legraise'];
 
+/**
+ * good_behavior 를 수행 중인 구간.
+ * Phase 3.5 에서 `activeProposal` 이 현재 구간을 읽게 되었으므로 (W-3 (a)),
+ * 미결 제안이 있는 상태는 그 제안을 낸 구간도 함께 가지고 있어야 한다.
+ */
+const GB_STINT: ProgramStint = {
+  programId: 'good_behavior', selectedAt: FLOOR, startedAt: FLOOR, endedAt: null,
+};
+
 function big4State(history: SessionRecord[], proposals: SwitchProposal[] = []): AppState {
-  return stateAt({ pushup: 4, squat: 4, pullup: 4, legraise: 4 }, history, [], proposals);
+  return stateAt(
+    { pushup: 4, squat: 4, pullup: 4, legraise: 4 }, history, [GB_STINT], proposals,
+  );
 }
 
 function allUnlockedState(history: SessionRecord[], proposals: SwitchProposal[] = []): AppState {
   return stateAt(
     { pushup: 7, squat: 7, pullup: 7, legraise: 7, bridge: 4, hspu: 4 },
-    history, [], proposals,
+    history, [GB_STINT], proposals,
   );
 }
 

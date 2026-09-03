@@ -1,5 +1,8 @@
 import { addDays, diffDays, isMonday } from './date.ts';
 import { checkGate } from './gate.ts';
+// Phase 3.5 에서 처음 허용되는 의존이다. 방향은 proposal → program 단방향이며
+// program.ts 는 proposal.ts 를 import 하지 않는다 (순환 없음).
+import { currentStint } from './program.ts';
 import { LABEL_TO_ID, getProgram } from './schedule.ts';
 import type {
   AppState, Catalog, IsoDate, ProgressionId, SessionRecord, SwitchProposal,
@@ -131,6 +134,16 @@ export function programProgressions(catalog: Catalog, programId: string): Progre
   return out;
 }
 
+/**
+ * `programId` 구간에 대한 미결 제안이 있는가 (W-3 (a)).
+ * 다른 프로그램에서 넘어온 고아 pending 은 세지 않는다.
+ */
+function hasPendingFor(state: AppState, programId: string): boolean {
+  return state.proposals.some(
+    (p) => p.status === 'pending' && p.fromProgramId === programId,
+  );
+}
+
 export interface ProposeOptions {
   /**
    * 카운트 기준의 하한. Phase 3.5 에서 활성 구간의 `startedAt` 이 주입된다 (EC-7).
@@ -157,7 +170,9 @@ export function proposeSwitch(
   if (to === null) return null;
 
   // 3. 미결 제안은 한 시점에 최대 1개다 (FR-4.6b).
-  if (state.proposals.some((p) => p.status === 'pending')) return null;
+  //    **현재 구간에 해당하는** 미결만 새 제안을 막는다 (W-3 (a)).
+  //    수동 전환으로 남은 고아 pending 이 재제안을 영구히 막지 않게 하려는 것이다.
+  if (hasPendingFor(state, opts.programId)) return null;
 
   // 4. 해금된 종목만 판정 대상이다 (FR-4.5).
   const targets = programProgressions(catalog, opts.programId)
@@ -182,33 +197,91 @@ export function proposeSwitch(
 }
 
 /**
+ * 활성 구간의 정보를 주입해 `proposeSwitch` 를 호출하는 래퍼 (EC-7).
+ *
+ * `floorDate` 가 `currentStint.startedAt` 이므로, 프로그램을 전환하면
+ * 새 구간의 시작일이 하한이 되어 이전 구간에서 쌓인 승급·유지 세션이
+ * 카운트에서 자동으로 빠진다. **전용 리셋 코드는 없다** (ADR-7).
+ * 리셋은 데이터 삭제가 아니라 판정 범위 축소다 — `history` 는 그대로 남는다.
+ *
+ * 프로그램 미선택이면 예외가 아니라 null 이다.
+ */
+export function proposeSwitchForCurrent(
+  state: AppState, catalog: Catalog, date: IsoDate,
+): SwitchProposal | null {
+  const stint = currentStint(state);
+  if (stint === null) return null;
+  return proposeSwitch(state, catalog, date, {
+    floorDate: stint.startedAt,
+    programId: stint.programId,
+  });
+}
+
+/**
  * 제안을 `proposals` 에 적재한다 (ADR-6).
  * 미결 제안이 이미 있으면 불변식 위반이므로 예외를 던진다 (FR-4.6b).
  */
 export function commitProposal(state: AppState, proposal: SwitchProposal): AppState {
-  if (state.proposals.some((p) => p.status === 'pending')) {
+  // 같은 구간에 대한 미결이 이미 있을 때만 불변식 위반이다.
+  // 수동 전환으로 남은 다른 프로그램의 고아 pending 은 적재를 막지 않는다 (W-3 (a)).
+  if (hasPendingFor(state, proposal.fromProgramId)) {
     throw new Error('불변식 위반: 미결 제안은 한 시점에 최대 1개다');
   }
   return { ...state, proposals: [...state.proposals, proposal] };
 }
 
 /**
- * 저장된 미결 제안. 없으면 null (FR-4.6a).
- * **날짜 인자를 받지 않는다** — 승인·거절 전까지 날짜와 무관하게 매일 노출된다.
+ * 부팅 시 한 번만 호출하는 단일 전이 함수 (W-3 (b)).
+ *
+ * `proposeSwitchForCurrent` → (non-null 이면) `commitProposal` 을 묶는다.
+ * 호출자가 두 단계의 순서를 틀리거나 적재를 빠뜨릴 여지를 없앤다.
+ * 생성할 제안이 없으면 인자 `state` 를 **그대로** 돌려준다.
+ *
+ * `proposeSwitch`(순수, FR-4.10 의 null 반환 계약)와 `commitProposal`(전이)은
+ * 그대로 남는다 — 단위 테스트 가능성을 위해서다. 정상 경로만 하나로 만든다.
  */
-export function activeProposal(state: AppState): SwitchProposal | null {
-  return state.proposals.find((p) => p.status === 'pending') ?? null;
+export function advanceProposals(
+  state: AppState, catalog: Catalog, date: IsoDate,
+): AppState {
+  const proposal = proposeSwitchForCurrent(state, catalog, date);
+  if (proposal === null) return state;
+  return commitProposal(state, proposal);
 }
 
-/** 미결 제안의 상태를 갱신한다. 미결이 없으면 상태를 그대로 돌려준다 (no-op). */
+/**
+ * 저장된 미결 제안. 없으면 null (FR-4.6a).
+ * **날짜 인자를 받지 않는다** — 승인·거절 전까지 날짜와 무관하게 매일 노출된다.
+ *
+ * 현재 구간에서 나온 미결만 반환한다 (W-3 (a)).
+ * 미결 상태에서 사용자가 FR-3.1 로 직접 다른 프로그램으로 전환하면
+ * `fromProgramId` 가 이미 끝난 구간을 가리키는 제안이 남는다. 그 고아 제안은
+ * 노출하지 않지만 **삭제하지도 않는다** — `proposals` 에 `pending` 인 채로 보존된다.
+ * 필터는 삭제가 아니라 가시성 조건이므로, 원래 프로그램으로 되돌아오면 다시 보인다.
+ *
+ * 프로그램 미선택(진행 중인 구간이 없음)이면 비교 기준이 없으므로 null 이다.
+ */
+export function activeProposal(state: AppState): SwitchProposal | null {
+  const stint = currentStint(state);
+  if (stint === null) return null;
+  return state.proposals.find(
+    (p) => p.status === 'pending' && p.fromProgramId === stint.programId,
+  ) ?? null;
+}
+
+/**
+ * 노출 중인 미결 제안의 상태를 갱신한다. 없으면 상태를 그대로 돌려준다 (no-op).
+ * 대상은 `activeProposal` 이 가리키는 그 하나뿐이다 —
+ * 고아 pending 은 승인·거절에 휩쓸리지 않는다 (W-3 (a)).
+ */
 function resolvePending(
   state: AppState, status: 'accepted' | 'declined', onDate: IsoDate,
 ): AppState {
-  if (!state.proposals.some((p) => p.status === 'pending')) return state;
+  const active = activeProposal(state);
+  if (active === null) return state;
   return {
     ...state,
     proposals: state.proposals.map(
-      (p) => (p.status === 'pending' ? { ...p, status, resolvedAt: onDate } : p),
+      (p) => (p === active ? { ...p, status, resolvedAt: onDate } : p),
     ),
   };
 }
