@@ -242,3 +242,20 @@
 - 타이머가 백그라운드에서 시간 어긋남: `requestAnimationFrame` 대신 `elapsedMs = Date.now() -
   startAt` 로 계산되는지, `visibilitychange` 에서 재계산 훅이 있는지 (EC-30)
 - 여러 탭 감지 코드 발견: 삭제. D-9 는 감지·경고·잠금을 하지 않는다
+
+
+---
+
+## 검증 지적 반영 (spec-validator, 2026-09-05) — EC 추적성
+
+NFR-15 는 EC-1~30 전부가 테스트 케이스로 존재할 것을 요구한다. 아래는 커버되고 있으나
+**EC 번호가 붙어 있지 않아 추적이 끊긴** 항목이다. 구현 시 테스트 이름이나 주석에 번호를 박는다.
+
+| EC | 어디서 커버되는가 | 조치 |
+|---|---|---|
+| EC-9 | `boot.test.ts` 의 프로그램 미선택 부팅 케이스 | 이름에 `EC-9` 표기 |
+| EC-14 | `timer.test.ts` 의 `unit: 'seconds'` 케이스 | 이름에 `EC-14` 표기 |
+| EC-25 | `inprogress.test.ts` 의 세트별 RPE 최댓값 케이스 | 이름에 `EC-25` 표기 |
+| EC-5 | `storage.test.ts` 의 localStorage 접근 차단 케이스 | 이름에 `EC-5` 표기 + `@vitest-environment happy-dom` |
+| EC-16 | **도메인 승계** — 기존 `tests/unit/session.test.ts` 의 하루 2회 기록 케이스 | 새로 쓰지 않는다. 여기 기록으로 추적을 잇는다 |
+| EC-18 | **도메인 승계** — 기존 `tests/unit/proposal.test.ts` 의 고아 제안 필터 케이스 | 새로 쓰지 않는다. 여기 기록으로 추적을 잇는다 |

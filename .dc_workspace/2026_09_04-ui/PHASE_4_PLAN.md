@@ -395,3 +395,48 @@ class Timer {
 ## 검증
 
 `PHASE_4_TEST.md` 의 항목을 순서대로 수행 — 각 커밋 완료 시점마다.
+
+
+---
+
+## 검증 지적 반영 (spec-validator, 2026-09-05)
+
+아래는 검증에서 누락으로 지적된 항목이다. **이 절의 체크리스트도 Phase 4 완료 정의에 포함된다.**
+
+### 저장 스키마 버전 (Critical 2 — GLOBAL 합의 #4 의 미이행)
+
+Phase 3B 가 `AppState.adjustedAtSessionIndex` 를 추가하므로 직렬화 스키마가 바뀐다.
+GLOBAL 합의 #4 가 "버전을 올리는 것은 Phase 4 저장 계층의 일" 이라고 경계를 그었는데
+초안 PLAN 에 반영되지 않았다.
+
+- [ ] `CURRENT_SCHEMA_VERSION = 2` 로 정의한다. 본문 다른 곳의 `schemaVersion: 1` 서술은
+      전부 2 로 읽는다
+- [ ] **v1 데이터(=`adjustedAtSessionIndex` 없음)를 읽으면 그 필드가 `undefined` 인 상태로
+      정상 복원**된다. 앵커 없음 = 조정한 적 없음이며, 이때 유지 횟수 계산은 0.1.0 과 같다
+      (FR-1.4 마이그레이션 체인의 첫 단계 v1→v2 가 이 no-op 이다)
+- [ ] `schemaVersion: 3` 처럼 **앱이 모르는 상위 버전은 읽기 실패로 처리하고 덮어쓰지 않는다**
+      (FR-1.5 / EC-3). v2 를 쓰기 시작한 뒤 v1 로 되돌아가는 경로는 만들지 않는다
+
+### FR-1.4 마이그레이션 체인 (Warning 5)
+
+- [ ] `schemaVersion < CURRENT_SCHEMA_VERSION` 이면 **마이그레이션 체인**을 태운다.
+      지금은 v1→v2 하나뿐이고 내용은 no-op 이지만, **체인 구조 자체가 코드에 있어야 한다**
+      (ADR-11). 다음 스키마 변경 때 분기문을 늘리는 게 아니라 함수를 하나 더 잇는 형태여야 한다
+
+### EC-5 명시 태깅 (Warning 6)
+
+- [ ] `storage.test.ts` 의 "localStorage 자체 접근 차단" 케이스에 **EC-5 를 명시적으로 태깅**한다.
+      이 테스트는 `// @vitest-environment happy-dom` 이 필요하다 (Critical 1)
+
+### NFR-4 · NFR-7 검증 (Warning 4)
+
+- [ ] **NFR-4 역방향 import 0건**: `grep -rn '\$lib/ui\|\$app/' src/lib/domain/` 결과가 비어야 한다.
+      도메인이 UI 나 SvelteKit 런타임을 참조하면 안 된다
+- [ ] **NFR-7 데이터가 기기를 떠나지 않음**: 빌드 산출물에 외부 전송 코드가 없어야 한다.
+      `grep -rn 'fetch(\|XMLHttpRequest\|navigator.sendBeacon' src/` 로 확인하고,
+      남는 것이 있으면 그것이 무엇인지 근거를 남긴다. analytics·tracking 스크립트는 넣지 않는다
+
+### FR-6.2a 체크리스트 누락 (Info 10)
+
+- [ ] 세트 입력란의 **초기값이 그 세트의 목표 수치**(`TargetSet.value`)다 (FR-6.2a).
+      TEST 에는 있었으나 PLAN 체크리스트에 없었다

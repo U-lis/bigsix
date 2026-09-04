@@ -379,3 +379,29 @@
 - 단계 조정 UI (FR-8.5) — Phase 4
 - localStorage 저장 시 새 필드 (`adjustedAtSessionIndex`) 직렬화 — Phase 4 (자동 — JSON.stringify 가
   `undefined` 필드는 뺀다)
+
+
+---
+
+## 검증 지적 반영 (spec-validator, 2026-09-05)
+
+### FR-12.5 문서 정정이 배정되지 않았다 (Warning 3)
+
+FR-12 커밋에 다음을 포함한다. 필드가 없어지면 그 필드를 설명하는 문서도 없어져야 한다.
+
+- [ ] `README.md` 의 `DayReview.accessories` 서술 삭제 (FR-12.5)
+- [ ] `README.md` 「알려진 한계」의 **L-1(보조 운동은 수행 판정에서 빠진다) 항목 삭제** (FR-12.5).
+      SPEC 은 이 한계를 "해소" 로 처리했다 — 모순이 사라졌으므로 한계도 사라진다
+
+### FR-12 파급 목록 누락 2건 (Warning 8)
+
+초안의 삭제·재작성 목록에 다음 두 곳이 빠져 있었다. `grep -n accessories test/calendar.test.ts` 로 확인된다.
+
+- [ ] `test/calendar.test.ts:132` — `assert.deepEqual(a.accessories, direct.accessories)`.
+      `reviewDay` 와 직접 호출의 동등성을 보는 케이스 안에 있다.
+      **어서션 한 줄만 지우고 케이스는 남긴다** — 동등성 검증 자체는 accessories 와 무관하다
+- [ ] `test/calendar.test.ts:371` — `it('보조 운동을 건너뛰어도 status 가 done 이다 (알려진 한계 고정)')`.
+      **케이스 전체를 삭제한다.** 고정하던 한계가 없어졌으므로 이 테스트가 지키는 대상이 없다
+
+- [ ] 위 2건을 반영해 **FR-12 로 인한 테스트 증감을 실제 숫자로 재집계**하고 커밋 메시지에 적는다.
+      초안의 "약 9개" 추정치는 과소평가였다

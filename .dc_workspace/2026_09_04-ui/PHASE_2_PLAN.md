@@ -145,11 +145,22 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // 기본은 node 다. 도메인 테스트 474개는 브라우저 API 를 쓰지 않는다.
+    // localStorage 를 만지는 Phase 4 테스트만 파일 첫 줄에
+    //   // @vitest-environment happy-dom
+    // 을 달아 개별적으로 올린다. 전역을 happy-dom 으로 올리면 도메인 테스트가
+    // 브라우저 전역을 볼 수 있게 되어 NFR-3(순수 TS) 위반을 잡지 못한다.
     environment: 'node',
     include: ['tests/unit/**/*.test.ts']
   }
 });
 ```
+
+> **검증 지적 반영 (Critical 1).** 초안은 `environment: 'node'` 만 두었는데
+> PHASE_4_TEST 의 EC-1~5 테스트가 `localStorage` / `window` 를 직접 만진다.
+> node 환경에서는 `ReferenceError: window is not defined` 로 즉시 실패한다.
+> 해결은 **파일별 `@vitest-environment` 주석**이며, `happy-dom` devDependency 는
+> Phase 4 인프라 커밋에서 추가한다 (Phase 2 에는 브라우저를 만지는 테스트가 없다).
 
 - [ ] `tsconfig.json` 생성 (cube-study 준용):
 
