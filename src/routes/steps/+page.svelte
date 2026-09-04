@@ -88,7 +88,7 @@
         {#if gate.unlocked}
           <details>
             <summary>단계 조정</summary>
-            <p class="warn">되돌릴 수 없습니다. 조정 시점부터 유지 횟수가 다시 세어집니다 (FR-13.3).</p>
+            <p class="warn">되돌릴 수 없습니다. 조정 시점부터 유지 횟수를 다시 셉니다.</p>
             <div class="step-grid">
               {#each Array.from({ length: MAX_STEP - MIN_STEP + 1 }, (_, i) => MIN_STEP + i) as n (n)}
                 <button

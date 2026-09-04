@@ -20,6 +20,7 @@
   import { loadCatalog } from '$lib/data/catalog';
   import ExerciseCard from '$lib/ui/session/ExerciseCard.svelte';
   import ProposalBanner from '$lib/ui/session/ProposalBanner.svelte';
+  import { progressionName } from '$lib/ui/session/labels';
   import Confirm from '$lib/ui/Confirm.svelte';
   import { planHeader } from '$lib/ui/session/labels';
 
@@ -107,7 +108,7 @@
         {/each}
         {#each agenda.locked as l (l.progressionId)}
           <article class="card locked">
-            <h3>{l.progressionId}</h3>
+            <h3>{progressionName(catalog, l.progressionId)}</h3>
             <p>잠김: {l.reason}</p>
           </article>
         {/each}

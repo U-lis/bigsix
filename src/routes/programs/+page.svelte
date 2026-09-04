@@ -11,6 +11,7 @@
   import { todayClock } from '$lib/ui/today.svelte';
   import { loadCatalog } from '$lib/data/catalog';
   import Confirm from '$lib/ui/Confirm.svelte';
+  import { progressionName } from '$lib/ui/session/labels';
 
   const catalog = loadCatalog();
   const programs = describePrograms(catalog);
@@ -69,7 +70,7 @@
           <div><dt>빈도</dt><dd>{p.frequency}</dd></div>
           <div><dt>운동일</dt><dd>{p.trainingDays}일 / 7</dd></div>
           <div><dt>휴식일</dt><dd>{p.restDays}일 / 7</dd></div>
-          <div><dt>종목</dt><dd>{p.progressionIds.join(', ')}</dd></div>
+          <div><dt>종목</dt><dd>{p.progressionIds.map((id) => progressionName(catalog, id)).join(', ')}</dd></div>
           {#if p.note !== undefined}<div><dt>비고</dt><dd>{p.note}</dd></div>{/if}
         </dl>
         {#if !isCurrent && restDaySelect}

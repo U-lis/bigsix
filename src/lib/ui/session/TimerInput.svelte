@@ -81,7 +81,7 @@
 
   <details class="manual">
     <summary>수동 정정</summary>
-    <p class="note">타이머 오작동 · 오터치 시 값을 직접 갈아 쓴다 (FR-6.17).</p>
+    <p class="note">타이머가 잘못 잡혔으면 값을 직접 고칠 수 있습니다.</p>
     {#if !manualOverride}
       <button type="button" onclick={() => manualOverride = true}>수동 입력 열기</button>
     {:else}

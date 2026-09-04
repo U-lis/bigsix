@@ -5,7 +5,18 @@
  * (NFR-2 / FR-5.3). 이 파일은 배치용 헤더 문구·라벨 정도만 만든다.
  */
 
-import type { PlannedExercise, SetMode, StandardLabel, Unit } from '../../domain/types.ts';
+import { getProgression } from '../../domain/catalog.ts';
+import type {
+  Catalog, PlannedExercise, ProgressionId, SetMode, StandardLabel, Unit,
+} from '../../domain/types.ts';
+
+/**
+ * 종목 이름. 표시는 한국어로 고정한다 (D-15) — `progressionId` 원문('pushup')을
+ * 화면에 그대로 내보내지 않는다.
+ */
+export function progressionName(catalog: Catalog, id: ProgressionId): string {
+  return getProgression(catalog, id).name.ko;
+}
 
 /** 화면 문구용 단위 라벨. */
 export function unitLabel(unit: Unit): string {
