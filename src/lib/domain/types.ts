@@ -166,7 +166,14 @@ export type SetMode = 'fixed' | 'max';
 export interface TargetSet {
   /** 목표값(횟수 또는 초). */
   target: number;
-  /** fixed = 이 수치만큼만, max = 이 수치를 상한으로 최대한. */
+  /**
+   * fixed = 이 수치만큼만.
+   *
+   * max = **이 수치를 하한으로 최대한.** 상한이 아니다 — `meetsStandard`
+   * (`history.ts`)는 상위 N세트가 기준값 **이상**인지만 보므로 초과분은 버려지지
+   * 않는다. 목표를 크게 넘기면 같은 세션에서 더 높은 기준(중급·상급)을 함께
+   * 충족시켜 승급이 앞당겨진다. 화면 문구도 "상한" 으로 쓰면 안 된다 (FR-15.2).
+   */
   mode: SetMode;
 }
 
