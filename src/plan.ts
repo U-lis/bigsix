@@ -2,8 +2,31 @@ import { RULES } from './rules.ts';
 import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
 import { lastSession, mean, meetsStandard, sessionsAt } from './history.ts';
 import type {
-  AppState, Catalog, PlannedExercise, ProgressionId, Step, TargetSet,
+  AppState, Catalog, PlannedExercise, ProgressionId, Step, TargetSet, Unit,
 } from './types.ts';
+
+/** 종목별 좌우 고지에 쓰는 부위 명칭 (FR-1.3). */
+const SIDE_PART: Partial<Record<ProgressionId, string>> = {
+  squat: '다리',
+  pushup: '팔',
+  pullup: '팔',
+  hspu: '팔',
+};
+
+/**
+ * perSide 단계에서 사용자에게 보여줄 고지 문구 (FR-1.2 / FR-1.3).
+ *
+ * 표시용 사실 문구이며 계산에 관여하지 않는다 (FR-1.5).
+ * `state` / `sets` 를 인자로 받지 않으므로 구조적으로 수치에 영향을 줄 수 없다.
+ * 부위 명칭이 없는 종목(legraise / bridge — 데이터에 perSide 가 없다)은 undefined 를 돌려준다.
+ */
+function sideNoteFor(id: ProgressionId, perSide: boolean, unit: Unit = 'reps'): string | undefined {
+  if (!perSide) return undefined;
+  const part = SIDE_PART[id];
+  if (part === undefined) return undefined;
+  const measure = unit === 'seconds' ? '유지 시간' : '횟수';
+  return `양쪽 ${part}을 모두 수행하고, 적게 한 쪽의 ${measure}를 입력한다.`;
+}
 
 /** 워밍업: 최대 2세트. 1~2단계는 1단계 중급+상급, 3단계부터는 직전 두 단계의 중급 기준. */
 export function planWarmup(catalog: Catalog, id: ProgressionId, step: number): TargetSet[] {
@@ -84,6 +107,8 @@ export function planConsolidation(
       () => ({ target, mode: 'fixed' as const })),
     goal: { label: 'beginner', sets: step.beginner.sets, value: valueOf(step.beginner) },
     kind: 'consolidation',
+    // 다지기는 이전 단계를 실제로 수행하므로 좌우 고지도 이전 단계 기준이다.
+    sideNote: sideNoteFor(id, prev.perSide === true, prev.unit),
     reason: `${n}단계 초보자 기준 ${step.beginner.sets}×${valueOf(step.beginner)} 미달로 중단. `
       + `${prev.n}단계 ${target} × ${RULES.consolidationSets}세트.` + bumpNote,
   };
@@ -105,6 +130,7 @@ export function planExercise(
     stepName: step.name,
     unit: step.unit,
     perSide: step.perSide === true,
+    sideNote: sideNoteFor(id, step.perSide === true, step.unit),
     warmup: planWarmup(catalog, id, n),
   };
 
@@ -188,6 +214,7 @@ export function withPair(
       stepName: paired.name,
       unit: paired.unit,
       perSide: paired.perSide === true,
+      sideNote: sideNoteFor(plan.progressionId, paired.perSide === true, paired.unit),
       warmup: [],
       work: [{ target: valueOf(paired.intermediate), mode: 'fixed' }],
       goal: {
