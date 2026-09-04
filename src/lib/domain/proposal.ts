@@ -90,9 +90,13 @@ export function lastSetbackIndex(
  */
 export function effectiveFloorIndex(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
+  adjustmentAnchor?: number,
 ): number {
   const setback = lastSetbackIndex(history, progressionId, floorDate);
-  return setback === null ? 0 : setback + 1;
+  const setbackFloor = setback === null ? 0 : setback + 1;
+  // 수동 단계 조정도 하한이다 (FR-13.3). 강등 하한과 같은 성격이라 큰 쪽을 쓴다 —
+  // 조정 뒤에 강등이 또 있었다면 강등이, 강등 뒤에 조정이 있었다면 조정이 이긴다.
+  return Math.max(setbackFloor, adjustmentAnchor ?? 0);
 }
 
 /**
@@ -106,8 +110,9 @@ export function effectiveFloorIndex(
  */
 export function promotionBaselineIndex(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
+  adjustmentAnchor?: number,
 ): number | null {
-  const floor = effectiveFloorIndex(history, progressionId, floorDate);
+  const floor = effectiveFloorIndex(history, progressionId, floorDate, adjustmentAnchor);
   return sessionIndices(history, progressionId, floorDate, floor)
     .find((i) => history[i].promotedTo !== undefined) ?? null;
 }
@@ -127,8 +132,9 @@ export function promotionBaselineIndex(
  */
 export function maintenanceCount(
   history: SessionRecord[], progressionId: ProgressionId, floorDate: IsoDate,
+  adjustmentAnchor?: number,
 ): number {
-  const baseline = promotionBaselineIndex(history, progressionId, floorDate);
+  const baseline = promotionBaselineIndex(history, progressionId, floorDate, adjustmentAnchor);
   if (baseline === null) return 0;
   return sessionIndices(history, progressionId, floorDate, baseline + 1).length;
 }
@@ -164,6 +170,11 @@ export interface ProposeOptions {
   floorDate: IsoDate;
   /** 현재 수행 중인 프로그램 id. */
   programId: string;
+  /**
+   * 종목별 수동 조정 앵커 (FR-13.3). `AppState.adjustedAtSessionIndex` 를 그대로 넘긴다.
+   * 없으면 조정된 적 없는 것으로 본다.
+   */
+  adjustmentAnchors?: Partial<Record<ProgressionId, number>>;
 }
 
 /**
@@ -196,7 +207,9 @@ export function proposeSwitch(
 
   // 6. 대상 종목 전부가 승급 후 3회 이상이어야 한다 (FR-4.1).
   const allMet = targets.every(
-    (id) => maintenanceCount(state.history, id, opts.floorDate) >= MAINTENANCE_SESSIONS,
+    (id) => maintenanceCount(
+      state.history, id, opts.floorDate, opts.adjustmentAnchors?.[id],
+    ) >= MAINTENANCE_SESSIONS,
   );
   if (!allMet) return null;
 
@@ -227,6 +240,7 @@ export function proposeSwitchForCurrent(
   return proposeSwitch(state, catalog, date, {
     floorDate: stint.startedAt,
     programId: stint.programId,
+    adjustmentAnchors: state.adjustedAtSessionIndex,
   });
 }
 

@@ -2,6 +2,7 @@ export * from './types.ts';
 export { RULES } from './rules.ts';
 export { fromJSON, getProgression, getStep, topStandard, topLabel, valueOf } from './catalog.ts';
 export { checkGate, unlockedProgressions, type GateResult } from './gate.ts';
+export { setStep, MIN_STEP, MAX_STEP } from './steps.ts';
 export { sessionsAt, lastSession, mean, meetsStandard } from './history.ts';
 export { planExercise, planWarmup, planConsolidation, canConsolidate, consolidationCount, withPair } from './plan.ts';
 export { evaluateSession, applySession, type Evaluation } from './evaluate.ts';

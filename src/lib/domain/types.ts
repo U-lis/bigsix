@@ -145,6 +145,20 @@ export interface AppState {
   stints: ProgramStint[];
   /** 자동 전환 제안 이력. 시간순. */
   proposals: SwitchProposal[];
+  /**
+   * 수동 단계 조정 시점의 스냅샷 (FR-13.3).
+   *
+   * 값은 조정 직후의 `history.length` 다. 조정된 적 없는 종목은 키가 없다.
+   * 이 인덱스 **이상**인 세션만 승급·유지 판정의 대상이 된다.
+   *
+   * 조정은 `history` 에 아무것도 남기지 않으므로(FR-13.4) 승급 기록(`promotedTo`)이
+   * 생기지 않는다. 앵커가 없으면 조정 전 세션이 유지 횟수에 섞여 전환 제안이 잘못
+   * 뜬다 — 그것을 막는 것이 이 필드의 존재 이유다.
+   *
+   * 선택 필드인 이유는 이 필드가 없던 시절에 저장된 상태를 읽을 수 있어야 하기
+   * 때문이다. 없으면 "조정한 적 없음" 과 같다.
+   */
+  adjustedAtSessionIndex?: Partial<Record<ProgressionId, number>>;
 }
 
 export type SetMode = 'fixed' | 'max';
