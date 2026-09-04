@@ -3,12 +3,12 @@
 // 여기 있는 테스트는 기능이 아니라 **상수와 데이터가 어긋나지 않는지**를 고정한다.
 // 어긋나도 예외가 나지 않고 조용히 오답을 내는 지점들이므로 테스트가 유일한 방어선이다.
 
-import { test, describe } from 'node:test';
+import { test, describe } from 'vitest';
 import assert from 'node:assert/strict';
-import { PROGRAM_ORDER } from '../src/proposal.ts';
-import { LABEL_TO_ID } from '../src/schedule.ts';
-import { firstTrainingDay } from '../src/program.ts';
-import type { Catalog, ProgressionId, Weekday } from '../src/types.ts';
+import { PROGRAM_ORDER } from '../../src/lib/domain/proposal.ts';
+import { LABEL_TO_ID } from '../../src/lib/domain/schedule.ts';
+import { firstTrainingDay } from '../../src/lib/domain/program.ts';
+import type { Catalog, ProgressionId, Weekday } from '../../src/lib/domain/types.ts';
 import { catalog } from './helpers.ts';
 
 const WEEKDAYS: Weekday[] = ['월', '화', '수', '목', '금', '토', '일'];

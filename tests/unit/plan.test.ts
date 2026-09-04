@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { canConsolidate, consolidationCount, planConsolidation, planExercise, planWarmup, withPair } from '../src/plan.ts';
-import { planDay } from '../src/schedule.ts';
+import { canConsolidate, consolidationCount, planConsolidation, planExercise, planWarmup, withPair } from '../../src/lib/domain/plan.ts';
+import { planDay } from '../../src/lib/domain/schedule.ts';
 import { catalog, rec, stateAt, targets } from './helpers.ts';
 
 // 푸시업 5단계: 초보 1×5 / 중급 2×10 / 상급 2×20

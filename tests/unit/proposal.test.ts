@@ -1,8 +1,8 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { catalog, stateAt } from './helpers.ts';
-import { addDays } from '../src/date.ts';
+import { addDays } from '../../src/lib/domain/date.ts';
 import {
   PROGRAM_ORDER,
   activeProposal,
@@ -16,10 +16,10 @@ import {
   programProgressions,
   promotionBaselineIndex,
   proposeSwitch,
-} from '../src/proposal.ts';
+} from '../../src/lib/domain/proposal.ts';
 import type {
   AppState, IsoDate, ProgramStint, ProgressionId, SessionRecord, SwitchProposal,
-} from '../src/types.ts';
+} from '../../src/lib/domain/types.ts';
 
 // ── 로컬 픽스처 (test/helpers.ts 는 수정하지 않는다) ──────────────────────────
 

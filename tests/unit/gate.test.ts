@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { checkGate, unlockedProgressions } from '../src/gate.ts';
+import { checkGate, unlockedProgressions } from '../../src/lib/domain/gate.ts';
 import { catalog, stateAt } from './helpers.ts';
 
 test('빅4는 항상 열려 있다', () => {

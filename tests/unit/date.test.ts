@@ -1,11 +1,11 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { weekdayOf, addDays, diffDays, dateRange, isMonday } from '../src/date.ts';
-import { initialState } from '../src/index.ts';
-import { LABEL_TO_ID } from '../src/schedule.ts';
-import { WEEKDAYS } from '../src/types.ts';
-import type { ProgressionId } from '../src/types.ts';
+import { weekdayOf, addDays, diffDays, dateRange, isMonday } from '../../src/lib/domain/date.ts';
+import { initialState } from '../../src/lib/domain/index.ts';
+import { LABEL_TO_ID } from '../../src/lib/domain/schedule.ts';
+import { WEEKDAYS } from '../../src/lib/domain/types.ts';
+import type { ProgressionId } from '../../src/lib/domain/types.ts';
 
 // --- weekdayOf (FR-6.2) ---
 
@@ -166,7 +166,7 @@ test('존재하지 않는 날짜는 Date.UTC 가 정규화한다 — 검증 로�
 // --- 타임존 무관 (FR-6.3, NFR-5) ---
 
 const runUnderTZ = (tz: string, expr: string): string => {
-  const url = new URL('../src/date.ts', import.meta.url).pathname;
+  const url = new URL('../../src/lib/domain/date.ts', import.meta.url).pathname;
   const code = `import * as d from ${JSON.stringify(url)};`
     + `process.stdout.write(String(${expr}));`;
   return execFileSync(

@@ -1,9 +1,9 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { applySession, evaluateSession } from '../src/evaluate.ts';
-import { planExercise } from '../src/plan.ts';
+import { applySession, evaluateSession } from '../../src/lib/domain/evaluate.ts';
+import { planExercise } from '../../src/lib/domain/plan.ts';
 import { catalog, rec, stateAt } from './helpers.ts';
-import type { ProgramStint, SessionInput, SwitchProposal } from '../src/types.ts';
+import type { ProgramStint, SessionInput, SwitchProposal } from '../../src/lib/domain/types.ts';
 
 /** applySession 에 넘길 입력. 파생 필드가 없는 SessionInput 이다. */
 function input(
@@ -203,7 +203,7 @@ test('history 에 들어가는 것은 input 이 아니라 파생 필드가 붙�
   const inp = input('pushup', 5, [20, 20]);
   const { state } = applySession(stateAt({ pushup: 5 }), catalog, inp);
   assert.equal(state.history[0].promotedTo, 6);
-  assert.equal((inp as Record<string, unknown>).promotedTo, undefined, '입력 객체는 변형되지 않는다');
+  assert.equal((inp as unknown as Record<string, unknown>).promotedTo, undefined, '입력 객체는 변형되지 않는다');
 });
 
 test('applySession 은 원본을 건드리지 않고 새 상태를 만든다', () => {

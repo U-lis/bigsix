@@ -1,12 +1,13 @@
-import { loadCatalog } from '../src/catalog.ts';
+import { loadCatalog } from '../../src/lib/data/catalog.ts';
 import {
   addDays, checkGate, initialState, programProgressions,
-} from '../src/index.ts';
+} from '../../src/lib/domain/index.ts';
 import type {
   AppState, IsoDate, ProgramStint, ProgressionId, SessionRecord, SwitchProposal,
-} from '../src/types.ts';
+} from '../../src/lib/domain/types.ts';
 
-export const catalog = loadCatalog(new URL('../data/progressions.json', import.meta.url).pathname);
+// 앱과 같은 로더를 쓴다 (FR-10.4). 테스트만 fs 경로를 쓰는 이중 구성을 만들지 않는다.
+export const catalog = loadCatalog();
 
 /**
  * 테스트용 AppState 픽스처.

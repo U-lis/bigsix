@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 
-import { addDays, weekdayOf } from '../src/date.ts';
+import { addDays, weekdayOf } from '../../src/lib/domain/date.ts';
 import {
   currentStint, dayNumber, dayNumberOn, describeProgram, describePrograms,
   firstTrainingDay, selectProgram, stintAt, switchProgram,
-} from '../src/program.ts';
-import { getProgram } from '../src/schedule.ts';
-import { WEEKDAYS } from '../src/types.ts';
-import type { AppState, ProgramStint, ProgressionId, SessionRecord } from '../src/types.ts';
+} from '../../src/lib/domain/program.ts';
+import { getProgram } from '../../src/lib/domain/schedule.ts';
+import { WEEKDAYS } from '../../src/lib/domain/types.ts';
+import type { AppState, ProgramStint, ProgressionId, SessionRecord } from '../../src/lib/domain/types.ts';
 import { catalog, rec, stateAt } from './helpers.ts';
 
 // 날짜 기준점: 2026-09-07(월) ~ 2026-09-13(일)
@@ -135,9 +135,9 @@ describe('describeProgram / describePrograms', () => {
     assert.deepEqual(d.name, { en: 'Veterano', ko: '베테랑' });
   });
 
-  it('data/progressions.json 에 파생 필드가 저장되어 있지 않다 (제약 c)', () => {
+  it('src/lib/data/progressions.json 에 파생 필드가 저장되어 있지 않다 (제약 c)', () => {
     const raw = JSON.parse(
-      readFileSync(new URL('../data/progressions.json', import.meta.url).pathname, 'utf-8'),
+      readFileSync(new URL('../../src/lib/data/progressions.json', import.meta.url).pathname, 'utf-8'),
     );
     for (const p of raw.programs) {
       for (const key of ['trainingDays', 'restDays', 'progressionIds', 'accessories']) {
@@ -476,9 +476,9 @@ describe('통합 — 설명 조회 → 선택 흐름 (FR-2.3 → FR-2.4)', () =>
 });
 
 describe('FR-3.6 — 정리 로직 부재 (코드 감사)', () => {
-  it('src/program.ts 에 slice / splice / shift / 상한 상수가 없다', () => {
+  it('src/lib/domain/program.ts 에 slice / splice / shift / 상한 상수가 없다', () => {
     const src = readFileSync(
-      new URL('../src/program.ts', import.meta.url).pathname, 'utf-8',
+      new URL('../../src/lib/domain/program.ts', import.meta.url).pathname, 'utf-8',
     );
     for (const 패턴 of [/\.slice\(/, /\.splice\(/, /\.shift\(/, /\bMAX_/]) {
       assert.equal(패턴.test(src), false, `금지 패턴 발견: ${패턴}`);

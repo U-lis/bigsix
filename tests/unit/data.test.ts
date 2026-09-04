@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { topStandard, valueOf } from '../src/catalog.ts';
+import { topStandard, valueOf } from '../../src/lib/domain/catalog.ts';
 import { catalog } from './helpers.ts';
 
 test('6종 × 10단계', () => {

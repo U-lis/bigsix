@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { listPrograms, planDay, planWeek } from '../src/schedule.ts';
+import { listPrograms, planDay, planWeek } from '../../src/lib/domain/schedule.ts';
 import { catalog, stateAt } from './helpers.ts';
 
 test('프로그램 5종이 있다', () => {

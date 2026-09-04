@@ -1,12 +1,12 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { abandonChallenge, recordConsolidation, recordSession } from '../src/session.ts';
-import { applySession } from '../src/evaluate.ts';
-import { canConsolidate, consolidationCount, planConsolidation } from '../src/plan.ts';
+import { abandonChallenge, recordConsolidation, recordSession } from '../../src/lib/domain/session.ts';
+import { applySession } from '../../src/lib/domain/evaluate.ts';
+import { canConsolidate, consolidationCount, planConsolidation } from '../../src/lib/domain/plan.ts';
 import { catalog, rec, stateAt } from './helpers.ts';
 import type {
   AppState, ProgramStint, ProgressionId, SessionInput, SessionRecord, SwitchProposal,
-} from '../src/types.ts';
+} from '../../src/lib/domain/types.ts';
 
 // 푸시업 5단계: 초보 1×5 / 중급 2×10 / 상급 2×20
 // 푸시업 4단계: 상급 2×25  → 다지기 기준값 25
@@ -166,8 +166,8 @@ test('반환된 consolidation 은 계획(PlannedExercise)이지 기록(SessionRe
   assert.ok(Array.isArray(c.warmup));
   assert.ok(typeof c.reason === 'string');
   // 기록에만 있는 필드는 없다
-  assert.equal((c as Record<string, unknown>).date, undefined);
-  assert.equal((c as Record<string, unknown>).sets, undefined);
+  assert.equal((c as unknown as Record<string, unknown>).date, undefined);
+  assert.equal((c as unknown as Record<string, unknown>).sets, undefined);
 });
 
 // =====================================================================

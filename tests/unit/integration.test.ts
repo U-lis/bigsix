@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -10,9 +10,9 @@ import {
   MAINTENANCE_SESSIONS, abandonChallenge, acceptProposal, activeProposal, advanceProposals,
   commitProposal, currentStint, dayNumber, declineProposal, initialState, maintenanceCount,
   proposeSwitch, proposeSwitchForCurrent, recordConsolidation, recordSession, switchProgram,
-} from '../src/index.ts';
-import * as api from '../src/index.ts';
-import type { AppState, IsoDate, SwitchProposal } from '../src/types.ts';
+} from '../../src/lib/domain/index.ts';
+import * as api from '../../src/lib/domain/index.ts';
+import type { AppState, IsoDate, SwitchProposal } from '../../src/lib/domain/types.ts';
 
 // ── 날짜 상수 ────────────────────────────────────────────────────────────────
 // 2026-09 의 월요일: 07, 14, 21, 28
@@ -27,7 +27,7 @@ const THU_17: IsoDate = '2026-09-17';
 const ready = () => readyForProposal('good_behavior', '2026-08-31', '2026-09-01');
 
 const src = (name: string) =>
-  readFileSync(new URL(`../src/${name}`, import.meta.url).pathname, 'utf8');
+  readFileSync(new URL(`../../src/lib/domain/${name}`, import.meta.url).pathname, 'utf8');
 
 /**
  * 모듈이 **정적 import** 하는 지정자 목록.

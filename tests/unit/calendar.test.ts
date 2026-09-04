@@ -1,14 +1,14 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 
 import {
   abandonChallenge, addDays, advanceProposals, initialState, planDay, planOn,
   proposeSwitchForCurrent, recordSession, reviewDay, reviewRange, selectProgram, switchProgram,
-} from '../src/index.ts';
+} from '../../src/lib/domain/index.ts';
 import type {
   AppState, Catalog, IsoDate, Program, ProgressionId, SessionRecord, Weekday,
-} from '../src/types.ts';
+} from '../../src/lib/domain/types.ts';
 import { ALL_UNLOCKED_STEPS, catalog, readyForProposal, stateAt, stintFixture } from './helpers.ts';
 
 // ── 날짜 기준점 ──────────────────────────────────────────────────────────────

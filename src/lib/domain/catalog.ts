@@ -1,10 +1,8 @@
-import { readFileSync } from 'node:fs';
 import type { Catalog, Progression, ProgressionId, Standard, Step } from './types.ts';
 
-/** JSON 파일에서 카탈로그를 읽는다. 브라우저에서는 import 한 객체를 fromJSON 에 넘긴다. */
-export function loadCatalog(path: string): Catalog {
-  return fromJSON(JSON.parse(readFileSync(path, 'utf-8')));
-}
+// loadCatalog(path) 는 여기 있었다. node:fs 에 의존해 브라우저에서 동작하지 않으므로
+// 제거했다 (FR-0.7 / EC-22). 앱과 테스트는 src/lib/data/catalog.ts 의 loadCatalog()
+// (인자 없음, vite JSON import) 를 함께 쓴다 (FR-10.2 / FR-10.4).
 
 export function fromJSON(raw: any): Catalog {
   return { progressions: raw.progressions, programs: raw.programs };
