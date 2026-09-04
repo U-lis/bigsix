@@ -19,8 +19,6 @@ export interface ProgramDescription {
   restDays: number;
   /** 요일표에 등장하는 빅6 종목. 중복 제거·정렬. */
   progressionIds: ProgressionId[];
-  /** 빅6 매핑에 없는 항목(악력·종아리·목). 중복 제거, 요일표 등장 순서. */
-  accessories: string[];
   note?: string;
 }
 
@@ -30,18 +28,14 @@ export function describeProgram(catalog: Catalog, programId: string): ProgramDes
 
   let trainingDays = 0;
   const ids = new Set<ProgressionId>();
-  const accessories: string[] = [];
 
   for (const weekday of WEEKDAYS) {
     const entries = program.schedule[weekday] ?? [];
     if (entries.length > 0) trainingDays += 1;
     for (const [label] of entries) {
       const id = LABEL_TO_ID[label];
-      // 빅6 매핑에 없는 라벨은 보조 운동이다. planDay 와 같은 판정을 쓴다.
-      if (id === undefined) {
-        if (!accessories.includes(label)) accessories.push(label);
-        continue;
-      }
+      // 빅6 매핑에 없는 라벨은 건너뛴다. planDay 와 같은 판정을 쓴다 (FR-12.3).
+      if (id === undefined) continue;
       ids.add(id);
     }
   }
@@ -53,7 +47,6 @@ export function describeProgram(catalog: Catalog, programId: string): ProgramDes
     trainingDays,
     restDays: WEEKDAYS.length - trainingDays,
     progressionIds: [...ids].sort(),
-    accessories,
   };
   if (program.note !== undefined) description.note = program.note;
   return description;

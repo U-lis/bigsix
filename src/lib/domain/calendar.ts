@@ -37,7 +37,6 @@ export function planOn(state: AppState, catalog: Catalog, date: IsoDate): DayAge
     dayNumber: dayNumber(stint, date),
     rest: plan.rest,
     exercises: plan.exercises,
-    accessories: plan.accessories,
     locked: plan.locked,
     proposal: activeProposal(state),
   };
@@ -52,7 +51,6 @@ function noStintReview(date: IsoDate): DayReview {
     status: 'rest',
     planned: [],
     plannedExercises: [],
-    accessories: [],
     performed: [],
   };
 }
@@ -67,10 +65,10 @@ function noStintReview(date: IsoDate): DayReview {
  * - 잠긴 종목은 `planned` 에서 뺀다 (ADR-4 부수 결정 a). 사용자가 할 수 없는 것을
  *   안 했다고 표시하지 않기 위해서다. `good_behavior` 금요일처럼 계획 종목이 전부
  *   잠긴 날은 `planned` 가 비어 `rest` 가 된다.
- * - 보조 운동도 `planned` 에서 뺀다 (ADR-4 부수 결정 b). `SessionRecord.progressionId`
- *   가 빅6 타입이라 악력·종아리·목 운동의 수행 여부를 알 방법이 없다.
- *   **다만 `accessories` 참고 필드로 결과에는 남긴다** — 판정 제외와 결과 삭제는 다른 문제다.
- *   알려진 한계: 보조 운동을 전부 건너뛰어도 그날은 `done` 으로 표시된다.
+ * - 보조 운동(악력·종아리·목)은 0.2.0 에서 도메인 출력에서 전부 제거됐다 (FR-12).
+ *   0.1.0 은 `accessories` 참고 필드로 남겨 두었는데, 기록할 수단이 없으면서 화면에는
+ *   보이는 모순이 있었다. 필드를 없애 모순을 없앴다. 책의 원래 스케줄은
+ *   `progressions.json` 에 그대로 있다.
  *
  * "수행" 판정은 그날 그 종목의 기록이 있는지만 본다. `kind` 와 `outcome` 을 보지 않는다 —
  * 포기한 세션도 다지기 세션도 그날 그 종목을 했다는 사실이다.
@@ -105,7 +103,6 @@ export function reviewDay(state: AppState, catalog: Catalog, date: IsoDate): Day
     status,
     planned,
     plannedExercises: plan.exercises,
-    accessories: plan.accessories,
     performed,
   };
 }

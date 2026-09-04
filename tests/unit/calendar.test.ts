@@ -129,7 +129,6 @@ describe('planOn — 요일 도출 (FR-6.1, FR-6.2)', () => {
       const direct = planDay(state, catalog, 'good_behavior', a.weekday);
       assert.equal(a.rest, direct.rest);
       assert.deepEqual(a.exercises, direct.exercises);
-      assert.deepEqual(a.accessories, direct.accessories);
       assert.deepEqual(a.locked, direct.locked);
     }
   });
@@ -256,7 +255,6 @@ describe('reviewDay — rest (FR-5.3, ADR-4)', () => {
     const r = reviewDay(state, cat, MON);
     assert.deepEqual(r.planned, []);
     assert.equal(r.status, 'rest');
-    assert.equal(r.accessories.length, 2);
   });
 });
 
@@ -353,35 +351,34 @@ describe('reviewDay — kind/outcome 을 판정에 쓰지 않는다', () => {
   });
 });
 
-describe('reviewDay — accessories 참고 필드 (W-2 (a), FR-5.1)', () => {
+describe('FR-12 — 보조 운동은 도메인 출력에 남지 않는다', () => {
   const solitary = () => stateAt(
     ALL_UNLOCKED_STEPS, [], [stintFixture('solitary_confinement', MON, MON)],
   );
 
-  it('solitary_confinement 월요일에 accessories 가 채워진다', () => {
-    const r = reviewDay(solitary(), catalog, MON);
-    assert.deepEqual(r.accessories, [{ name: '악력 운동', prescription: '제한 없음' }]);
-  });
-
-  it('accessories 가 planned 에 섞이지 않는다', () => {
+  it('빅6 매핑에 없는 라벨은 planned 에 섞이지 않는다', () => {
+    // solitary_confinement 월요일 = 풀업 + 스쿼트 + 악력 운동.
     const r = reviewDay(solitary(), catalog, MON);
     assert.deepEqual(r.planned, ['pullup', 'squat']);
   });
 
-  it('보조 운동을 건너뛰어도 status 가 done 이다 (알려진 한계 고정)', () => {
+  it('DayReview 에 accessories 키 자체가 없다', () => {
+    const r = reviewDay(solitary(), catalog, MON) as unknown as Record<string, unknown>;
+    assert.equal('accessories' in r, false);
+  });
+
+  it('DayPlan 에도 accessories 키가 없다', () => {
+    const d = planDay(solitary(), catalog, 'solitary_confinement', '월');
+    assert.equal('accessories' in (d as unknown as Record<string, unknown>), false);
+  });
+
+  it('보조 운동만 수행하지 않아도 판정에 영향이 없다 — 빅6 만 보면 done 이다', () => {
     const state = recorded(
       solitary(),
       { date: MON, progressionId: 'pullup' },
       { date: MON, progressionId: 'squat' },
     );
-    const r = reviewDay(state, catalog, MON);
-    assert.equal(r.status, 'done');
-    assert.equal(r.accessories.length, 1);
-  });
-
-  it('보조 운동이 없는 프로그램은 accessories 가 빈 배열이다', () => {
-    const state = selected('good_behavior', MON);
-    for (const d of WEEK) assert.deepEqual(reviewDay(state, catalog, d).accessories, [], d);
+    assert.equal(reviewDay(state, catalog, MON).status, 'done');
   });
 });
 
@@ -421,10 +418,8 @@ describe('reviewDay — plannedExercises (W-2 (c), FR-5.1)', () => {
     assert.deepEqual(reviewDay(selected('good_behavior', MON), catalog, TUE).plannedExercises, []);
   });
 
-  it('활성 구간이 없으면 plannedExercises 와 accessories 가 둘 다 빈 배열이다', () => {
-    const r = reviewDay(initialState(2), catalog, MON);
-    assert.deepEqual(r.plannedExercises, []);
-    assert.deepEqual(r.accessories, []);
+  it('활성 구간이 없으면 plannedExercises 가 빈 배열이다', () => {
+    assert.deepEqual(reviewDay(initialState(2), catalog, MON).plannedExercises, []);
   });
 });
 

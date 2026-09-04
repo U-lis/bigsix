@@ -181,17 +181,10 @@ export interface PlannedExercise {
   paired?: PlannedExercise;
 }
 
-/** 빅6에 없지만 프로그램 표에 등장하는 보조 운동(악력·종아리·목). */
-export interface AccessoryItem {
-  name: string;
-  prescription: string;
-}
-
 export interface DayPlan {
   weekday: Weekday;
   rest: boolean;
   exercises: PlannedExercise[];
-  accessories: AccessoryItem[];
   /** 선행 조건 미달로 빠진 종목. */
   locked: { progressionId: ProgressionId; reason: string }[];
 }
@@ -211,7 +204,6 @@ export type DayAgenda =
       dayNumber: number;
       rest: boolean;
       exercises: PlannedExercise[];
-      accessories: AccessoryItem[];
       /** 선행 조건 미달로 빠진 종목. */
       locked: { progressionId: ProgressionId; reason: string }[];
       /** 미결 전환 제안. 없으면 null (FR-4.6a). */
@@ -237,13 +229,6 @@ export interface DayReview {
    * 과거 시점 목표의 정확한 복원은 이번 범위에서 지원하지 않는다.
    */
   plannedExercises: PlannedExercise[];
-
-  /**
-   * 그날 계획된 보조 운동(악력·종아리·목).
-   * **참고 필드다 — status 판정에 쓰지 않는다** (ADR-4 부수 결정 b).
-   * 기록 모델이 보조 운동을 표현하지 못하므로 수행 여부를 알 수 없다.
-   */
-  accessories: AccessoryItem[];
 
   /** 그날의 history 기록. */
   performed: SessionRecord[];

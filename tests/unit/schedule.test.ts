@@ -33,11 +33,12 @@ test('해금되면 같은 날에 계획이 채워진다', () => {
   assert.equal(day.locked.length, 0);
 });
 
-test('빅6에 없는 보조 운동은 따로 분류된다', () => {
+test('FR-12 — 빅6에 없는 보조 운동은 계획에 남지 않는다', () => {
   const s = stateAt({ pushup: 7, squat: 7, pullup: 7, legraise: 7 });
   const day = planDay(s, catalog, 'solitary_confinement', '월');
+  // 월요일 요일표는 풀업 + 스쿼트 + 악력 운동이다. 악력 운동은 조용히 건너뛴다.
   assert.deepEqual(day.exercises.map((e) => e.progressionId), ['pullup', 'squat']);
-  assert.deepEqual(day.accessories, [{ name: '악력 운동', prescription: '제한 없음' }]);
+  assert.equal('accessories' in (day as unknown as Record<string, unknown>), false);
 });
 
 test('Veterano 는 하루 한 종목, 일요일 휴식', () => {

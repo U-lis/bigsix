@@ -25,13 +25,13 @@ let state = initialState();                       // 전 종목 2단계, 프로�
 
 // 프로그램 5종 설명을 보고 하나를 고른다
 describePrograms(catalog);
-// → [{ id, name, frequency, trainingDays, restDays, progressionIds, accessories }, ...]
+// → [{ id, name, frequency, trainingDays, restDays, progressionIds }, ...]
 state = selectProgram(state, catalog, 'good_behavior', '2026-09-02');
 // 선택일이 그 루틴의 휴식일이면 다음 운동일이 1일차다
 
 // 그날 뭘 얼마나 — 실제 날짜로 묻는다
 const today = planOn(state, catalog, '2026-09-02');
-// → { kind: 'plan', weekday, programId, dayNumber, rest, exercises, accessories, locked, proposal }
+// → { kind: 'plan', weekday, programId, dayNumber, rest, exercises, locked, proposal }
 // 프로그램 미선택이면 예외 대신 { kind: 'no-program', date } 를 돌려준다
 
 // 하고 나서 기록
@@ -121,10 +121,6 @@ if (today.kind === 'plan' && today.proposal) {
 **타입 검사기가 없다.** 의존성 0 원칙 때문에 `tsc` 를 쓰지 않는다. Node 의 타입 스트리핑은
 타입 주석을 지울 뿐 검사하지 않으므로, 타입 오류는 실행 전에 잡히지 않는다.
 구조를 바꾸는 변경은 테스트로 검증한다 (현재 474개, line 100% / branch 94.95% / funcs 100%).
-
-**보조 운동은 수행 판정에서 빠진다.** 악력·종아리·목 운동은 기록 모델이 표현하지 못해
-수행 여부를 알 수 없다. 빅6만 하고 보조 운동을 건너뛰어도 그날 상태는 `done` 이다.
-`DayReview.accessories` 는 참고 필드일 뿐 판정 근거가 아니다.
 
 **`DayReview.plannedExercises` 는 과거 목표가 아니다.** 조회 시점의 현재 단계로 재계산한 값이라,
 그날 이후 단계가 오르내렸다면 수치가 다르다. 과거 시점 목표의 정확한 복원은 지원하지 않는다.

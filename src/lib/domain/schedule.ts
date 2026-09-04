@@ -1,7 +1,7 @@
 import { checkGate } from './gate.ts';
 import { planExercise, withPair } from './plan.ts';
 import type {
-  AccessoryItem, AppState, Catalog, DayPlan, PlannedExercise, Program, ProgressionId, Weekday,
+  AppState, Catalog, DayPlan, PlannedExercise, Program, ProgressionId, Weekday,
 } from './types.ts';
 
 /** 프로그램 표의 한국어 종목명 → 종목 id. 여기에 없으면 보조 운동으로 분류한다. */
@@ -32,15 +32,13 @@ export function planDay(
   const entries = program.schedule[weekday] ?? [];
 
   const exercises: PlannedExercise[] = [];
-  const accessories: AccessoryItem[] = [];
   const locked: DayPlan['locked'] = [];
 
-  for (const [label, prescription] of entries) {
+  for (const [label] of entries) {
     const id = LABEL_TO_ID[label];
-    if (id === undefined) {
-      accessories.push({ name: label, prescription });
-      continue;
-    }
+    // 빅6 매핑에 없는 라벨(악력·종아리·목)은 조용히 건너뛴다 (FR-12.3).
+    // 책의 원래 스케줄은 progressions.json 에 그대로 남아 있다 (FR-12.2).
+    if (id === undefined) continue;
     const gate = checkGate(state, catalog, id);
     if (!gate.unlocked) {
       locked.push({ progressionId: id, reason: gate.reason });
@@ -53,7 +51,6 @@ export function planDay(
     weekday,
     rest: entries.length === 0,
     exercises,
-    accessories,
     locked,
   };
 }

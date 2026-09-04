@@ -93,21 +93,11 @@ describe('describeProgram / describePrograms', () => {
     assert.equal(ids.filter((x) => x === 'pullup').length, 1);
   });
 
-  it('solitary_confinement 의 보조 운동은 악력·종아리·목 3종이다 (FR-2.3)', () => {
-    assert.deepEqual(
-      sorted(describeProgram(catalog, 'solitary_confinement').accessories),
-      sorted(['악력 운동', '종아리 운동', '목 운동']),
-    );
-  });
-
-  it('악력 운동이 월·목 두 번 나오지만 중복 제거된다', () => {
-    const acc = describeProgram(catalog, 'solitary_confinement').accessories;
-    assert.equal(acc.filter((x) => x === '악력 운동').length, 1);
-  });
-
-  it('나머지 4종의 보조 운동은 빈 배열이다', () => {
-    for (const id of ['new_blood', 'good_behavior', 'veterano', 'supermax']) {
-      assert.deepEqual(describeProgram(catalog, id).accessories, [], id);
+  it('FR-12 — ProgramDescription 에 accessories 키가 없다', () => {
+    // solitary_confinement 는 악력·종아리·목이 요일표에 있는 유일한 프로그램이다.
+    // 그 라벨들이 어디에도 남지 않아야 한다.
+    for (const d of describePrograms(catalog)) {
+      assert.equal('accessories' in (d as unknown as Record<string, unknown>), false, d.id);
     }
   });
 

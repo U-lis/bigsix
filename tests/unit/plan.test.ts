@@ -300,7 +300,7 @@ test('planDay 를 거쳐도 종목별 sideNote 가 올바르게 실린다 (DayPl
   assert.match(byId.pushup.sideNote!, /양쪽 팔/);
   assert.equal(byId.legraise.sideNote, undefined);
   assert.equal(day.exercises.length, 2);
-  assert.deepEqual(Object.keys(day).sort(), ['accessories', 'exercises', 'locked', 'rest', 'weekday']);
+  assert.deepEqual(Object.keys(day).sort(), ['exercises', 'locked', 'rest', 'weekday']);
 
   const wed = planDay(stateAt({ squat: 7, pullup: 7 }), catalog, 'good_behavior', '수');
   const wedById = Object.fromEntries(wed.exercises.map((e) => [e.progressionId, e]));

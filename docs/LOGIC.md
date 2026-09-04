@@ -26,7 +26,8 @@ SessionRecord = { date, progressionId, step, performedStep?, sets, rpe?, kind, o
 
 ### 2. 오늘 뭘 얼마나 — `planDay(state, catalog, programId, weekday)`
 프로그램 표(요일별 종목)에 현재 단계의 목표를 채워 넣는다.
-반환: 운동 목록 + 보조 운동(악력·종아리·목) + 잠긴 종목 + 휴식일 여부.
+반환: 운동 목록 + 잠긴 종목 + 휴식일 여부.
+요일표에 있는 악력·종아리·목 운동은 빅6 가 아니라 조용히 건너뛴다 (FR-12).
 
 종목 하나의 목표는 `planExercise` 가 계산한다. 책 플로우차트 그대로:
 
