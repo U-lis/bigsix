@@ -17,6 +17,9 @@
   import { inProgress } from '$lib/ui/session.svelte';
   import { todayClock } from '$lib/ui/today.svelte';
   import { sw } from '$lib/ui/sw.svelte';
+  import { theme, THEME_LABEL } from '$lib/ui/theme.svelte';
+  import { wakeLock } from '$lib/ui/wakelock.svelte';
+  import { install } from '$lib/ui/install.svelte';
   import About from '$lib/ui/About.svelte';
 
   let { children } = $props();
@@ -36,6 +39,10 @@
     });
     inProgress.init(result.inProgress);
     booted = true;
+
+    // 상단 바가 소비할 룬들의 리스너 초기화 (FR-16.2 / FR-16.5).
+    wakeLock.start();
+    install.start();
 
     // 첫 실행이면 시작 단계 선택 화면(steps) 으로 (FR-3.5, FR-3.6). 이미 그 화면이면 유지.
     // no-program 리다이렉트는 제거 (FR-17.1) — 오늘 화면이 안내 상태를 직접 말한다.
@@ -57,6 +64,41 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#111113" />
 </svelte:head>
+
+<!-- FR-16.1 상단 바 — 하단 탭은 그대로 유지한다. -->
+<header class="topbar" aria-label="앱 컨트롤">
+  <span class="brand">bigsix</span>
+  <div class="controls">
+    {#if install.available}
+      <!-- FR-16.2 / EC-31 — 프롬프트 없으면 안 그린다 (NFR-22). -->
+      <button type="button" class="ctrl" onclick={() => void install.prompt()} aria-label="앱 설치">
+        설치
+      </button>
+    {/if}
+    <!-- FR-16.3 테마 토글. 항상 그린다 (지원 여부와 무관). -->
+    <button type="button" class="ctrl" onclick={() => theme.cycle()}
+            aria-label="테마 순환: 현재 {THEME_LABEL[theme.value]}">
+      {THEME_LABEL[theme.value]}
+    </button>
+    {#if wakeLock.supported}
+      <!-- FR-16.5 화면 유지. 지원 안 하면 안 그린다 (NFR-22 / EC-33).
+           enabled / held 를 구분해 표시한다 (FR-16.7 / EC-34). -->
+      <button type="button" class="ctrl"
+              class:on={wakeLock.enabled}
+              class:pending={wakeLock.enabled && !wakeLock.held}
+              onclick={() => void wakeLock.toggle()}
+              aria-label={wakeLock.enabled
+                ? (wakeLock.held ? '화면 유지: 켜짐' : '화면 유지: 켜짐(대기 중)')
+                : '화면 유지: 꺼짐'}>
+        화면
+      </button>
+    {/if}
+    <!-- FR-19.1 About 진입. -->
+    <button type="button" class="ctrl" onclick={openAbout} aria-label="정보">
+      정보
+    </button>
+  </div>
+</header>
 
 {#if booted}
   {#if appState.saveStatus === 'write-blocked'}
@@ -113,9 +155,89 @@
 {/if}
 
 <style>
+  /*
+   * FR-16.4 CSS 이중 정의.
+   *
+   * 세 겹으로 나눠 놓아 테마 토글이 시스템 미디어 쿼리를 이긴다:
+   * 1) `:root` — 라이트 팔레트 기본값.
+   * 2) `@media (prefers-color-scheme: dark)` — 시스템이 다크면 다크 팔레트.
+   * 3) `:root[data-theme="dark|light"]` — 사용자가 명시 선택하면 그 값이 이긴다.
+   */
+  :global(:root) {
+    --bg: #fafafa;
+    --fg: #111113;
+    --muted: #666;
+    --card-bg: #fff;
+    --card-border: #ddd;
+    --banner-err-bg: #fee;
+    --banner-err-fg: #822;
+    --banner-err-border: #c66;
+    --banner-warn-bg: #ffd;
+    --banner-warn-fg: #653;
+    --banner-warn-border: #b93;
+    --tab-bg: #f0f0f0;
+    --tab-fg: #666;
+    --tab-active-bg: #fff;
+    --tab-active-fg: #111;
+    --tab-active-mark: #6a6;
+    --ctrl-bg: #eee;
+    --ctrl-fg: #222;
+    --ctrl-border: #bbb;
+    --ctrl-on: #245;
+    --ctrl-on-fg: #cfe;
+  }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) {
+      --bg: #111113;
+      --fg: #eee;
+      --muted: #999;
+      --card-bg: #1a1a1a;
+      --card-border: #333;
+      --banner-err-bg: #422;
+      --banner-err-fg: #fcc;
+      --banner-err-border: #a66;
+      --banner-warn-bg: #322;
+      --banner-warn-fg: #fca;
+      --banner-warn-border: #a86;
+      --tab-bg: #1a1a1a;
+      --tab-fg: #aaa;
+      --tab-active-bg: #222;
+      --tab-active-fg: #fff;
+      --tab-active-mark: #6a6;
+      --ctrl-bg: #222;
+      --ctrl-fg: #ccc;
+      --ctrl-border: #444;
+      --ctrl-on: #245;
+      --ctrl-on-fg: #cfe;
+    }
+  }
+  :global(:root[data-theme="dark"]) {
+    --bg: #111113;
+    --fg: #eee;
+    --muted: #999;
+    --card-bg: #1a1a1a;
+    --card-border: #333;
+    --banner-err-bg: #422;
+    --banner-err-fg: #fcc;
+    --banner-err-border: #a66;
+    --banner-warn-bg: #322;
+    --banner-warn-fg: #fca;
+    --banner-warn-border: #a86;
+    --tab-bg: #1a1a1a;
+    --tab-fg: #aaa;
+    --tab-active-bg: #222;
+    --tab-active-fg: #fff;
+    --tab-active-mark: #6a6;
+    --ctrl-bg: #222;
+    --ctrl-fg: #ccc;
+    --ctrl-border: #444;
+    --ctrl-on: #245;
+    --ctrl-on-fg: #cfe;
+  }
+
   :global(html, body) {
-    background: #111113;
-    color: #eee;
+    background: var(--bg);
+    color: var(--fg);
     margin: 0;
     padding: 0;
     font-family: system-ui, -apple-system, sans-serif;
@@ -125,11 +247,53 @@
     animation: flash 0.5s steps(2, end) infinite;
   }
   @keyframes flash {
-    from { background: #111113; }
+    from { background: var(--bg); }
     to { background: #363; }
   }
-  main { min-height: 100vh; padding-bottom: 4rem; }
+  main { min-height: 100vh; padding-bottom: 4rem; padding-top: 3rem; }
   main:not(.booted) { visibility: hidden; }
+
+  /* FR-16.1 상단 바 */
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 0.75rem;
+    background: var(--tab-bg);
+    border-bottom: 1px solid var(--card-border);
+    min-height: 3rem;
+    z-index: 9;
+  }
+  .brand {
+    font-weight: 600;
+    color: var(--fg);
+    font-size: 1rem;
+  }
+  .controls { display: flex; gap: 0.35rem; }
+  .ctrl {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.35rem 0.65rem;
+    background: var(--ctrl-bg);
+    color: var(--ctrl-fg);
+    border: 1px solid var(--ctrl-border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .ctrl.on {
+    background: var(--ctrl-on);
+    color: var(--ctrl-on-fg);
+    border-color: var(--ctrl-on);
+  }
+  .ctrl.pending {
+    opacity: 0.7;
+  }
+
   .banner {
     padding: 0.75rem 1rem;
     font-size: 0.9rem;
@@ -141,33 +305,46 @@
   .banner button {
     min-height: 44px;
     padding: 0.5rem 1rem;
-    background: #333;
-    color: #eee;
-    border: 1px solid #888;
+    background: var(--ctrl-bg);
+    color: var(--ctrl-fg);
+    border: 1px solid var(--ctrl-border);
     border-radius: 6px;
     cursor: pointer;
   }
-  .banner.err { background: #422; color: #fcc; border-bottom: 1px solid #a66; }
-  .banner.warn { background: #322; color: #fca; border-bottom: 1px solid #a86; }
+  .banner.err {
+    background: var(--banner-err-bg);
+    color: var(--banner-err-fg);
+    border-bottom: 1px solid var(--banner-err-border);
+  }
+  .banner.warn {
+    background: var(--banner-warn-bg);
+    color: var(--banner-warn-fg);
+    border-bottom: 1px solid var(--banner-warn-border);
+  }
   .tabs {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     display: flex;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
+    background: var(--tab-bg);
+    border-top: 1px solid var(--card-border);
     z-index: 10;
   }
   .tabs a {
     flex: 1;
     text-align: center;
     padding: 0.85rem 0.25rem;
-    color: #aaa;
+    color: var(--tab-fg);
     text-decoration: none;
     font-size: 0.9rem;
     min-height: 44px;
   }
-  .tabs a.active { color: #fff; background: #222; border-top: 2px solid #6a6; padding-top: calc(0.85rem - 2px); }
-  .dev-note { padding: 1rem; color: #999; }
+  .tabs a.active {
+    color: var(--tab-active-fg);
+    background: var(--tab-active-bg);
+    border-top: 2px solid var(--tab-active-mark);
+    padding-top: calc(0.85rem - 2px);
+  }
+  .dev-note { padding: 1rem; color: var(--muted); }
 </style>
