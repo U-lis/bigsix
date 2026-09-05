@@ -1,5 +1,5 @@
 import { addDays, diffDays, weekdayOf } from './date.ts';
-import { getProgram, LABEL_TO_ID } from './schedule.ts';
+import { getProgram, LABEL_TO_ID, planDay } from './schedule.ts';
 import { WEEKDAYS } from './types.ts';
 import type {
   AppState, Catalog, IsoDate, ProgramStint, ProgressionId, Weekday,
@@ -120,6 +120,36 @@ export function switchProgram(
   state: AppState, catalog: Catalog, programId: string, onDate: IsoDate,
 ): AppState {
   return beginStint(state, catalog, programId, onDate);
+}
+
+/**
+ * 활성 구간에서 실제로 수행할 종목이 있는 다음 날짜 (FR-17.4 / EC-43 / ADR-19).
+ *
+ * 기존 `firstTrainingDay(catalog, programId, from)` 는 요일표만 보므로
+ * 잠긴 종목만 있는 날을 "다음 운동일" 로 가리킬 수 있다. 이 함수는 그 오류를
+ * 피하기 위해 `state` 를 받아 실제로 수행할 종목이 있는지 확인한다.
+ *
+ * `from` 자신도 후보다. 활성 구간이 없으면 null. 7일 안에 못 찾으면 null
+ * (예외 아님, FR-17.4a / EC-43).
+ *
+ * `planDay` 는 잠긴 종목을 `exercises` 가 아니라 `locked` 에 넣으므로,
+ * `exercises.length === 0` 인 날은 실제로 수행할 것이 없는 날이다.
+ *
+ * **기존 `firstTrainingDay` 는 건드리지 않는다** (ADR-19) — 프로그램 선택 화면의
+ * "다음 첫 운동일이 1일차" 안내는 아직 선택 안 한 프로그램에 대한 것이므로
+ * 잠금과 무관하다.
+ */
+export function nextDoableTrainingDay(
+  state: AppState, catalog: Catalog, from: IsoDate,
+): IsoDate | null {
+  const stint = currentStint(state);
+  if (stint === null) return null;
+  for (let i = 0; i < WEEKDAYS.length; i += 1) {
+    const date = addDays(from, i);
+    const plan = planDay(state, catalog, stint.programId, weekdayOf(date));
+    if (plan.exercises.length > 0) return date;
+  }
+  return null;
 }
 
 /** 진행 중인 구간. 없으면 null (프로그램 미선택 또는 전부 마감). */

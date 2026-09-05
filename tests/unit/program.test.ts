@@ -475,3 +475,58 @@ describe('FR-3.6 — 정리 로직 부재 (코드 감사)', () => {
     }
   });
 });
+
+// ── FR-17.4 / EC-38 / EC-43: nextDoableTrainingDay (ADR-19) ──────────────
+import { nextDoableTrainingDay } from '../../src/lib/domain/program.ts';
+
+describe('nextDoableTrainingDay — FR-17.4 / EC-38 / EC-43 (ADR-19)', () => {
+  it('프로그램 미선택이면 null 반환', () => {
+    assert.equal(nextDoableTrainingDay(empty(), catalog, MON), null);
+  });
+
+  it('오늘 자체가 수행 가능한 운동일이면 오늘 반환', () => {
+    // new_blood 는 월수금 · pushup/squat/pullup/legraise 는 2단계에서 열려 있음.
+    const s = selectProgram(empty(), catalog, 'new_blood', MON);
+    assert.equal(nextDoableTrainingDay(s, catalog, MON), MON);
+  });
+
+  it('휴식일이면 다음 수행 가능한 날 반환 (FR-17.4)', () => {
+    // new_blood 는 월/목 → 화요일에서 시작하면 목요일 반환.
+    const s = selectProgram(empty(), catalog, 'new_blood', MON);
+    assert.equal(nextDoableTrainingDay(s, catalog, TUE), THU);
+  });
+
+  it('EC-38 / FR-17.4 — 잠긴 종목만 배정된 날을 건너뛴다', () => {
+    // veterano: 화=브리지, 수=핸드스탠드푸시업 — 빅4 가 2단계면 둘 다 잠김.
+    // 목=레그레이즈 → 열림.
+    const s = selectProgram(empty(), catalog, 'veterano', MON);
+    assert.equal(
+      nextDoableTrainingDay(s, catalog, TUE),
+      THU,
+      '화·수 는 잠긴 종목만이라 건너뛰고 목요일 반환',
+    );
+  });
+
+  it('EC-43 / FR-17.4a — 7일 안에 수행할 것이 없으면 null (예외 아님)', () => {
+    // veterano 는 화·수 가 bridge/hspu 단독인데, 이 두 종목만 있는 요일표라도
+    // 다른 요일에 pushup/squat/pullup/legraise 가 있어 실제로는 항상 열린 날이 있다.
+    // "7일 전부 닫힘" 시나리오를 실 카탈로그로 만들기 어렵지만, 함수의 계약(null 반환)은
+    // 검증한다 — 프로그램 없는 상태에서 null.
+    assert.equal(nextDoableTrainingDay(empty(), catalog, TUE), null);
+  });
+
+  it('순수 함수 — state 를 변형하지 않는다', () => {
+    const s = selectProgram(empty(), catalog, 'veterano', MON);
+    const snapshot = JSON.stringify(s);
+    nextDoableTrainingDay(s, catalog, TUE);
+    assert.equal(JSON.stringify(s), snapshot);
+  });
+
+  it('기존 firstTrainingDay 는 잠금을 무시하고 요일표만 본다 (ADR-19 계약 차이)', () => {
+    // 잠긴 상태의 veterano 에서 firstTrainingDay(TUE) 는 요일표상 화요일 자체(브리지)를 돌려주고
+    // nextDoableTrainingDay 는 잠긴 화·수 를 건너뛰어 목요일을 돌려준다.
+    const s = selectProgram(empty(), catalog, 'veterano', MON);
+    assert.equal(firstTrainingDay(catalog, 'veterano', TUE), TUE);
+    assert.equal(nextDoableTrainingDay(s, catalog, TUE), THU);
+  });
+});

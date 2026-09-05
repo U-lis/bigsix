@@ -13,8 +13,9 @@ export { evaluateSession, applySession, type Evaluation } from './evaluate.ts';
 export { planDay, planWeek, getProgram, listPrograms } from './schedule.ts';
 export { weekdayOf, addDays, diffDays, dateRange, isMonday } from './date.ts';
 export {
-  describeProgram, describePrograms, firstTrainingDay, selectProgram, switchProgram,
-  currentStint, stintAt, dayNumber, dayNumberOn, type ProgramDescription,
+  describeProgram, describePrograms, firstTrainingDay, nextDoableTrainingDay,
+  selectProgram, switchProgram, currentStint, stintAt, dayNumber, dayNumberOn,
+  type ProgramDescription,
 } from './program.ts';
 export {
   proposeSwitch, proposeSwitchForCurrent, advanceProposals, commitProposal,
