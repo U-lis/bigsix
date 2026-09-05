@@ -15,6 +15,10 @@ const POLL_MS = 30 * 60 * 1000;
 
 class ServiceWorkerState {
   justUpdated = $state(false);
+  /** About 의 "업데이트 확인" 버튼이 눌린 뒤 업데이트 확인 중인지 (FR-19.3). */
+  checking = $state(false);
+  /** 업데이트 확인 결과 문구. null 이면 아직 결과 없음. */
+  message = $state<string | null>(null);
   #reg: ServiceWorkerRegistration | null = null;
 
   constructor() {
@@ -62,6 +66,33 @@ class ServiceWorkerState {
       await this.#reg?.update();
     } catch {
       // 네트워크 실패는 조용히 넘긴다 — 다음 주기에 다시 시도.
+    }
+  }
+
+  /**
+   * About 의 「업데이트 확인」 버튼 (FR-19.3).
+   * 실제 갱신이 있으면 controllerchange 리스너가 location.reload() 를 부른다 —
+   * 이 함수는 그 트리거만 걸고 결과 문구를 세팅한다.
+   */
+  async checkNow(): Promise<void> {
+    if (this.checking) return;
+    this.checking = true;
+    this.message = null;
+    try {
+      if (this.#reg === undefined || this.#reg === null) {
+        this.message = '서비스 워커가 등록되어 있지 않습니다.';
+        return;
+      }
+      await this.#reg.update();
+      // update() 는 새 워커가 발견되면 installing → activating 을 진행하며,
+      // 활성화되면 controllerchange 로 자동 새로고침한다. 새 워커가 없으면 아무 일도 일어나지 않는다.
+      this.message = this.#reg.installing !== null || this.#reg.waiting !== null
+        ? '새 버전 발견 — 곧 새로고침됩니다.'
+        : '최신입니다.';
+    } catch {
+      this.message = '업데이트 확인 실패 — 네트워크를 확인하세요.';
+    } finally {
+      this.checking = false;
     }
   }
 }
