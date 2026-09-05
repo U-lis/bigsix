@@ -49,8 +49,10 @@ export function setTargetLabel(target: number, mode: SetMode, unit: Unit): strin
 }
 
 /** 세션 종류 라벨. */
-export function kindLabel(kind: 'work' | 'consolidation'): string {
-  return kind === 'consolidation' ? '다지기 세션' : '본 세션';
+export function kindLabel(kind: 'work' | 'consolidation' | 'free'): string {
+  if (kind === 'consolidation') return '다지기 세션';
+  if (kind === 'free') return '자유 운동';
+  return '본 세션';
 }
 
 /** 프로그램 헤더. */

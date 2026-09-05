@@ -20,6 +20,7 @@
   import { loadCatalog } from '$lib/data/catalog';
   import ExerciseCard from '$lib/ui/session/ExerciseCard.svelte';
   import ProposalBanner from '$lib/ui/session/ProposalBanner.svelte';
+  import FreeExerciseForm from '$lib/ui/session/FreeExerciseForm.svelte';
   import { progressionName } from '$lib/ui/session/labels';
   import Confirm from '$lib/ui/Confirm.svelte';
   import { planHeader } from '$lib/ui/session/labels';
@@ -33,6 +34,9 @@
 
   // 다지기 승인 확인 상태.
   let consolidationPending = $state<PlannedExercise | null>(null);
+
+  // 자유 운동 폼 표시 상태 (FR-18.1).
+  let showFreeForm = $state(false);
 
   function onAbandoned(canConsolidate: boolean, consolidation: PlannedExercise | null) {
     if (canConsolidate && consolidation !== null) {
@@ -120,7 +124,23 @@
       {/if}
     {/if}
   {/if}
+
+  <!-- FR-18.1 자유 운동은 언제든 기록할 수 있다. 휴식일·운동일·미선택 무관. -->
+  {#if agenda.kind !== 'no-program'}
+    <div class="free-entry">
+      <button type="button" onclick={() => (showFreeForm = true)}>자유 운동 기록</button>
+    </div>
+  {/if}
 </section>
+
+{#if showFreeForm}
+  <FreeExerciseForm
+    today={todayClock.today}
+    {catalog}
+    onDone={() => (showFreeForm = false)}
+    onCancel={() => (showFreeForm = false)}
+  />
+{/if}
 
 {#if consolidationPending !== null}
   <Confirm
@@ -169,4 +189,20 @@
     color: #ddd;
   }
   a { color: #8cf; }
+  .free-entry {
+    margin-top: 1.25rem;
+    display: flex;
+    justify-content: center;
+  }
+  .free-entry button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.25rem;
+    background: #223;
+    color: #ccc;
+    border: 1px solid #445;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
 </style>

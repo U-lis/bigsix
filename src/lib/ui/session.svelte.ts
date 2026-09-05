@@ -68,6 +68,23 @@ class InProgressStore {
     this.persist();
   }
 
+  /**
+   * 자유 운동 세션 시작 (FR-18.1). 계획(PlannedExercise)이 없으므로 UI 가
+   * 사용자의 선택(종목·단계)을 그대로 넘긴다. `performedStep` 은 사용자가
+   * 실제로 수행하는 단계 그대로다 (다지기 개념 없음).
+   */
+  beginFree(startedAt: IsoDate, progressionId: ProgressionId, step: number): void {
+    this.#session = {
+      startedAt,
+      progressionId,
+      step,
+      performedStep: step,
+      kind: 'free',
+      workSets: [],
+    };
+    this.persist();
+  }
+
   pushWorkSet(entry: SetEntry): void {
     if (this.#session === null) return;
     this.#session = {
@@ -117,13 +134,15 @@ class InProgressStore {
       nextState = result.state;
       record = result.record;
     } else {
+      // work / free 는 applySession 을 그대로 탄다. free 는 applySession 이 조기
+      // 반환으로 state.steps 를 손대지 않는다 (FR-18.4 / EC-40).
       const input: SessionInput = {
         date: s.startedAt, // FR-2.8 / D-7
         progressionId: s.progressionId,
         step: s.step,
         performedStep: s.performedStep,
         sets: values,
-        kind: 'work',
+        kind: s.kind, // 'work' | 'free'
       };
       if (sessionRpe !== undefined) input.rpe = sessionRpe;
       const result = applySession(state, catalog, input);

@@ -56,11 +56,18 @@ export interface InProgressSession {
   progressionId: ProgressionId;
   /** 훈련 중인 단계. 다지기 기록도 이 값은 그대로 둔다. */
   step: number;
-  /** 실제로 수행하는 단계. 다지기면 step - 1. */
+  /**
+   * 실제로 수행하는 단계.
+   * work = step. consolidation = step - 1. free = 사용자가 고른 단계 그대로.
+   */
   performedStep: number;
-  kind: 'work' | 'consolidation';
-  /** 입력된 워밍업 세트. 순서대로 채워진다. 미입력 세트는 아직 배열에 없다. */
-  /** 입력된 본 세트. 순서대로 채워진다. */
+  /**
+   * 세션 성격.
+   * free 는 자유 운동 진행 중 상태다 (FR-18.1). 완료 시 applySession 이 조기 반환으로
+   * state.steps 를 손대지 않는다 (FR-18.4).
+   */
+  kind: 'work' | 'consolidation' | 'free';
+  /** 입력된 본 세트. 순서대로 채워진다. 미입력 세트는 아직 배열에 없다. */
   workSets: SetEntry[];
 }
 
@@ -104,7 +111,7 @@ function isInProgressShape(value: unknown): value is InProgressSession {
   if (typeof v.progressionId !== 'string') return false;
   if (typeof v.step !== 'number') return false;
   if (typeof v.performedStep !== 'number') return false;
-  if (v.kind !== 'work' && v.kind !== 'consolidation') return false;
+  if (v.kind !== 'work' && v.kind !== 'consolidation' && v.kind !== 'free') return false;
   if (!Array.isArray(v.workSets)) return false;
   return true;
 }

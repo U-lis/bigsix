@@ -253,3 +253,71 @@ describe('같은 종목 두 번 — EC-16 (session.test.ts 승계)', () => {
 // ── ALL_UNLOCKED_STEPS 는 미사용 경고 방지용 (import 만 유지) ─────────────
 void ALL_UNLOCKED_STEPS;
 void initialState;
+
+// ── FR-18 자유 운동 세션 진행·복원·완료 ──────────────────────────────────
+describe('FR-18 자유 운동 세션', () => {
+  it('beginFree 로 시작하면 InProgressSession.kind === "free"', () => {
+    inProgress.beginFree('2026-09-05', 'pushup', 3);
+    assert.equal(inProgress.value?.kind, 'free');
+    assert.equal(inProgress.value?.progressionId, 'pushup');
+    assert.equal(inProgress.value?.step, 3);
+    assert.equal(inProgress.value?.performedStep, 3, 'free 는 performedStep === step');
+  });
+
+  it('free 세션 진행 중 저장·복원 라운드트립', () => {
+    inProgress.beginFree('2026-09-05', 'pushup', 4);
+    inProgress.pushWorkSet({ value: 15 });
+    inProgress.pushWorkSet({ value: 12 });
+
+    // 새 저장소 상태 확인
+    const saved = readInProgress();
+    assert.equal(saved.status, 'ok');
+    if (saved.status === 'ok') {
+      assert.equal(saved.value.kind, 'free');
+      assert.equal(saved.value.workSets.length, 2);
+      assert.equal(saved.value.workSets[0].value, 15);
+    }
+
+    // discard 후 init 으로 복원
+    inProgress.discard();
+    if (saved.status === 'ok') writeInProgress(saved.value);
+    const back = readInProgress();
+    assert.equal(back.status, 'ok');
+    if (back.status === 'ok') inProgress.init(back.value);
+    assert.equal(inProgress.value?.kind, 'free');
+    assert.equal(inProgress.value?.workSets.length, 2);
+  });
+
+  it('free 세션 finalize 는 applySession 을 kind="free" 로 호출해 state.steps 를 유지한다', () => {
+    // 7단계 상태에서 3단계 free 를 기록해도 steps 는 7 유지 (EC-40).
+    const state = stateAt({ pushup: 7 });
+    inProgress.beginFree('2026-09-05', 'pushup', 3);
+    inProgress.pushWorkSet({ value: 50 });
+    inProgress.pushWorkSet({ value: 50 });
+    inProgress.pushWorkSet({ value: 50 });
+    const { record, nextState } = inProgress.finalize(state, catalog);
+    assert.equal(nextState.steps.pushup, 7, 'free 는 단계를 움직이지 않는다');
+    assert.equal(record.kind, 'free');
+    assert.equal(record.step, 3);
+    assert.equal(record.promotedTo, undefined);
+    assert.equal(inProgress.value, null, 'finalize 후 세션은 비워진다');
+  });
+
+  it('free 세션 finalize 시 세트별 RPE 최댓값이 세션 RPE 로 넘어간다 (FR-18.9 / D-11)', () => {
+    const state = stateAt({ pushup: 5 });
+    inProgress.beginFree('2026-09-05', 'pushup', 5);
+    inProgress.pushWorkSet({ value: 10, rpe: 5 });
+    inProgress.pushWorkSet({ value: 8, rpe: 9 });
+    inProgress.pushWorkSet({ value: 6, rpe: 7 });
+    const { record } = inProgress.finalize(state, catalog);
+    assert.equal(record.rpe, 9);
+  });
+
+  it('RPE 를 하나도 입력하지 않으면 record 에 rpe 필드가 없다', () => {
+    const state = stateAt({ pushup: 5 });
+    inProgress.beginFree('2026-09-05', 'pushup', 5);
+    inProgress.pushWorkSet({ value: 10 });
+    const { record } = inProgress.finalize(state, catalog);
+    assert.equal(record.rpe, undefined);
+  });
+});
