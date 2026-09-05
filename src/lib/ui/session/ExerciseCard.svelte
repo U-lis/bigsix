@@ -5,6 +5,7 @@
    * 도메인 문자열(reason / sideNote) 는 가공 없이 그대로 노출한다 (NFR-2 / FR-5.3).
    */
   import type { AppState, Catalog, IsoDate, PlannedExercise, SessionRecord } from '../../domain/types.ts';
+  import { PROMOTION_STREAK } from '../../domain/index.ts';
   import { inProgress } from '../session.svelte.ts';
   import { appState } from '../state.svelte.ts';
   import { exerciseTitle, kindLabel, setTargetLabel, standardLabel, unitLabel } from './labels.ts';
@@ -80,9 +81,16 @@
 </script>
 
 <article class="card">
+  <!-- FR-21: 목표가 시선의 첫 지점이다. 종목명은 부제로 내린다. -->
   <header>
-    <h3>{exerciseTitle(plan)}</h3>
-    <p class="sub">{kindLabel(plan.kind)} · 목표 {standardLabel(plan.goal.label)} {plan.goal.sets}×{plan.goal.value}{unitLabel(plan.unit)}</p>
+    <p class="eyebrow">{exerciseTitle(plan)} · {kindLabel(plan.kind)}</p>
+    <h3 class="goal">
+      {plan.goal.sets}×{plan.goal.value}{unitLabel(plan.unit)}
+      <span class="std">{standardLabel(plan.goal.label)}</span>
+    </h3>
+    {#if plan.streak !== undefined}
+      <p class="streak">{plan.streak}/{PROMOTION_STREAK}회 연속</p>
+    {/if}
   </header>
 
   {#if plan.sideNote !== undefined && plan.sideNote !== null}
@@ -172,7 +180,17 @@
     color: #eee;
   }
   header h3 { margin: 0 0 0.25rem; font-size: 1.15rem; }
-  .sub { margin: 0 0 0.5rem; color: #ccc; font-size: 0.9rem; }
+    .eyebrow { margin: 0 0 0.15rem; color: #aaa; font-size: 0.85rem; }
+  /* 사용자가 지금 해야 할 것. 카드에서 가장 크고 진하다. */
+  .goal {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #fff;
+  }
+  .goal .std { font-size: 0.9rem; font-weight: 500; color: #bbb; margin-left: 0.35rem; }
+  .streak { margin: 0.2rem 0 0.5rem; color: #ccc; font-size: 0.9rem; }
   .side-note {
     background: #232;
     border: 1px solid #464;

@@ -164,7 +164,9 @@
     background: #1a1a1a;
     padding: 1rem;
     border-radius: 8px;
-    color: #999;
+    /* 잠금 사유는 흐리게 하지 않는다 (FR-21.4) — 사용자의 행동을 바꾸는 정보다.
+       흐린 색은 부가 정보에만 쓴다. */
+    color: #ddd;
   }
   a { color: #8cf; }
 </style>

@@ -129,6 +129,7 @@ export function planExercise(
     ...base,
     // 기준 이상이면 얼마든 더 해도 된다. 다만 초과분이 연속을 앞당기지는 않는다.
     work: Array.from({ length: std.sets }, () => ({ target: stdVal, mode: 'max' as const })),
+    streak: streak.streak,
     goal: { label: streak.tier, sets: std.sets, value: stdVal },
     kind: 'work',
     reason,

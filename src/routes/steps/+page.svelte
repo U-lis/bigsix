@@ -130,7 +130,8 @@
     padding: 1rem;
     border-radius: 8px;
   }
-  .card.locked { background: #191919; color: #999; }
+  /* 잠금 사유는 흐리게 하지 않는다 (FR-21.4). 카드 배경만 구분한다. */
+  .card.locked { background: #191919; }
   .card header { display: flex; justify-content: space-between; align-items: baseline; }
   .card h3 { margin: 0; font-size: 1.05rem; }
   .step-badge {

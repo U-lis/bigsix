@@ -187,6 +187,11 @@ export interface PlannedExercise {
   unit: Unit;
   perSide: boolean;
   work: TargetSet[];
+  /**
+   * 이 기준을 지금까지 연속으로 통과한 횟수 (FR-22.5). **표시 전용이다** —
+   * 판정은 `stepStreak` 이 `history` 에서 다시 계산한다. 다지기 계획에는 없다.
+   */
+  streak?: number;
   /** 이번 세션이 겨냥하는 기준. */
   goal: { label: StandardLabel; sets: number; value: number };
   kind: 'work' | 'consolidation';

@@ -68,3 +68,6 @@ export function acceptProposal(
   if (proposal === null) return state;
   return switchProgram(markAccepted(state, onDate), catalog, proposal.toProgramId, onDate);
 }
+
+/** 승급에 필요한 기준별 연속 통과 횟수 (FR-22.1). 화면 문구가 쓴다. */
+export const PROMOTION_STREAK = RULES.promotionStreakRequired;
