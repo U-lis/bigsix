@@ -19,13 +19,6 @@ export const RULES = {
    */
   gateRequiresCompletion: true,
 
-  /**
-   * 미확인: 직전 평균이 목표 기준의 이 비율에 도달하면 기준 자체에 도전한다.
-   * 팬메이드 요약 차트에서 온 값이고 책에서 확인하지 못했다.
-   * FR-22 가 승급 조건을 3연속으로 바꾸면서 소비자가 사라진다 — 다음 커밋에서 제거한다.
-   */
-  attemptThreshold: 0.9,
-
   /** book: 아무리 강해도 2단계부터 시작할 것을 권한다. */
   startStep: 2,
 
@@ -42,13 +35,6 @@ export const RULES = {
   consolidationBumpEvery: 3,
   /** 정책: 올릴 때의 증가폭(기준값 대비). 30 → 33 → 36 → 39. */
   consolidationBumpRatio: 0.1,
-
-  /**
-   * 정책: 직전 RPE 가 이 값 이상이면 다음 세션의 유지 세트 목표를 낮춘다.
-   * FR-22 로 유지 세트 개념이 사라지면 소비자가 없어진다 — 다음 커밋에서 제거한다.
-   */
-  rpeDownshiftAt: 9,
-  rpeDownshiftAmount: 1,
 
   /** 정책: 최근 N개 세션의 RPE 평균이 임계 이상이면 승급을 보류한다. */
   rpeVetoWindow: 3,

@@ -5,6 +5,14 @@ import type {
   AppState, Catalog, ProgressionId, SessionRecord, Standard, StandardLabel, Step,
 } from './types.ts';
 
+/** 화면·설명 문구용 기준 이름. */
+export const TIER_KO: Record<StandardLabel, string> = {
+  beginner: '초보자',
+  intermediate: '중급자',
+  progression: '상급자',
+  elite: '최상급자',
+};
+
 /**
  * 승급 진행 상태 (FR-22).
  *

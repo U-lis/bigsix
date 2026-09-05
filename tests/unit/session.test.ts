@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { abandonChallenge, recordConsolidation, recordSession } from '../../src/lib/domain/session.ts';
 import { applySession } from '../../src/lib/domain/evaluate.ts';
 import { canConsolidate, consolidationCount, planConsolidation } from '../../src/lib/domain/plan.ts';
-import { catalog, rec, stateAt } from './helpers.ts';
+import { catalog, onePassFromPromotion, rec, stateAt, topSets } from './helpers.ts';
 import type {
   AppState, ProgramStint, ProgressionId, SessionInput, SessionRecord, SwitchProposal,
 } from '../../src/lib/domain/types.ts';
@@ -273,20 +273,27 @@ test('EC-4 / FR-7.5 같은 날 같은 종목을 두 번 기록할 수 있다', (
 });
 
 test('EC-4 / FR-7.5 두 기록이 각각 독립적으로 승급 판정된다', () => {
-  const s = atStep('pushup', 5);
-  // 첫 세션: 상급자 기준 2×20 미달
+  // 마지막 기준 3연속 직전까지 채워 둔다.
+  const s = { ...atStep('pushup', 5), history: onePassFromPromotion('pushup', 5) };
+  // 첫 세션: 미달이라 연속이 끊긴다
   const a = recordSession(s, catalog, work('pushup', 5, [12, 10]));
   assert.equal(a.record.promotedTo, undefined);
   assert.equal(a.state.steps.pushup, 5);
-  // 두 번째 세션: 같은 날, 기준 충족
-  const b = recordSession(a.state, catalog, work('pushup', 5, [20, 20]));
-  assert.equal(b.record.promotedTo, 6);
-  assert.equal(b.state.steps.pushup, 6);
+  // 두 번째 세션: 같은 날. 연속이 끊겼으므로 이것도 승급이 아니다
+  const b = recordSession(a.state, catalog, work('pushup', 5, topSets('pushup', 5)));
+  assert.equal(b.record.promotedTo, undefined);
+  assert.equal(b.state.steps.pushup, 5);
+  // 끊긴 뒤 다시 3연속을 채우면 그때 승급한다
+  let st = b.state;
+  for (let i = 0; i < 2; i += 1) {
+    st = recordSession(st, catalog, work('pushup', 5, topSets('pushup', 5))).state;
+  }
+  assert.equal(st.steps.pushup, 6);
 });
 
 test('EC-4 첫 세션에서 승급하면 두 번째 세션의 step 이 새 단계다', () => {
-  const s = atStep('pushup', 5);
-  const a = recordSession(s, catalog, work('pushup', 5, [20, 20]));
+  const s = { ...atStep('pushup', 5), history: onePassFromPromotion('pushup', 5) };
+  const a = recordSession(s, catalog, work('pushup', 5, topSets('pushup', 5)));
   assert.equal(a.state.steps.pushup, 6);
   const b = recordSession(a.state, catalog, work('pushup', a.state.steps.pushup, [3]));
   assert.equal(a.record.step, 5);

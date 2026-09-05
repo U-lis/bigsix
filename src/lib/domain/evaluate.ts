@@ -1,6 +1,7 @@
 import { RULES } from './rules.ts';
 import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
 import { meetsStandard, sessionsAt } from './history.ts';
+import { stepStreak, streakComplete, TIER_KO, type StepStreak } from './progress.ts';
 import type { AppState, Catalog, SessionInput, SessionRecord, StandardLabel } from './types.ts';
 
 export interface Evaluation {
@@ -9,6 +10,8 @@ export interface Evaluation {
   /** 1~9단계는 상급자, 10단계는 최상급자 기준 충족 여부. */
   metTop: boolean;
   topLabel: StandardLabel;
+  /** 이번 세션까지 반영한 연속 상태 (FR-22). 화면이 "중급자 2/3회 연속" 을 여기서 얻는다. */
+  streak: StepStreak;
   /** 실제로 단계를 올릴지. */
   promote: boolean;
   /** 기준은 채웠지만 승급을 막은 사유. */
@@ -40,11 +43,19 @@ export function evaluateSession(
   const label = topLabel(step);
   const notes: string[] = [];
 
+  // 이번 세션까지 반영한 연속 상태. 승급 판정의 유일한 근거다 (FR-22.1).
+  const after = stepStreak(
+    { ...state, history: [...state.history, record as SessionRecord] }, catalog,
+    record.progressionId,
+  );
+  const streakNote = `${TIER_KO[after.tier]} 기준 ${after.streak}/${RULES.promotionStreakRequired}회 연속.`;
+
   if (record.kind === 'consolidation') {
     notes.push(`${record.performedStep ?? record.step - 1}단계를 다지는 세션 `
-      + '— 현재 단계의 승급 판정 대상이 아니다.');
+      + '— 현재 단계의 승급 판정 대상이 아니다. 연속 횟수는 그대로다.');
+    notes.push(streakNote);
     return { metBeginner: false, metIntermediate: false, metTop: false, topLabel: label,
-      promote: false, nextStep: record.step, notes };
+      streak: after, promote: false, nextStep: record.step, notes };
   }
 
   const metBeginner = meetsStandard(record.sets, step.beginner.sets, valueOf(step.beginner));
@@ -53,35 +64,39 @@ export function evaluateSession(
   const metTop = meetsStandard(record.sets, top.sets, valueOf(top));
 
   if (record.outcome === 'abandoned') {
-    notes.push('사용자가 중단한 도전 — 단계 유지.');
+    notes.push('사용자가 중단한 도전 — 단계 유지. 연속 횟수는 그대로다.');
+    notes.push(streakNote);
     return { metBeginner, metIntermediate, metTop, topLabel: label,
-      promote: false, nextStep: record.step, notes };
+      streak: after, promote: false, nextStep: record.step, notes };
   }
 
-  if (!metTop) {
-    notes.push(`${label === 'elite' ? '최상급자' : '상급자'} 기준 `
-      + `${top.sets}×${valueOf(top)} 미달 — 단계 유지.`);
+  // 승급 조건은 「단계별 목표를 순차로 3회 연속 통과」 하나뿐이다 (FR-22.1).
+  // 한 세션에 상급자 기준을 크게 넘겨도 그 기준의 연속 1회일 뿐이다 (FR-22.2).
+  if (!streakComplete(step, after)) {
+    notes.push(streakNote);
     return { metBeginner, metIntermediate, metTop, topLabel: label,
-      promote: false, nextStep: record.step, notes };
+      streak: after, promote: false, nextStep: record.step, notes };
   }
 
   if (step.n >= 10) {
-    notes.push('마스터 단계 기준 달성. 더 올라갈 단계가 없다.');
+    notes.push(`최상급자 기준 ${top.sets}×${valueOf(top)} 3연속 완성. 더 올라갈 단계가 없다.`);
     return { metBeginner, metIntermediate, metTop, topLabel: label,
-      promote: false, blockedBy: 'master', nextStep: record.step, notes };
+      streak: after, promote: false, blockedBy: 'master', nextStep: record.step, notes };
   }
 
   const veto = rpeVeto(state, record);
   if (veto.blocked) {
-    notes.push(`상급자 기준 충족. 다만 최근 ${veto.n}회 RPE 평균 ${veto.mean.toFixed(1)} `
+    notes.push(`${TIER_KO[after.tier]} 기준 3연속 완성. `
+      + `다만 최근 ${veto.n}회 RPE 평균 ${veto.mean.toFixed(1)} `
       + `(임계 ${RULES.rpeVetoMean}) — 승급 보류, 현재 단계 유지.`);
     return { metBeginner, metIntermediate, metTop, topLabel: label,
-      promote: false, blockedBy: 'rpe', nextStep: record.step, notes };
+      streak: after, promote: false, blockedBy: 'rpe', nextStep: record.step, notes };
   }
 
-  notes.push(`상급자 기준 ${top.sets}×${valueOf(top)} 충족 — ${step.n + 1}단계로.`);
+  notes.push(`${TIER_KO[after.tier]} 기준 ${top.sets}×${valueOf(top)} 3연속 완성 `
+    + `— ${step.n + 1}단계로.`);
   return { metBeginner, metIntermediate, metTop, topLabel: label,
-    promote: true, nextStep: step.n + 1, notes };
+    streak: after, promote: true, nextStep: step.n + 1, notes };
 }
 
 /**

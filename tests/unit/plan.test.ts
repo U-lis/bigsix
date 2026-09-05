@@ -4,6 +4,9 @@ import { canConsolidate, consolidationCount, planConsolidation, planExercise, wi
 import { planDay } from '../../src/lib/domain/schedule.ts';
 import { catalog, rec, stateAt, targets } from './helpers.ts';
 
+// 푸시업 5단계 초보자 기준(1×5)을 채우는 세션. 연속을 한 칸 올린다.
+const pass5 = () => rec('pushup', 5, [5]);
+
 // 푸시업 5단계: 초보 1×5 / 중급 2×10 / 상급 2×20
 // 푸시업 2단계: 초보 1×10 / 중급 2×20 / 상급 3×40  (3세트 분기)
 
@@ -14,12 +17,20 @@ test('새 단계 첫 세션은 초보자 기준에 도전한다', () => {
   assert.equal(p.kind, 'work');
 });
 
-test('도전에 실패해도 다음 계획은 다시 초보자 기준 도전이다', () => {
+test('FR-22.3b 중단하면 다음 계획은 같은 목표로 재도전이다', () => {
   const s = stateAt({ pushup: 5 }, [rec('pushup', 5, [3], { outcome: 'abandoned' })]);
   const p = planExercise(s, catalog, 'pushup');
   assert.equal(p.kind, 'work');
-  assert.deepEqual(targets(p), ['5+']);
-  assert.match(p.reason, /도전 2회차/);
+  assert.deepEqual(targets(p), ['5+'], '난도를 낮추지 않는다');
+  assert.match(p.reason, /재도전/);
+  assert.match(p.reason, /0\/3회 연속/, '중단은 연속을 깨지도 올리지도 않는다');
+});
+
+test('FR-22.3a 중단해도 쌓인 연속은 유지된다', () => {
+  const s = stateAt({ pushup: 5 }, [
+    pass5(), pass5(), rec('pushup', 5, [3], { outcome: 'abandoned' }),
+  ]);
+  assert.match(planExercise(s, catalog, 'pushup').reason, /2\/3회 연속/);
 });
 
 test('다지기는 이전 단계 상급자 기준 2세트로 시작한다', () => {
@@ -71,58 +82,52 @@ test('1단계에서는 다지기로 내려갈 곳이 없다', () => {
   assert.equal(canConsolidate(stateAt({ pushup: 2 }), catalog, 'pushup'), true);
 });
 
-test('초보자 기준을 한 번 넘으면 다지기 흐름에서 빠져나온다', () => {
+test('중단·다지기를 거쳐도 초보자 3연속을 채우면 중급자로 넘어간다', () => {
   const s = stateAt({ pushup: 5 }, [
+    pass5(),
     rec('pushup', 5, [3], { outcome: 'abandoned' }),
     rec('pushup', 5, [25, 25], { kind: 'consolidation', performedStep: 4 }),
-    rec('pushup', 5, [6, 5]),
+    pass5(), pass5(),
   ]);
   const p = planExercise(s, catalog, 'pushup');
   assert.equal(p.goal.label, 'intermediate');
-  assert.deepEqual(targets(p), ['5', '10+']);
+  assert.deepEqual(targets(p), ['10+', '10+']);
 });
 
-test('초보자 통과·중급자 미달이면 유지 1세트 + 중급자까지 최대한', () => {
-  const s = stateAt({ pushup: 5 }, [rec('pushup', 5, [6, 5])]);
+test('FR-22 초보자 3연속을 채우면 중급자 기준이 목표가 된다', () => {
+  const s = stateAt({ pushup: 5 }, [pass5(), pass5(), pass5()]);
   const p = planExercise(s, catalog, 'pushup');
-  assert.deepEqual(targets(p), ['5', '10+']); // 평균 5.5 → floor 5, 목표 중급 10
+  assert.deepEqual(targets(p), ['10+', '10+'], '중급자 2×10 을 그대로 노린다');
   assert.equal(p.goal.label, 'intermediate');
+  assert.match(p.reason, /중급자 기준 2×10 · 0\/3회 연속/);
 });
 
-test('중급자 통과 후 상급자가 2세트면 유지 1세트 + 상급자까지 최대한', () => {
+test('FR-22.3 미달하면 연속만 0 이 되고 목표는 그 기준에 머문다 (EC-49)', () => {
+  const s = stateAt({ pushup: 5 }, [pass5(), pass5(), pass5(), rec('pushup', 5, [1])]);
+  const p = planExercise(s, catalog, 'pushup');
+  assert.equal(p.goal.label, 'intermediate', '초보자로 되돌아가지 않는다');
+  assert.match(p.reason, /0\/3회 연속/);
+});
+
+test('FR-22 중급자 3연속을 채우면 상급자 기준이 목표가 된다', () => {
+  const inter = () => rec('pushup', 5, [10, 10]);
   const s = stateAt({ pushup: 5 }, [
-    rec('pushup', 5, [6, 5]), rec('pushup', 5, [12, 11]),
+    pass5(), pass5(), pass5(), inter(), inter(), inter(),
   ]);
   const p = planExercise(s, catalog, 'pushup');
-  assert.deepEqual(targets(p), ['11', '20+']); // 평균 11.5 → 11, 목표 상급 20
+  assert.deepEqual(targets(p), ['20+', '20+']);
   assert.equal(p.goal.label, 'progression');
 });
 
-test('상급자가 3세트면 유지 2세트 + 마지막 세트 최대한', () => {
+test('FR-22 상급자가 3세트인 단계는 세 세트가 목표다', () => {
+  const beg = () => rec('pushup', 2, [10]);
+  const inter = () => rec('pushup', 2, [20, 20]);
   const s = stateAt({ pushup: 2 }, [
-    rec('pushup', 2, [10]), rec('pushup', 2, [22, 21, 20]),
+    beg(), beg(), beg(), inter(), inter(), inter(),
   ]);
   const p = planExercise(s, catalog, 'pushup');
-  assert.deepEqual(targets(p), ['21', '21', '40+']); // 평균 21, 목표 상급 3×40
+  assert.deepEqual(targets(p), ['40+', '40+', '40+']);
   assert.equal(p.goal.sets, 3);
-});
-
-test('직전 평균이 목표의 90% 이상이면 기준 자체에 도전한다', () => {
-  const s = stateAt({ pushup: 5 }, [
-    rec('pushup', 5, [10, 10]), rec('pushup', 5, [19, 18]),
-  ]);
-  const p = planExercise(s, catalog, 'pushup');
-  assert.deepEqual(targets(p), ['20', '20']); // 평균 18.5 >= 18
-  assert.match(p.reason, /90% 이상/);
-});
-
-test('직전 RPE 9 이상이면 유지 세트 목표를 1 낮춘다', () => {
-  const base = stateAt({ pushup: 5 }, [rec('pushup', 5, [6, 5])]);
-  const hard = stateAt({ pushup: 5 }, [rec('pushup', 5, [6, 5], { rpe: 9 })]);
-  assert.deepEqual(targets(planExercise(base, catalog, 'pushup')), ['5', '10+']);
-  const p = planExercise(hard, catalog, 'pushup');
-  assert.deepEqual(targets(p), ['4', '10+']);
-  assert.match(p.reason, /RPE 9/);
 });
 
 test('FR-20 계획에 워밍업이 없다', () => {
@@ -244,33 +249,37 @@ test('동반 단계에도 sideNote 가 채워진다', () => {
 
 test('sideNote 는 state / history 와 무관하게 (종목, 단계) 로만 결정된다', () => {
   const empty = planExercise(stateAt({ pushup: 7 }), catalog, 'pushup');
+  const beg7 = () => rec('pushup', 7, [5]);
   const busy = planExercise(stateAt({ pushup: 7 }, [
-    rec('pushup', 7, [3], { rpe: 9 }),
+    beg7(), beg7(), beg7(),
     rec('pushup', 7, [20, 20], { kind: 'consolidation', performedStep: 6 }),
-    rec('pushup', 7, [6, 5], { rpe: 10 }),
   ]), catalog, 'pushup');
-  assert.notDeepEqual(targets(empty), targets(busy), '수치 경로는 서로 다르다');
+  assert.notDeepEqual(
+    [empty.goal.label, empty.reason], [busy.goal.label, busy.reason],
+    '판정 경로는 서로 다르다',
+  );
   assert.equal(empty.sideNote, busy.sideNote, '고지는 동일하다');
 });
 
 // FR-1.5 — sideNote 는 수치 계산에 관여하지 않는다
-test('sideNote 가 붙어도 work / goal / warmup / reason 이 그대로다', () => {
+test('sideNote 가 붙어도 work / goal / reason 이 그대로다', () => {
   // perSide 단계 (pushup 7: 초보 1×5 / 중급 2×9 / 상급 2×20 미만은 데이터에 따름)
   const withNote = planExercise(stateAt({ pushup: 7 }, [
     rec('pushup', 7, [6, 5]),
   ]), catalog, 'pushup');
   assert.notEqual(withNote.sideNote, undefined);
   // 비-perSide 단계와 동일한 구조 필드 집합을 갖는다 (sideNote 만 값이 다르다)
-  const noNote = planExercise(stateAt({ pushup: 5 }, [rec('pushup', 5, [6, 5])]), catalog, 'pushup');
+  const noNote = planExercise(
+    stateAt({ pushup: 5 }, [pass5(), pass5(), pass5()]), catalog, 'pushup');
   assert.deepEqual(Object.keys(withNote).sort(), Object.keys(noNote).sort());
   assert.equal(noNote.sideNote, undefined);
 
-  // Phase 1 시점 수치 스냅샷 — 5단계 초보 통과 후 유지 1세트 + 중급 10 까지 최대한
+  // FR-22 수치 스냅샷 — 초보자 3연속 뒤에는 중급자 기준(2×10)이 그대로 목표다
   assert.deepEqual(noNote.work, [
-    { target: 5, mode: 'fixed' }, { target: 10, mode: 'max' },
+    { target: 10, mode: 'max' }, { target: 10, mode: 'max' },
   ]);
   assert.deepEqual(noNote.goal, { label: 'intermediate', sets: 2, value: 10 });
-  assert.equal(noNote.reason, '직전 평균 5.5. 유지 1세트 5회 뒤 마지막 세트는 10 까지 최대한.');
+  assert.equal(noNote.reason, '중급자 기준 2×10 · 0/3회 연속.');
 });
 
 test('sideNote 내용이 reason 에 섞이지 않는다', () => {

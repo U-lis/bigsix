@@ -1,4 +1,6 @@
 import { loadCatalog } from '../../src/lib/data/catalog.ts';
+import { getStep, topStandard } from '../../src/lib/domain/catalog.ts';
+import { RULES } from '../../src/lib/domain/rules.ts';
 import {
   addDays, checkGate, initialState, programProgressions,
 } from '../../src/lib/domain/index.ts';
@@ -87,3 +89,33 @@ export function readyForProposal(
 
 export const targets = (p: { work: { target: number; mode: string }[] }) =>
   p.work.map((w) => `${w.target}${w.mode === 'max' ? '+' : ''}`);
+
+/**
+ * FR-22 승급 직전 상태를 만든다 — 그 단계의 마지막 기준(상급자/최상급자)을
+ * `need - 1` 회 연속 통과한 history.
+ *
+ * 승급이 "3회 연속" 으로 바뀌면서 단일 세션으로 승급을 검증할 수 없게 됐다.
+ * 이 헬퍼로 마지막 한 세션만 남긴 상태를 만들고 그 세션의 판정을 본다.
+ */
+export function onePassFromPromotion(
+  id: ProgressionId, n: number, extra: Partial<SessionRecord> = {},
+): SessionRecord[] {
+  const step = getStep(catalog, id, n);
+  const need = RULES.promotionStreakRequired;
+  const out: SessionRecord[] = [];
+  const fill = (std: { sets: number; value: number }, times: number) => {
+    for (let i = 0; i < times; i += 1) {
+      out.push(rec(id, n, Array.from({ length: std.sets }, () => std.value), extra));
+    }
+  };
+  fill(step.beginner as { sets: number; value: number }, need);
+  fill(step.intermediate as { sets: number; value: number }, need);
+  fill(topStandard(step) as { sets: number; value: number }, need - 1);
+  return out;
+}
+
+/** 그 단계의 마지막 기준을 정확히 채우는 세트 배열. */
+export function topSets(id: ProgressionId, n: number): number[] {
+  const top = topStandard(getStep(catalog, id, n));
+  return Array.from({ length: top.sets }, () => top.value as number);
+}

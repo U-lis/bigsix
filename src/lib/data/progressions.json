@@ -1,5 +1,5 @@
 {
-  "_source": "data/cc-charts.pdf (fan-made summary chart, archive.org). Cross-checked against hughbien/notebook and the the Korean print edition (죄수 운동법, 비타북스 2017, ISBN 979-11-5846-142-3, 2026-09-02). Remaining unverified: ko step names, named programs. 60스텝 전부 본문 + 단계 요약표 이중 대조 완료.",
+  "_source": "data/cc-charts.pdf (fan-made summary chart, archive.org). Cross-checked against hughbien/notebook and the the Korean print edition (죄수 운동법, 비타북스 2017, ISBN 979-11-5846-142-3, 2026-09-02). Remaining unverified: ko step names, named programs. 60스텝 전부 본문 + 단계 요약표 이중 대조 완료. 대조 범위는 **단계별 기준 수치뿐**이며, 차트에 딸려 있던 보조 규칙(워밍업·90% 규칙)은 대조하지 않았다 — 둘 다 책에 없는 것으로 확인되어 0.2.0 에서 제거했다.",
   "_schema": {
     "unit": "reps | seconds",
     "standard": "{ sets: number, value: number } | { sets: number, value: [min, max] }",

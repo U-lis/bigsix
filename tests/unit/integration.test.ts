@@ -417,22 +417,29 @@ describe('3C ↔ 3A 상호작용 (FR-3.5)', () => {
       [stintFixture('good_behavior', '2026-08-31', '2026-08-31')],
     );
 
-    const dates: IsoDate[] = ['2026-09-01', '2026-09-03', '2026-09-05', '2026-09-07', '2026-09-09'];
-    // 앞의 두 번은 목표를 크게 넘겨 승급시키고, 나머지는 유지 세션이다.
-    dates.forEach((date, i) => {
-      const sets = i < 2 ? [60, 60, 60] : [5, 5];
-      const id = i < 2 ? (i === 0 ? 'pushup' : 'squat') : 'pullup';
+    // FR-22 — 승급은 마지막 기준 3연속이다. 초보자·중급자·상급자 각 3회씩,
+    // 즉 한 종목당 9세션을 채워야 한 번 오른다.
+    const dates: IsoDate[] = [
+      '2026-09-01', '2026-09-03', '2026-09-05', '2026-09-07', '2026-09-09',
+      '2026-09-11', '2026-09-13', '2026-09-15', '2026-09-17',
+    ];
+    dates.forEach((date) => {
       state = recordSession(state, catalog, {
-        date, progressionId: id, step: state.steps[id], sets, kind: 'work',
+        date, progressionId: 'pushup', step: state.steps.pushup, sets: [60, 60, 60],
+        kind: 'work',
       }).state;
     });
+    state = recordSession(state, catalog, {
+      date: '2026-09-19', progressionId: 'pullup', step: state.steps.pullup, sets: [5, 5],
+      kind: 'work',
+    }).state;
 
-    assert.equal(state.history.length, 5);
-    assert.equal(state.history.filter((r) => r.promotedTo !== undefined).length, 2);
+    assert.equal(state.history.length, 10);
+    assert.equal(state.history.filter((r) => r.promotedTo !== undefined).length, 1);
 
     const stepsBefore = { ...state.steps };
     const after = switchProgram(state, catalog, 'veterano', MON_14);
-    assert.equal(after.history.length, 5);
+    assert.equal(after.history.length, 10);
     assert.deepEqual(after.history, state.history);
     assert.deepEqual(after.steps, stepsBefore);
   });

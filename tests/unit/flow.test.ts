@@ -3,9 +3,10 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { loadCatalog } from '../../src/lib/data/catalog.ts';
 import {
-  advanceProposals, getStep, initialState, planOn, recordSession, selectProgram, setStep,
-  topStandard, valueOf,
+  addDays, advanceProposals, getStep, initialState, planOn, recordSession, selectProgram,
+  setStep, topStandard, valueOf,
 } from '../../src/lib/domain/index.ts';
+import { RULES } from '../../src/lib/domain/rules.ts';
 import type { AppState } from '../../src/lib/domain/types.ts';
 
 /**
@@ -37,22 +38,25 @@ describe('관통 — 선택부터 승급까지', () => {
     assert.equal(mon.rest, false);
     assert.ok(mon.exercises.length > 0, '운동일에는 종목이 있다');
 
-    // 4. 그날 계획대로 전 종목을 기록한다. 계획상의 목표가 아니라 그 단계의
-    //    최상위 기준(상급자/최상급자)을 넘겨야 승급한다 — 세트 수도 그 기준을 따른다.
+    // 4. 그날 계획대로 전 종목을 기록한다.
+    //    FR-22 — 승급은 「단계별 목표를 순차로 3회 연속 통과」다. 초보자·중급자·
+    //    상급자 각 3회씩이므로 한 종목당 9세션이 필요하다. 매번 최상위 기준을
+    //    넘겨도 마찬가지다 — 한 세션에 tier 를 건너뛰지 않는다.
+    const need = 3 * RULES.promotionStreakRequired;
     for (const ex of mon.exercises) {
-      const step = getStep(catalog, ex.progressionId, ex.step);
-      const top = topStandard(step);
-      const out = recordSession(s, catalog, {
-        date: '2026-09-07',
-        progressionId: ex.progressionId,
-        step: ex.step,
-        sets: Array.from({ length: top.sets }, () => valueOf(top) + 5),
-        kind: 'work',
-      });
-      s = out.state;
+      const top = topStandard(getStep(catalog, ex.progressionId, ex.step));
+      for (let i = 0; i < need; i += 1) {
+        s = recordSession(s, catalog, {
+          date: addDays('2026-09-07', i),
+          progressionId: ex.progressionId,
+          step: ex.step,
+          sets: Array.from({ length: top.sets }, () => valueOf(top) + 5),
+          kind: 'work',
+        }).state;
+      }
     }
 
-    // 5. 상급자 기준을 크게 넘겼으니 승급했어야 한다.
+    // 5. 9세션을 채웠으니 승급했어야 한다.
     for (const ex of mon.exercises) {
       assert.ok(
         s.steps[ex.progressionId] > ex.step,
@@ -60,7 +64,14 @@ describe('관통 — 선택부터 승급까지', () => {
       );
     }
 
-    // 6. 부팅마다 advanceProposals 를 여러 번 불러도 제안이 중복되지 않는다 (EC-19).
+    // 6. 9세션 중 승급은 정확히 한 번만 기록된다.
+    for (const ex of mon.exercises) {
+      const promoted = s.history.filter(
+        (r) => r.progressionId === ex.progressionId && r.promotedTo !== undefined);
+      assert.equal(promoted.length, 1, ex.progressionId);
+    }
+
+    // 7. 부팅마다 advanceProposals 를 여러 번 불러도 제안이 중복되지 않는다 (EC-19).
     const a = advanceProposals(s, catalog, '2026-09-14');
     const b = advanceProposals(a, catalog, '2026-09-14');
     assert.equal(b.proposals.length, a.proposals.length);

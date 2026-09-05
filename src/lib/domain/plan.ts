@@ -1,8 +1,9 @@
 import { RULES } from './rules.ts';
-import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
-import { lastSession, mean, meetsStandard, sessionsAt } from './history.ts';
+import { standardOf, stepStreak, TIER_KO } from './progress.ts';
+import { getStep, topStandard, valueOf } from './catalog.ts';
+import { lastSession, sessionsAt } from './history.ts';
 import type {
-  AppState, Catalog, PlannedExercise, ProgressionId, Step, TargetSet, Unit,
+  AppState, Catalog, PlannedExercise, ProgressionId, Step, Unit,
 } from './types.ts';
 
 /** 종목별 좌우 고지에 쓰는 부위 명칭 (FR-1.3). */
@@ -26,18 +27,6 @@ function sideNoteFor(id: ProgressionId, perSide: boolean, unit: Unit = 'reps'): 
   if (part === undefined) return undefined;
   const measure = unit === 'seconds' ? '유지 시간' : '횟수';
   return `양쪽 ${part}을 모두 수행하고, 적게 한 쪽의 ${measure}를 입력한다.`;
-}
-
-function carryValue(avg: number, rpe: number | undefined): number {
-  const down = rpe !== undefined && rpe >= RULES.rpeDownshiftAt ? RULES.rpeDownshiftAmount : 0;
-  return Math.max(1, Math.floor(avg) - down);
-}
-
-/** 이 단계에서 초보자 기준을 한 번이라도 충족한 적이 있는가(한 번 넘으면 되돌아가지 않는다). */
-function hasClearedBeginner(state: AppState, id: ProgressionId, step: Step): boolean {
-  return sessionsAt(state, id, step.n)
-    .filter((r) => r.kind === 'work')
-    .some((r) => meetsStandard(r.sets, step.beginner.sets, valueOf(step.beginner)));
 }
 
 /** 이 단계에서 지금까지 수행한 다지기 세션 횟수. */
@@ -117,67 +106,32 @@ export function planExercise(
     sideNote: sideNoteFor(id, step.perSide === true, step.unit),
   };
 
-  const top = topStandard(step);
-  const topVal = valueOf(top);
-  const interVal = valueOf(step.intermediate);
-  const beginVal = valueOf(step.beginner);
+  // 목표는 지금 통과 중인 기준이다 (FR-22.4). 90% 규칙도 유지 세트도 없다 —
+  // 승급이 "그 기준 3회 연속" 이므로 매 세션 그 기준을 그대로 노리면 된다.
+  const streak = stepStreak(state, catalog, id);
+  const std = standardOf(step, streak.tier);
+  const stdVal = valueOf(std);
+  const need = RULES.promotionStreakRequired;
 
   const last = lastSession(state, id, n);
-  const attempts = sessionsAt(state, id, n).filter((r) => r.kind === 'work').length;
+  const retry = last?.outcome === 'abandoned';
+  const done = consolidationCount(state, id, n);
 
-  // --- 1. 아직 초보자 기준을 못 넘은 구간: 매번 초보자 기준에 도전한다 ---
-  //     실패하면 그 자리에서 planConsolidation 으로 전환할지 사용자가 고른다.
-  if (!hasClearedBeginner(state, id, step)) {
-    const done = consolidationCount(state, id, n);
-    return {
-      ...base,
-      work: [{ target: beginVal, mode: 'max' }],
-      goal: { label: 'beginner', sets: step.beginner.sets, value: beginVal },
-      kind: 'work',
-      reason: attempts === 0
-        ? `${n}단계 첫 세션. 초보자 기준 ${step.beginner.sets}×${beginVal} 도전.`
-        : `초보자 기준 ${step.beginner.sets}×${beginVal} 도전 ${attempts + 1}회차`
-          + (done > 0 ? ` (다지기 ${done}회 누적).` : '.'),
-    };
-  }
-
-  // --- 2. 초보자 통과 이후: 직전 세션이 중급자 기준을 넘었는지로 갈린다 ---
-  const lastSets = last?.sets ?? [];
-  const hitInter = meetsStandard(lastSets, step.intermediate.sets, interVal);
-  const goalStd = hitInter ? top : step.intermediate;
-  const goalVal = hitInter ? topVal : interVal;
-  const goalLabel = hitInter ? topLabel(step) : ('intermediate' as const);
-  const avg = mean(lastSets);
-
-  // 90% 규칙 — 직전 평균이 목표의 90% 이상이면 기준 자체에 도전한다.
-  if (avg >= RULES.attemptThreshold * goalVal) {
-    return {
-      ...base,
-      work: Array.from({ length: goalStd.sets },
-        () => ({ target: goalVal, mode: 'fixed' as const })),
-      goal: { label: goalLabel, sets: goalStd.sets, value: goalVal },
-      kind: 'work',
-      reason: `직전 평균 ${avg.toFixed(1)} 이 목표 ${goalVal} 의 `
-        + `${Math.round(RULES.attemptThreshold * 100)}% 이상. 기준 ${goalStd.sets}×${goalVal} 직접 도전.`,
-    };
-  }
-
-  const carry = carryValue(avg, last?.rpe);
-  const carrySets = goalStd.sets >= 3 ? goalStd.sets - 1 : 1;
-  const work: TargetSet[] = [
-    ...Array.from({ length: carrySets }, () => ({ target: carry, mode: 'fixed' as const })),
-    { target: goalVal, mode: 'max' as const },
-  ];
-  const downshifted = last?.rpe !== undefined && last.rpe >= RULES.rpeDownshiftAt;
+  // 중단은 연속을 깨지 않으므로 목표도 그대로다. 실패한 것을 같은 목표로 다시 낸다
+  // (FR-22.3b / EC-54). 난도를 낮추지 않는다.
+  const reason = retry
+    ? `직전 세션 중단 — 같은 목표로 재도전. `
+      + `${TIER_KO[streak.tier]} 기준 ${std.sets}×${stdVal} · ${streak.streak}/${need}회 연속`
+      + (done > 0 ? ` (다지기 ${done}회 누적).` : '.')
+    : `${TIER_KO[streak.tier]} 기준 ${std.sets}×${stdVal} · ${streak.streak}/${need}회 연속.`;
 
   return {
     ...base,
-    work,
-    goal: { label: goalLabel, sets: goalStd.sets, value: goalVal },
+    // 기준 이상이면 얼마든 더 해도 된다. 다만 초과분이 연속을 앞당기지는 않는다.
+    work: Array.from({ length: std.sets }, () => ({ target: stdVal, mode: 'max' as const })),
+    goal: { label: streak.tier, sets: std.sets, value: stdVal },
     kind: 'work',
-    reason: `직전 평균 ${avg.toFixed(1)}. 유지 ${carrySets}세트 ${carry}회 뒤 `
-      + `마지막 세트는 ${goalVal} 까지 최대한.`
-      + (downshifted ? ` (직전 RPE ${last!.rpe} — 유지 세트 ${RULES.rpeDownshiftAmount} 하향)` : ''),
+    reason,
   };
 }
 
