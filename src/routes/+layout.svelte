@@ -17,11 +17,11 @@
   import { inProgress } from '$lib/ui/session.svelte';
   import { todayClock } from '$lib/ui/today.svelte';
   import { sw } from '$lib/ui/sw.svelte';
-  import Confirm from '$lib/ui/Confirm.svelte';
+  import About from '$lib/ui/About.svelte';
 
   let { children } = $props();
   let booted = $state(false);
-  let showResetConfirm = $state(false);
+  let about = $state<ReturnType<typeof About> | undefined>();
 
   onMount(() => {
     if (!browser) return;
@@ -48,10 +48,8 @@
     else window.addEventListener('load', () => void sw.register(), { once: true });
   });
 
-  function resetInitial() {
-    showResetConfirm = false;
-    appState.resetToInitial();
-    goto('/steps');
+  function openAbout() {
+    about?.open();
   }
 </script>
 
@@ -71,7 +69,7 @@
   {#if appState.storageStatus === 'corrupt'}
     <div class="banner warn" role="alert">
       저장 데이터가 손상되었습니다. 원본은 그대로 보존되어 있습니다.
-      <button type="button" onclick={() => showResetConfirm = true}>초기 상태로 시작</button>
+      <button type="button" onclick={openAbout}>초기 상태로 시작</button>
     </div>
   {/if}
 
@@ -106,15 +104,8 @@
   <a href="/steps" class:active={page.url.pathname === '/steps'}>단계</a>
 </nav>
 
-{#if showResetConfirm}
-  <Confirm
-    title="정말 초기 상태로 시작하시겠습니까?"
-    body="현재 저장된 데이터는 보존되지만 새 초기 상태가 그 위에 저장됩니다. 이후 조작에서 원본에 접근할 수 없습니다."
-    confirmLabel="초기 상태로 시작"
-    onConfirm={resetInitial}
-    onCancel={() => showResetConfirm = false}
-  />
-{/if}
+<!-- About 모달: 상단 바에서도, 손상 배너에서도 여는 진입점 (FR-19.4). -->
+<About bind:this={about} />
 
 <!-- dev 안내 (dev 에서만) -->
 {#if dev && !booted}
