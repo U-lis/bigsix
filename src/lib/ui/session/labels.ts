@@ -6,8 +6,9 @@
  */
 
 import { getProgression } from '../../domain/catalog.ts';
+import { weekdayOf } from '../../domain/date.ts';
 import type {
-  Catalog, PlannedExercise, ProgressionId, SetMode, StandardLabel, Unit,
+  Catalog, IsoDate, PlannedExercise, ProgressionId, SetMode, StandardLabel, Unit,
 } from '../../domain/types.ts';
 
 /**
@@ -66,4 +67,18 @@ export function planHeader(programKo: string, dayNumber: number, weekday: string
  */
 export function exerciseTitle(plan: PlannedExercise): string {
   return `${plan.performedStep}단계 · ${plan.stepName.ko}`;
+}
+
+/**
+ * 'YYYY-MM-DD' → '9월 8일' 형식의 한국어 날짜 문구 (FR-17.4 화면 문구용).
+ * ISO 문자열을 Date 생성자에 넘기지 않는다 (ADR-5) — 문자열을 직접 잘라 쓴다.
+ */
+export function formatKoDate(iso: IsoDate): string {
+  const [, m, d] = iso.split('-').map(Number);
+  return `${m}월 ${d}일`;
+}
+
+/** 'YYYY-MM-DD' → '월'/'화'... 요일 한글 한 글자. */
+export function weekdayKoOf(iso: IsoDate): string {
+  return weekdayOf(iso);
 }

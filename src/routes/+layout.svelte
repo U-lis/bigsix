@@ -38,11 +38,9 @@
     booted = true;
 
     // 첫 실행이면 시작 단계 선택 화면(steps) 으로 (FR-3.5, FR-3.6). 이미 그 화면이면 유지.
+    // no-program 리다이렉트는 제거 (FR-17.1) — 오늘 화면이 안내 상태를 직접 말한다.
     if (result.needsFirstRun && page.url.pathname !== '/steps') {
       goto('/steps');
-    } else if (result.agenda.kind === 'no-program' && !result.needsFirstRun && page.url.pathname === '/') {
-      // no-program 이지만 첫 실행은 아니면 프로그램 선택 (FR-3.3 / FR-9.2).
-      goto('/programs');
     }
 
     // 서비스 워커 등록 — dev 에서는 건너뜀 (sw.js 자체가 없어 404).
