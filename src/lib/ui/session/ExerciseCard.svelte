@@ -91,15 +91,6 @@
 
   <p class="reason">{plan.reason}</p>
 
-  <section class="warmup">
-    <h4>워밍업</h4>
-    <ol>
-      {#each plan.warmup as w, i (i)}
-        <li>{setTargetLabel(w.target, w.mode, plan.unit)}</li>
-      {/each}
-    </ol>
-  </section>
-
   <section class="work">
     <h4>본 세트 ({workDone}/{plan.work.length})</h4>
     <ol>

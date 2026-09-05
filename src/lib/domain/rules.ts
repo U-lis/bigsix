@@ -16,9 +16,6 @@ export const RULES = {
   /** book: 직전 평균이 목표 기준의 이 비율에 도달하면 기준 자체에 도전한다. */
   attemptThreshold: 0.9,
 
-  /** book: 워밍업은 최대 2세트. */
-  maxWarmupSets: 2,
-
   /** book: 아무리 강해도 2단계부터 시작할 것을 권한다. */
   startStep: 2,
 

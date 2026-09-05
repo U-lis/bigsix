@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { canConsolidate, consolidationCount, planConsolidation, planExercise, planWarmup, withPair } from '../../src/lib/domain/plan.ts';
+import { canConsolidate, consolidationCount, planConsolidation, planExercise, withPair } from '../../src/lib/domain/plan.ts';
 import { planDay } from '../../src/lib/domain/schedule.ts';
 import { catalog, rec, stateAt, targets } from './helpers.ts';
 
@@ -125,12 +125,11 @@ test('직전 RPE 9 이상이면 유지 세트 목표를 1 낮춘다', () => {
   assert.match(p.reason, /RPE 9/);
 });
 
-test('워밍업은 최대 2세트, 3단계부터는 직전 두 단계의 중급자 기준', () => {
-  // 1~2단계: 1단계 중급(2×25 → 25) + 1단계 상급(3×50 → 50)
-  assert.deepEqual(planWarmup(catalog, 'pushup', 2).map((w) => w.target), [25, 50]);
-  // 5단계: 3단계 중급 15 + 4단계 중급 12
-  assert.deepEqual(planWarmup(catalog, 'pushup', 5).map((w) => w.target), [15, 12]);
-  assert.equal(planWarmup(catalog, 'pushup', 9).length, 2);
+test('FR-20 계획에 워밍업이 없다', () => {
+  // 워밍업은 책에 없는 규칙이었고, 낮은 단계의 승급 기준을 그대로 준비운동 분량으로
+  // 써서 본세트의 4~7배가 나왔다. 개념째 제거했다.
+  const p = planExercise(stateAt({ pushup: 2 }), catalog, 'pushup');
+  assert.equal('warmup' in (p as unknown as Record<string, unknown>), false);
 });
 
 test('핸드스탠드 2단계에는 1단계가 동반 단계로 붙는다', () => {
@@ -271,7 +270,6 @@ test('sideNote 가 붙어도 work / goal / warmup / reason 이 그대로다', ()
     { target: 5, mode: 'fixed' }, { target: 10, mode: 'max' },
   ]);
   assert.deepEqual(noNote.goal, { label: 'intermediate', sets: 2, value: 10 });
-  assert.deepEqual(noNote.warmup.map((w) => w.target), [15, 12]);
   assert.equal(noNote.reason, '직전 평균 5.5. 유지 1세트 5회 뒤 마지막 세트는 10 까지 최대한.');
 });
 

@@ -186,7 +186,6 @@ export interface PlannedExercise {
   stepName: { en: string; ko: string };
   unit: Unit;
   perSide: boolean;
-  warmup: TargetSet[];
   work: TargetSet[];
   /** 이번 세션이 겨냥하는 기준. */
   goal: { label: StandardLabel; sets: number; value: number };

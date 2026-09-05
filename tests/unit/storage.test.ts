@@ -225,7 +225,6 @@ describe('AppState 와 진행 중 세션은 별도 키 (FR-2.6)', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [],
       workSets: [],
     };
     writeInProgress(ip);
@@ -243,7 +242,6 @@ describe('readInProgress / writeInProgress — 라운드트립', () => {
       step: 4,
       performedStep: 4,
       kind: 'work',
-      warmupSets: [{ value: 10 }],
       workSets: [{ value: 20, rpe: 7 }, { value: 18 }],
     };
     writeInProgress(ip);
@@ -285,7 +283,6 @@ describe('clearAppState / clearInProgress', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [],
       workSets: [],
     });
     clearAppState();
@@ -294,5 +291,61 @@ describe('clearAppState / clearInProgress', () => {
     assert.ok(window.localStorage.getItem(IN_PROGRESS_KEY) !== null);
     clearInProgress();
     assert.equal(window.localStorage.getItem(IN_PROGRESS_KEY), null);
+  });
+});
+
+// ── FR-20.3 / EC-48: v2 → v3 마이그레이션 (워밍업 제거) ──────────────────
+
+describe('FR-20.3 v2 봉투의 warmupSets 를 버리고 읽는다 (EC-48)', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('warmupSets 가 들어 있어도 본세트 입력분이 살아남는다', () => {
+    // 세션 도중 앱이 갱신된 경우다. 워밍업 값은 의미가 없어졌지만 그것 때문에
+    // 본세트 입력분까지 잃으면 안 된다.
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({
+        schemaVersion: 2,
+        inProgress: {
+          startedAt: '2026-09-05',
+          progressionId: 'pushup',
+          step: 5,
+          performedStep: 5,
+          kind: 'work',
+          warmupSets: [{ value: 10 }, { value: 15 }],
+          workSets: [{ value: 20 }],
+        },
+      }),
+    );
+    const r = readInProgress();
+    assert.equal(r.status, 'ok');
+    if (r.status !== 'ok') return;
+    assert.deepEqual(r.value.workSets, [{ value: 20 }]);
+    assert.equal('warmupSets' in (r.value as unknown as Record<string, unknown>), false);
+  });
+
+  it('v3 로 다시 쓰면 warmupSets 가 남지 않는다', () => {
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({
+        schemaVersion: 2,
+        inProgress: {
+          startedAt: '2026-09-05',
+          progressionId: 'pushup',
+          step: 5,
+          performedStep: 5,
+          kind: 'work',
+          warmupSets: [{ value: 10 }],
+          workSets: [],
+        },
+      }),
+    );
+    const r = readInProgress();
+    assert.equal(r.status, 'ok');
+    if (r.status !== 'ok') return;
+    writeInProgress(r.value);
+    const env = JSON.parse(window.localStorage.getItem(IN_PROGRESS_KEY) as string);
+    assert.equal(env.schemaVersion, 3);
+    assert.equal('warmupSets' in env.inProgress, false);
   });
 });

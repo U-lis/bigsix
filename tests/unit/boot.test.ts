@@ -104,7 +104,6 @@ describe('boot — 진행 중 세션 복원 (FR-2.4)', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [{ value: 5 }],
       workSets: [{ value: 8 }],
     });
     const r = boot('2026-09-05');
@@ -142,7 +141,7 @@ describe('boot — 결과 형태 (FR-3.1)', () => {
 
 // ── 봉투 v1 데이터 (FR-1.4) ───────────────────────────────────────────────
 
-describe('boot — v1 데이터를 v2 로 정상 복원 (FR-1.4)', () => {
+describe('boot — v1 데이터를 CURRENT 로 정상 복원 (FR-1.4)', () => {
   it('v1 봉투를 만나면 adjustedAtSessionIndex 가 undefined 로 정상 복원', () => {
     window.localStorage.setItem(
       APP_STATE_KEY,
@@ -157,10 +156,10 @@ describe('boot — v1 데이터를 v2 로 정상 복원 (FR-1.4)', () => {
     const raw = window.localStorage.getItem(APP_STATE_KEY);
     assert.ok(raw !== null);
     const env = JSON.parse(raw as string);
-    // 아직 v1 그대로다 — 실제 상태 전이가 일어나야 v2 로 재저장된다.
+    // 아직 v1 그대로다 — 실제 상태 전이가 일어나야 CURRENT 로 재저장된다.
     assert.equal(env.schemaVersion, 1);
-    // CURRENT_SCHEMA_VERSION 은 2 다.
-    assert.equal(CURRENT_SCHEMA_VERSION, 2);
+    // FR-20 이 워밍업을 없애며 v3 로 올렸다.
+    assert.equal(CURRENT_SCHEMA_VERSION, 3);
   });
 });
 

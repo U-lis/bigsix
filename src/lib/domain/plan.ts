@@ -28,21 +28,6 @@ function sideNoteFor(id: ProgressionId, perSide: boolean, unit: Unit = 'reps'): 
   return `양쪽 ${part}을 모두 수행하고, 적게 한 쪽의 ${measure}를 입력한다.`;
 }
 
-/** 워밍업: 최대 2세트. 1~2단계는 1단계 중급+상급, 3단계부터는 직전 두 단계의 중급 기준. */
-export function planWarmup(catalog: Catalog, id: ProgressionId, step: number): TargetSet[] {
-  const sets: TargetSet[] = [];
-  if (step <= 2) {
-    const s1 = getStep(catalog, id, 1);
-    sets.push({ target: valueOf(s1.intermediate), mode: 'fixed' });
-    sets.push({ target: valueOf(topStandard(s1)), mode: 'fixed' });
-  } else {
-    for (const n of [step - 2, step - 1]) {
-      sets.push({ target: valueOf(getStep(catalog, id, n).intermediate), mode: 'fixed' });
-    }
-  }
-  return sets.slice(0, RULES.maxWarmupSets);
-}
-
 function carryValue(avg: number, rpe: number | undefined): number {
   const down = rpe !== undefined && rpe >= RULES.rpeDownshiftAt ? RULES.rpeDownshiftAmount : 0;
   return Math.max(1, Math.floor(avg) - down);
@@ -102,7 +87,6 @@ export function planConsolidation(
     stepName: prev.name,
     unit: prev.unit,
     perSide: prev.perSide === true,
-    warmup: planWarmup(catalog, id, prev.n),
     work: Array.from({ length: RULES.consolidationSets },
       () => ({ target, mode: 'fixed' as const })),
     goal: { label: 'beginner', sets: step.beginner.sets, value: valueOf(step.beginner) },
@@ -131,7 +115,6 @@ export function planExercise(
     unit: step.unit,
     perSide: step.perSide === true,
     sideNote: sideNoteFor(id, step.perSide === true, step.unit),
-    warmup: planWarmup(catalog, id, n),
   };
 
   const top = topStandard(step);
@@ -215,7 +198,6 @@ export function withPair(
       unit: paired.unit,
       perSide: paired.perSide === true,
       sideNote: sideNoteFor(plan.progressionId, paired.perSide === true, paired.unit),
-      warmup: [],
       work: [{ target: valueOf(paired.intermediate), mode: 'fixed' }],
       goal: {
         label: 'intermediate',

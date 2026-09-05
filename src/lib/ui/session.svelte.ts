@@ -63,7 +63,6 @@ class InProgressStore {
       step: plan.step,
       performedStep: plan.performedStep,
       kind: plan.kind,
-      warmupSets: [],
       workSets: [],
     };
     this.persist();
@@ -84,24 +83,6 @@ class InProgressStore {
     const next = [...this.#session.workSets];
     next[index] = entry;
     this.#session = { ...this.#session, workSets: next };
-    this.persist();
-  }
-
-  pushWarmupSet(entry: SetEntry): void {
-    if (this.#session === null) return;
-    this.#session = {
-      ...this.#session,
-      warmupSets: [...this.#session.warmupSets, entry],
-    };
-    this.persist();
-  }
-
-  updateWarmupSet(index: number, entry: SetEntry): void {
-    if (this.#session === null) return;
-    if (index < 0 || index >= this.#session.warmupSets.length) return;
-    const next = [...this.#session.warmupSets];
-    next[index] = entry;
-    this.#session = { ...this.#session, warmupSets: next };
     this.persist();
   }
 

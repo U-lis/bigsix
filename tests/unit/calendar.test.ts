@@ -396,7 +396,6 @@ describe('reviewDay — plannedExercises (W-2 (c), FR-5.1)', () => {
     assert.deepEqual(r.plannedExercises, direct.exercises);
     for (const e of r.plannedExercises) {
       assert.ok(Array.isArray(e.work) && e.work.length > 0);
-      assert.ok(Array.isArray(e.warmup));
       assert.ok(typeof e.goal.value === 'number');
     }
   });

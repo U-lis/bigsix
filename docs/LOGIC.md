@@ -39,7 +39,6 @@ SessionRecord = { date, progressionId, step, performedStep?, sets, rpe?, kind, o
 | 중급자 통과, 상급자가 3세트 | 유지 2세트 + 마지막 세트 최대한 |
 | 직전 평균이 목표의 90% 이상 | 목표 기준 자체에 도전 |
 
-워밍업은 최대 2세트. 1~2단계는 1단계 중급+상급, 3단계부터는 직전 두 단계의 중급 기준.
 핸드스탠드 2단계에는 1단계(월 헤드스탠드)가 동반 단계로 자동으로 붙는다.
 
 ### 2-1. 다지기 전환 — `canConsolidate` / `planConsolidation`
@@ -95,7 +94,6 @@ if (canConsolidate(state, catalog, 'pushup')) {
 | `gateStep` | 6 | book |
 | `gateRequiresCompletion` | true | 결정 — 6단계 완수 후 7단계 진입 |
 | `attemptThreshold` | 0.9 | book |
-| `maxWarmupSets` | 2 | book |
 | `startStep` | 2 | book |
 | `consolidationSets` | 2 | book |
 | `consolidationBumpEvery` / `Ratio` | 3 / 0.1 | 정책 |

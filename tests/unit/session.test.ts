@@ -135,7 +135,6 @@ test('FR-7.3 다지기 계획이 planConsolidation 직접 호출 결과와 완�
   assert.deepEqual(r.consolidation, direct, '재구현이 아니라 위임이다');
   assert.deepEqual(r.consolidation!.work, direct.work);
   assert.deepEqual(r.consolidation!.goal, direct.goal);
-  assert.deepEqual(r.consolidation!.warmup, direct.warmup);
   assert.equal(r.consolidation!.reason, direct.reason);
 });
 
@@ -163,7 +162,6 @@ test('반환된 consolidation 은 계획(PlannedExercise)이지 기록(SessionRe
   const c = r.consolidation!;
   // 계획에만 있는 필드
   assert.ok(Array.isArray(c.work));
-  assert.ok(Array.isArray(c.warmup));
   assert.ok(typeof c.reason === 'string');
   // 기록에만 있는 필드는 없다
   assert.equal((c as unknown as Record<string, unknown>).date, undefined);

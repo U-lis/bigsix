@@ -113,6 +113,11 @@
           </article>
         {/each}
       </div>
+      <!-- FR-20.5: 워밍업 규칙을 없앤 자리. 수치도 종목별 지시도 없는 사실 한 줄이며,
+           세션마다 반복하지 않고 오늘 화면에 한 번만 둔다. -->
+      {#if agenda.exercises.length > 0}
+        <p class="stretch">운동 전후로 스트레칭을 한다.</p>
+      {/if}
     {/if}
   {/if}
 </section>
@@ -140,6 +145,12 @@
     border-radius: 6px;
     margin-bottom: 1rem;
   }
+  .stretch {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: #888;
+  }
+
   .rest {
     color: #ccc;
     padding: 1rem;

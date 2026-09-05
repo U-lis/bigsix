@@ -30,7 +30,7 @@ export const IN_PROGRESS_KEY = 'bigsix.session.inprogress';
  * 읽으면 그 필드가 `undefined` 인 채로 정상 복원된다 (앵커 없음 = 조정한 적 없음).
  * FR-1.4 마이그레이션 체인의 첫 단계 v1→v2 는 이 no-op 이다.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 // ── 봉투 스키마 ────────────────────────────────────────────────────────────
 
@@ -60,7 +60,6 @@ export interface InProgressSession {
   performedStep: number;
   kind: 'work' | 'consolidation';
   /** 입력된 워밍업 세트. 순서대로 채워진다. 미입력 세트는 아직 배열에 없다. */
-  warmupSets: SetEntry[];
   /** 입력된 본 세트. 순서대로 채워진다. */
   workSets: SetEntry[];
 }
@@ -106,7 +105,6 @@ function isInProgressShape(value: unknown): value is InProgressSession {
   if (typeof v.step !== 'number') return false;
   if (typeof v.performedStep !== 'number') return false;
   if (v.kind !== 'work' && v.kind !== 'consolidation') return false;
-  if (!Array.isArray(v.warmupSets)) return false;
   if (!Array.isArray(v.workSets)) return false;
   return true;
 }
@@ -124,8 +122,12 @@ const migrateV1toV2: Migrator = (envelope) => {
   return { ...envelope, schemaVersion: 2 };
 };
 
+/** v2 → v3: 워밍업 제거 (FR-20). `AppState` 봉투에는 워밍업이 없어 no-op 이다. */
+const migrateV2toV3: Migrator = (envelope) => ({ ...envelope, schemaVersion: 3 });
+
 const APP_STATE_MIGRATIONS: Record<number, Migrator> = {
   1: migrateV1toV2,
+  2: migrateV2toV3,
 };
 
 /**
@@ -146,10 +148,29 @@ function migrateAppStateEnvelope(raw: Record<string, unknown>): Record<string, u
   return cur;
 }
 
-// InProgress 스키마도 같은 자리에 마이그레이션 훅을 열어 둔다. 지금은 v1 이 없어
-// 실제 마이그레이션이 없다. 정책만 동일 — 미래 버전은 실패, 낮은 버전은 체인 적용.
+// InProgress 스키마도 같은 자리에 마이그레이션 훅을 열어 둔다.
+// 정책은 동일 — 미래 버전은 실패, 낮은 버전은 체인 적용.
+
+/** v1 → v2: 변경 없음. `AppState` 쪽만 필드가 늘었다. */
+const migrateInProgressV1toV2: Migrator = (envelope) => ({ ...envelope, schemaVersion: 2 });
+
+/**
+ * v2 → v3: 진행 중 세션에서 `warmupSets` 를 버린다 (FR-20.3 / EC-48).
+ * 워밍업 자체가 없어졌으므로 남은 값은 의미가 없다. 오류로 버리지 않고 무시한다 —
+ * 세션 도중 앱을 갱신한 사용자가 본세트 입력분까지 잃으면 안 된다.
+ */
+const migrateInProgressV2toV3: Migrator = (envelope) => {
+  const inProgress = envelope.inProgress;
+  if (inProgress === null || typeof inProgress !== 'object') {
+    return { ...envelope, schemaVersion: 3 };
+  }
+  const { warmupSets: _dropped, ...rest } = inProgress as Record<string, unknown>;
+  return { ...envelope, inProgress: rest, schemaVersion: 3 };
+};
+
 const IN_PROGRESS_MIGRATIONS: Record<number, Migrator> = {
-  // 미래 확장 자리.
+  1: migrateInProgressV1toV2,
+  2: migrateInProgressV2toV3,
 };
 
 function migrateInProgressEnvelope(raw: Record<string, unknown>): Record<string, unknown> | null {

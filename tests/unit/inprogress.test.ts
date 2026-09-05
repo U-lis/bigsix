@@ -28,10 +28,6 @@ function makePlan(): PlannedExercise {
     stepName: { en: 'Kneeling Pushup', ko: '무릎 대고 팔굽혀펴기' },
     unit: 'reps',
     perSide: false,
-    warmup: [
-      { target: 10, mode: 'fixed' },
-      { target: 15, mode: 'fixed' },
-    ],
     work: [
       { target: 20, mode: 'fixed' },
       { target: 20, mode: 'fixed' },
@@ -85,7 +81,6 @@ describe('init — FR-2.4 / EC-17 재실행 복원', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [{ value: 10 }],
       workSets: [{ value: 20, rpe: 7 }],
     };
     writeInProgress(s);
@@ -195,7 +190,6 @@ describe('isStaleStartedAt — FR-2.9 / EC-7a', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [],
       workSets: [],
     };
     assert.equal(isStaleStartedAt(s, '2026-09-06'), true);
@@ -208,7 +202,6 @@ describe('isStaleStartedAt — FR-2.9 / EC-7a', () => {
       step: 3,
       performedStep: 3,
       kind: 'work',
-      warmupSets: [],
       workSets: [],
     };
     assert.equal(isStaleStartedAt(s, '2026-09-05'), false);
