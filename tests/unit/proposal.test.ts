@@ -882,3 +882,49 @@ describe('주간 흐름', () => {
     assert.equal(state.proposals.at(-1)!.resolvedAt, '2026-09-17');
   });
 });
+
+// ── FR-18 자유 운동 필터 회귀 (ADR-16) ────────────────────────────────────
+describe('FR-18 자유 운동 필터 (ADR-16)', () => {
+  it('sessionIndices 는 free 세션을 건너뛴다 — maintenanceCount 로 관측', () => {
+    // 4단계로 승급한 세션 + 그 뒤 4단계 work 2개 + free 3개.
+    // free 를 세면 5, work 만 세면 2 여야 한다.
+    const history: SessionRecord[] = [
+      promoted('pushup', 3, '2026-09-01'),
+      { date: '2026-09-02', progressionId: 'pushup', step: 4, sets: [8, 8], kind: 'work' },
+      { date: '2026-09-03', progressionId: 'pushup', step: 4, sets: [8, 8], kind: 'work' },
+      { date: '2026-09-04', progressionId: 'pushup', step: 4, sets: [8, 8], kind: 'free' },
+      { date: '2026-09-05', progressionId: 'pushup', step: 4, sets: [8, 8], kind: 'free' },
+      { date: '2026-09-06', progressionId: 'pushup', step: 4, sets: [8, 8], kind: 'free' },
+    ];
+    assert.equal(maintenanceCount(history, 'pushup', '2026-09-01'), 2);
+  });
+
+  it('lastSetbackIndex 는 free 의 outcome:abandoned 를 무시한다 (EC-45 회귀)', () => {
+    const history: SessionRecord[] = [
+      { date: '2026-09-01', progressionId: 'pushup', step: 4, sets: [1],
+        kind: 'free', outcome: 'abandoned' },
+    ];
+    assert.equal(lastSetbackIndex(history, 'pushup', '2026-09-01'), null);
+  });
+
+  it('promotionBaselineIndex 는 free 세션을 기준점으로 삼지 않는다', () => {
+    const history: SessionRecord[] = [
+      // 자유 운동에 promotedTo 가 붙는 시나리오는 도메인상 불가지만 방어.
+      { date: '2026-09-01', progressionId: 'pushup', step: 3, sets: [10],
+        kind: 'free' },
+      promoted('pushup', 3, '2026-09-02'),
+    ];
+    // free 는 baseline 후보에 안 잡히므로 실제 승급 세션(index 1)이 baseline.
+    assert.equal(promotionBaselineIndex(history, 'pushup', '2026-09-01'), 1);
+  });
+
+  it('effectiveFloorIndex 는 free abandoned 를 하한으로 밀어 올리지 않는다', () => {
+    const history: SessionRecord[] = [
+      promoted('pushup', 3, '2026-09-01'),
+      { date: '2026-09-05', progressionId: 'pushup', step: 4, sets: [0],
+        kind: 'free', outcome: 'abandoned' },
+    ];
+    // free 는 setback 이 아니므로 floor 는 0.
+    assert.equal(effectiveFloorIndex(history, 'pushup', '2026-09-01'), 0);
+  });
+});

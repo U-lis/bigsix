@@ -728,3 +728,37 @@ describe('타임존 무관 (FR-6.3)', () => {
     );
   });
 });
+
+// ── FR-18.8 자유 운동은 조회에는 남지만 판정에는 관여하지 않는다 ─────────────
+describe('FR-18.8 reviewDay 와 자유 운동 (ADR-16)', () => {
+  it('reviewDay 의 planned 는 free 를 포함하지 않는다 (계약상 planDay 는 free 를 만들지 않음)', () => {
+    // 월요일 계획: pushup / legraise. free 로 pullup 을 기록해도 planned 는 변화 없음.
+    const state = recorded(selected('good_behavior', MON), { date: MON, progressionId: 'pushup' });
+    const withFree: AppState = {
+      ...state,
+      history: [
+        ...state.history,
+        hist(MON, 'pullup', { kind: 'free' }),
+      ],
+    };
+    const r = reviewDay(withFree, catalog, MON);
+    assert.deepEqual(r.planned, ['pushup', 'legraise']);
+    // free 는 done 판정을 흔들지 않는다: pushup 만 계획 대비 수행, legraise 미수행 → partial.
+    assert.equal(r.status, 'partial');
+  });
+
+  it('reviewDay 의 performed 는 free 를 포함한다 — 기록 사실은 조회에 남는다', () => {
+    // 월요일 계획: pushup / legraise. free 로 pullup 을 기록.
+    const state = recorded(selected('good_behavior', MON), { date: MON, progressionId: 'pushup' });
+    const withFree: AppState = {
+      ...state,
+      history: [
+        ...state.history,
+        hist(MON, 'pullup', { kind: 'free' }),
+      ],
+    };
+    const r = reviewDay(withFree, catalog, MON);
+    assert.equal(r.performed.length, 2, 'pushup(work) 과 pullup(free) 둘 다 조회');
+    assert.ok(r.performed.some((s) => s.progressionId === 'pullup' && s.kind === 'free'));
+  });
+});

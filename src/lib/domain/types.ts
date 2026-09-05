@@ -80,8 +80,15 @@ export interface SessionInput {
   sets: number[];
   /** 주관적 운동 강도 1~10. 선택 입력. */
   rpe?: number;
-  /** work = 정규 세션, consolidation = 이전 단계를 다지는 세션. */
-  kind: 'work' | 'consolidation';
+  /**
+   * work = 정규 세션, consolidation = 이전 단계를 다지는 세션,
+   * free = 사용자가 계획 밖에서 임의로 기록한 운동.
+   *
+   * `'free'` 는 승급·유지·강등·다음 목표 계산 어디에도 영향을 주지 않는다
+   * (FR-18.6 / ADR-16). 판정에서 걸러 내는 유일한 경로는 `history.ts` 의
+   * `judgingHistory` 이며, 새 판정 코드는 이 뷰를 통해서만 히스토리를 본다.
+   */
+  kind: 'work' | 'consolidation' | 'free';
   /** abandoned = 사용자가 도중에 '불가능' 을 눌러 중단한 도전. */
   outcome?: 'completed' | 'abandoned';
 }
@@ -194,6 +201,11 @@ export interface PlannedExercise {
   streak?: number;
   /** 이번 세션이 겨냥하는 기준. */
   goal: { label: StandardLabel; sets: number; value: number };
+  /**
+   * 자유 운동(`SessionInput.kind === 'free'`)은 계획을 만들지 않으므로 여기에
+   * `'free'` 가 없다. 계획은 프로그램 요일표와 판정에서 파생되는 반면 자유 운동은
+   * 사용자가 즉석에서 고르는 것이라 계획할 대상이 아니다 (SPEC2 Out of Scope).
+   */
   kind: 'work' | 'consolidation';
   /** 이 목표가 나온 근거. 사실만 적는다. */
   reason: string;

@@ -4,7 +4,9 @@ export { fromJSON, getProgression, getStep, topStandard, topLabel, valueOf } fro
 export { checkGate, unlockedProgressions, type GateResult } from './gate.ts';
 export { setStep, MIN_STEP, MAX_STEP } from './steps.ts';
 export { stepStreak, streakComplete, standardOf, type StepStreak } from './progress.ts';
-export { sessionsAt, lastSession, mean, meetsStandard } from './history.ts';
+export {
+  sessionsAt, lastSession, mean, meetsStandard, judgingHistory, judgingState,
+} from './history.ts';
 export { planExercise, planConsolidation, canConsolidate, consolidationCount, withPair } from './plan.ts';
 export { evaluateSession, applySession, type Evaluation } from './evaluate.ts';
 /** 요일 미리보기용 저수준 API. 날짜 기반 진입점은 `planOn` (Phase 4). */

@@ -52,6 +52,11 @@ function sessionIndices(
   const out: number[] = [];
   for (let i = fromIndex; i < history.length; i += 1) {
     const r = history[i];
+    // 자유 운동은 승급·유지·강등 판정 어디에도 잡히지 않는다 (ADR-16 / EC-45/EC-46).
+    // sessionIndices 는 lastSetbackIndex / promotionBaselineIndex / maintenanceCount
+    // 셋의 공통 진입점이라 여기 한 줄로 네 진입점 중 3개(#3, #4)와 상관없는 유지·강등이
+    // 자동 배제된다.
+    if (r.kind === 'free') continue;
     if (r.progressionId === progressionId && onOrAfter(r.date, floorDate)) out.push(i);
   }
   return out;

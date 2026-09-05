@@ -314,3 +314,40 @@ test('planDay 를 거쳐도 종목별 sideNote 가 올바르게 실린다 (DayPl
   assert.match(wedById.squat.sideNote!, /양쪽 다리/);
   assert.match(wedById.pullup.sideNote!, /양쪽 팔/);
 });
+
+// ── FR-18 자유 운동 필터 회귀 케이스 (ADR-16) ────────────────────────────────
+
+test('FR-18.6 (2) planExercise 는 free 세션을 lastSession 으로 잡지 않는다', () => {
+  // 직전 work 세션이 상급자 통과, 그 뒤 자유 운동으로 낮은 값이 있어도
+  // 재도전 판정이 나와서는 안 된다.
+  const s = stateAt({ pushup: 5 }, [
+    rec('pushup', 5, [5], { date: '2026-09-01' }),
+    { date: '2026-09-02', progressionId: 'pushup', step: 5, sets: [0],
+      kind: 'free', outcome: 'abandoned' },
+  ]);
+  const p = planExercise(s, catalog, 'pushup');
+  assert.doesNotMatch(p.reason, /재도전/, 'free 의 outcome:abandoned 도 무시');
+});
+
+test('FR-18 stepStreak 은 free 세션을 세지 않는다', () => {
+  // history: [work-통과, free-통과, work-통과, work-통과] → streak = 3 (free 무시)
+  const s = stateAt({ pushup: 5 }, [
+    rec('pushup', 5, [5], { date: '2026-09-01' }),
+    { date: '2026-09-02', progressionId: 'pushup', step: 5, sets: [5], kind: 'free' },
+    rec('pushup', 5, [5], { date: '2026-09-03' }),
+    rec('pushup', 5, [5], { date: '2026-09-04' }),
+  ]);
+  // 초보자 3연속 → 중급자 0/3
+  const p = planExercise(s, catalog, 'pushup');
+  assert.match(p.reason, /중급자/);
+  assert.match(p.reason, /0\/3회 연속/);
+});
+
+test('FR-18 consolidationCount 는 free 를 세지 않는다 (계약상 kind==consolidation 만 세므로 자동 배제)', () => {
+  const s = stateAt({ pushup: 5 }, [
+    { date: '2026-09-01', progressionId: 'pushup', step: 5, sets: [5], kind: 'free' },
+    { date: '2026-09-02', progressionId: 'pushup', step: 5, sets: [5],
+      kind: 'free', performedStep: 4 },
+  ]);
+  assert.equal(consolidationCount(s, 'pushup', 5), 0);
+});

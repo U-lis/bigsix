@@ -1,7 +1,7 @@
 import { RULES } from './rules.ts';
 import { standardOf, stepStreak, TIER_KO } from './progress.ts';
 import { getStep, topStandard, valueOf } from './catalog.ts';
-import { lastSession, sessionsAt } from './history.ts';
+import { judgingState, lastSession, sessionsAt } from './history.ts';
 import type {
   AppState, Catalog, PlannedExercise, ProgressionId, Step, Unit,
 } from './types.ts';
@@ -33,7 +33,10 @@ function sideNoteFor(id: ProgressionId, perSide: boolean, unit: Unit = 'reps'): 
 export function consolidationCount(
   state: AppState, id: ProgressionId, step: number,
 ): number {
-  return sessionsAt(state, id, step).filter((r) => r.kind === 'consolidation').length;
+  // 다지기 카운트는 판정 성격이라 자유 운동을 배제한다 (ADR-16).
+  // free 는 애초에 kind === 'consolidation' 이 아니지만 방어적으로 뷰를 좁힌다.
+  return sessionsAt(judgingState(state), id, step)
+    .filter((r) => r.kind === 'consolidation').length;
 }
 
 /** 1단계에는 되돌아갈 단계가 없다. */
@@ -106,6 +109,10 @@ export function planExercise(
     sideNote: sideNoteFor(id, step.perSide === true, step.unit),
   };
 
+  // 판정 성격의 계산은 자유 운동을 배제한 뷰에서만 한다 (ADR-16).
+  // stepStreak 는 자체적으로 free 를 건너뛰므로 뷰를 좁힐 필요가 없다.
+  const jState = judgingState(state);
+
   // 목표는 지금 통과 중인 기준이다 (FR-22.4). 90% 규칙도 유지 세트도 없다 —
   // 승급이 "그 기준 3회 연속" 이므로 매 세션 그 기준을 그대로 노리면 된다.
   const streak = stepStreak(state, catalog, id);
@@ -113,7 +120,7 @@ export function planExercise(
   const stdVal = valueOf(std);
   const need = RULES.promotionStreakRequired;
 
-  const last = lastSession(state, id, n);
+  const last = lastSession(jState, id, n);
   const retry = last?.outcome === 'abandoned';
   const done = consolidationCount(state, id, n);
 

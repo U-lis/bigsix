@@ -87,11 +87,15 @@ export function stepStreak(
 ): StepStreak {
   const n = state.steps[id];
   const step = getStep(catalog, id, n);
+  // 판정용 뷰로 좁힌 히스토리를 훑는다 — 자유 운동은 여기 들어오지 않는다
+  // (FR-18.6 / ADR-16). 앵커는 원본 history 기준이므로,
+  // 자유 운동을 지나칠 때는 별도 조건으로 처리해 인덱스 일치를 유지한다.
   const anchor = state.adjustedAtSessionIndex?.[id] ?? 0;
 
   let cur: StepStreak = { tier: 'beginner', streak: 0 };
   for (let i = anchor; i < state.history.length; i += 1) {
     const r = state.history[i];
+    if (r.kind === 'free') continue;
     if (r.progressionId !== id) continue;
     // 승급 세션을 만나면 그 뒤가 새 단계의 시작이다. 그 전 기록은 이 단계와 무관하다.
     if (r.promotedTo !== undefined) {

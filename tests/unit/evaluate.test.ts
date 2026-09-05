@@ -407,3 +407,20 @@ test('승급 후 이어지는 계획의 단계가 새 단계다', () => {
   assert.equal(state.steps.pushup, 6);
   assert.equal(planExercise(state, catalog, 'pushup').step, 6);
 });
+
+// ── FR-18 자유 운동 필터: RPE 거부권 창에서 free 배제 (ADR-16) ──────────────
+
+test('rpeVeto 는 free 세션의 RPE 를 창에 넣지 않는다', () => {
+  // 최근 세션 3개가 free 이고 RPE 9 라도, 이번 work 세션이 상급자 3연속 완성 시점이면
+  // 거부권이 발동하지 않아야 한다 — 판정 창은 work 만 본다.
+  // 상급자 2연속 통과분(work) + 그 뒤 free 3개(RPE 9) + 이번 세션(work, 상급자 통과).
+  const lead: SessionRecord[] = onePassFromPromotion('pushup', 5); // 8세션
+  const freeNoise: SessionRecord[] = [1, 2, 3].map((i) => ({
+    date: `2026-09-1${i}`, progressionId: 'pushup', step: 5, sets: [20, 20], kind: 'free', rpe: 9,
+  }));
+  const state = stateAt({ pushup: 5 }, [...lead, ...freeNoise]);
+  const { evaluation } = applySession(state, catalog, input('pushup', 5, topSets('pushup', 5)));
+  // free 만 있어 rpeVeto 창이 채워지지 않으므로 승급이 성사되어야 한다.
+  assert.equal(evaluation.promote, true, 'free 는 RPE 창에 포함되지 않는다');
+  assert.equal(evaluation.blockedBy, undefined);
+});

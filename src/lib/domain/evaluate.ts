@@ -1,6 +1,6 @@
 import { RULES } from './rules.ts';
 import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
-import { meetsStandard, sessionsAt } from './history.ts';
+import { judgingState, meetsStandard, sessionsAt } from './history.ts';
 import { stepStreak, streakComplete, TIER_KO, type StepStreak } from './progress.ts';
 import type { AppState, Catalog, SessionInput, SessionRecord, StandardLabel } from './types.ts';
 
@@ -27,7 +27,9 @@ export interface Evaluation {
 function rpeVeto(
   state: AppState, record: SessionInput,
 ): { blocked: boolean; mean: number; n: number } {
-  const recent = [...sessionsAt(state, record.progressionId, record.step), record]
+  // 자유 운동은 판정 대상이 아니므로 RPE 창에도 넣지 않는다 (ADR-16 / EC-46 유사).
+  const jState = judgingState(state);
+  const recent = [...sessionsAt(jState, record.progressionId, record.step), record]
     .filter((r) => r.kind === 'work' && r.rpe !== undefined)
     .slice(-RULES.rpeVetoWindow);
   if (recent.length < RULES.rpeVetoWindow) return { blocked: false, mean: 0, n: recent.length };
@@ -108,6 +110,34 @@ export function evaluateSession(
 export function applySession(
   state: AppState, catalog: Catalog, input: SessionInput,
 ): { state: AppState; evaluation: Evaluation; record: SessionRecord } {
+  // 자유 운동은 승급·유지·강등·다음 목표 계산 어디에도 영향을 주지 않는다
+  // (FR-18.4 / FR-18.6 / EC-40). `state.steps` 를 어느 방향으로도 움직이지 않는다 —
+  // 사용자가 임의로 고른 단계이므로 다지기(`nextStep = record.step`) 분기를
+  // 그대로 쓰면 현재 단계에서 밑으로 내려가는 부작용이 난다.
+  if (input.kind === 'free') {
+    const record: SessionRecord = { ...input };
+    const step = getStep(catalog, input.progressionId, input.step);
+    const evaluation: Evaluation = {
+      metBeginner: false,
+      metIntermediate: false,
+      metTop: false,
+      topLabel: topLabel(step),
+      streak: stepStreak(state, catalog, input.progressionId),
+      promote: false,
+      nextStep: input.step,
+      notes: ['자유 운동 — 승급·유지 판정 대상이 아니다.'],
+    };
+    return {
+      state: {
+        ...state,
+        // steps 를 손대지 않는다 (FR-18.4 / EC-40).
+        history: [...state.history, record],
+      },
+      evaluation,
+      record,
+    };
+  }
+
   const evaluation = evaluateSession(state, catalog, input);
 
   // 값이 없을 때 undefined 를 명시 대입하지 않는다 — 필드 자체를 만들지 않는다.
