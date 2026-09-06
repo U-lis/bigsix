@@ -18,7 +18,8 @@
   let dialog: HTMLDialogElement | undefined = $state();
 
   const APP_NAME = 'bigsix';
-  const AUTHOR = 'familygameguild';
+  // cube-study 와 같은 표기를 쓴다. 이메일 주소에서 유추한 문자열을 쓰지 않는다.
+  const AUTHOR = 'ulismoon';
 
   const info = [
     { label: '제작자', value: AUTHOR },
