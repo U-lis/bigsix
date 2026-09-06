@@ -88,16 +88,18 @@ test('세트를 더 많이 해도 상위 N개로 판정한다', () => {
 });
 
 test('승급은 수행 횟수로만 판정한다 — 심박수는 쓰지 않는다', () => {
-  // 기록 모델에 심박수 필드가 없다. 판정에 쓰이는 주관 지표는 RPE 뿐이다.
-  const keys = Object.keys(rec('pushup', 5, [20, 20]));
-  assert.equal(keys.includes('heartRate'), false);
-  assert.equal(keys.includes('hr'), false);
-  // 같은 수행 횟수면 다른 필드와 무관하게 같은 판정이 나온다.
-  const plain = evaluateSession(stateAt({ pushup: 5 }), catalog, rec('pushup', 5, [20, 20]));
-  const dated = evaluateSession(stateAt({ pushup: 5 }), catalog,
-    rec('pushup', 5, [20, 20], { date: '2030-12-31', performedStep: 5 }));
-  assert.equal(plain.promote, dated.promote);
-  assert.equal(plain.nextStep, dated.nextStep);
+  // 판정에 쓰이는 주관 지표는 RPE 뿐이다. 필드 이름을 grep 하는 대신,
+  // 기록에 무엇이 더 붙든 수행 횟수가 같으면 판정이 같다는 것을 직접 본다.
+  const base = stateAt({ pushup: 5 }, onePassFromPromotion('pushup', 5));
+  const plain = evaluateSession(base, catalog, rec('pushup', 5, topSets('pushup', 5)));
+  const noisy = evaluateSession(base, catalog, rec('pushup', 5, topSets('pushup', 5), {
+    date: '2030-12-31', performedStep: 5,
+    ...({ heartRate: 190, hr: 190 } as Record<string, number>),
+  }));
+  assert.equal(plain.promote, noisy.promote);
+  assert.equal(plain.nextStep, noisy.nextStep);
+  assert.deepEqual(plain.streak, noisy.streak);
+  assert.equal(plain.promote, true, '이 시나리오가 실제로 승급을 만드는지도 함께 고정한다');
 });
 
 test('다지기 세션은 승급 판정 대상이 아니다', () => {

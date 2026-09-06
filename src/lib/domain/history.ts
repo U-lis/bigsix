@@ -3,9 +3,17 @@ import type { AppState, ProgressionId, SessionRecord } from './types.ts';
 /**
  * 판정용 히스토리 뷰 (FR-18.7 / ADR-16).
  *
- * 자유 운동(`kind === 'free'`)은 승급·유지·강등·다음 목표 계산 어디에도 영향을
- * 주지 않는다. 그 필터는 이 함수 **하나**에 집중한다 — 네 곳에 조건을 흩뿌리지
- * 않는다. 판정하는 코드는 이 함수를 통해서만 히스토리를 본다.
+ * 자유 운동(`kind === 'free'`)은 승급·유지·강등·다음 목표 계산 어디에도 영향을 주지 않는다.
+ *
+ * **`AppState` 를 받는 판정 코드는 이 함수(또는 `judgingState`)를 통한다.**
+ * 다만 두 곳은 예외이며, 각자 인라인으로 같은 필터를 쓴다. 이유가 구조적이다 —
+ * - `progress.ts` 의 `stepStreak`: `adjustedAtSessionIndex` 앵커가 **raw history 인덱스**라
+ *   뷰로 좁히면 인덱스 정합이 깨진다
+ * - `proposal.ts` 의 `sessionIndices`: `AppState` 가 아니라 `SessionRecord[]` 를 받으므로
+ *   `judgingState` 로 변환할 대상이 없다
+ *
+ * **새 판정 경로를 만들 때 "이 함수만 쓰면 된다" 고 가정하지 마라.** raw history 를 받는
+ * 함수라면 필터를 직접 넣어야 하고, 세 곳의 기준(`kind !== 'free'`)이 어긋나면 샌다.
  *
  * 조회(`reviewDay` 의 `performed`, `sessionsAt` 자체)는 이 필터를 쓰지 않는다.
  * 자유 운동 기록도 이력이므로 조회 결과에는 남아야 한다 (FR-18.8).

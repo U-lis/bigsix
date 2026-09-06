@@ -31,13 +31,15 @@ describe('deriveTodayScreen — 4상태 파생 (FR-17 / ADR-19)', () => {
     if (r.kind === 'rest') assert.equal(r.nextTrainingDate, THU);
   });
 
-  it('rest 이고 향후 7일 안에 수행 가능한 날 없으면 nextTrainingDate === null', () => {
+  it('rest 인 날은 nextTrainingDate 가 채워진다 (null 케이스는 nextDoableTrainingDay 쪽에서)', () => {
     // 이 시나리오는 실 카탈로그로 만들기 어렵다 — 실질적으로는 항상 열린 날이 있다.
     // 함수 계약(null 가능성)은 nextDoableTrainingDay 테스트에서 확인.
     // 여기서는 훈련일이 있는 정상 케이스가 null 을 돌려주지 않음을 확인.
     const s = selectProgram(initialState(2), catalog, 'new_blood', MON);
     const r = deriveTodayScreen(s, catalog, TUE);
-    if (r.kind === 'rest') assert.notEqual(r.nextTrainingDate, null);
+    assert.equal(r.kind, 'rest');
+    if (r.kind !== 'rest') return;
+    assert.notEqual(r.nextTrainingDate, null);
   });
 
   it('EC-37 / FR-17.5: no-doable — rest === false 인데 exercises 가 빔', () => {
@@ -79,8 +81,8 @@ describe('deriveTodayScreen — 4상태 파생 (FR-17 / ADR-19)', () => {
     // (오늘도 후보로 넣으면 TUE 가 잠긴 것을 무시하고 이상한 결과가 나올 수 있다.)
     const s = selectProgram(stateAt({}), catalog, 'veterano', MON);
     const r = deriveTodayScreen(s, catalog, TUE);
-    if (r.kind === 'no-doable') {
-      assert.notEqual(r.nextTrainingDate, TUE);
-    }
+    assert.equal(r.kind, 'no-doable');
+    if (r.kind !== 'no-doable') return;
+    assert.notEqual(r.nextTrainingDate, TUE);
   });
 });

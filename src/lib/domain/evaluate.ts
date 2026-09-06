@@ -1,5 +1,6 @@
 import { RULES } from './rules.ts';
 import { getStep, topLabel, topStandard, valueOf } from './catalog.ts';
+import { checkGate } from './gate.ts';
 import { judgingState, meetsStandard, sessionsAt } from './history.ts';
 import { stepStreak, streakComplete, TIER_KO, type StepStreak } from './progress.ts';
 import type { AppState, Catalog, SessionInput, SessionRecord, StandardLabel } from './types.ts';
@@ -115,6 +116,13 @@ export function applySession(
   // 사용자가 임의로 고른 단계이므로 다지기(`nextStep = record.step`) 분기를
   // 그대로 쓰면 현재 단계에서 밑으로 내려가는 부작용이 난다.
   if (input.kind === 'free') {
+    // 잠긴 종목은 자유 운동으로도 할 수 없다 (FR-18.3 / EC-42).
+    // 화면 가드만으로는 부족하다 — 이 함수를 직접 부르는 경로(일괄 임포트 등)가
+    // 생기면 자유 운동이 해금 우회로가 된다.
+    const gate = checkGate(state, catalog, input.progressionId);
+    if (!gate.unlocked) {
+      throw new Error(`잠긴 종목은 자유 운동으로 기록할 수 없다: ${input.progressionId} — ${gate.reason}`);
+    }
     const record: SessionRecord = { ...input };
     const step = getStep(catalog, input.progressionId, input.step);
     const evaluation: Evaluation = {

@@ -1,10 +1,10 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
-  applySession, judgingHistory, judgingState, planExercise,
+  applySession, initialState, judgingHistory, judgingState, planExercise,
 } from '../../src/lib/domain/index.ts';
 import type { AppState, SessionInput, SessionRecord } from '../../src/lib/domain/types.ts';
-import { catalog, rec, stateAt } from './helpers.ts';
+import { ALL_UNLOCKED_STEPS, catalog, rec, stateAt } from './helpers.ts';
 
 // 자유 운동 입력을 만드는 헬퍼. UI 없이 도메인 계약을 검증한다.
 function freeInput(
@@ -176,4 +176,30 @@ test('judgingHistory 는 work / consolidation 은 유지하고 free 만 제외�
   const filtered = judgingHistory(history);
   assert.equal(filtered.length, 3);
   assert.ok(filtered.every((r) => r.kind !== 'free'));
+});
+
+// ── FR-18.3 / EC-42: 잠긴 종목은 자유 운동으로도 못 한다 (도메인 레벨) ──────
+
+test('FR-18.3 / EC-42 잠긴 종목의 자유 운동은 도메인이 거절한다', () => {
+  // 화면 가드만으로는 부족하다. applySession 을 직접 부르는 경로(일괄 임포트,
+  // CLI 등)가 생기면 자유 운동이 해금 우회로가 된다.
+  const fresh = initialState(2);
+  for (const id of ['bridge', 'hspu'] as const) {
+    assert.throws(
+      () => applySession(fresh, catalog, {
+        date: '2026-09-06', progressionId: id, step: 3, sets: [10], kind: 'free',
+      }),
+      /잠긴 종목/,
+      id,
+    );
+  }
+});
+
+test('FR-18.3 해금된 종목의 자유 운동은 통과한다', () => {
+  const unlocked = stateAt(ALL_UNLOCKED_STEPS);
+  const out = applySession(unlocked, catalog, {
+    date: '2026-09-06', progressionId: 'bridge', step: 3, sets: [10], kind: 'free',
+  });
+  assert.equal(out.state.history.length, 1);
+  assert.equal(out.state.steps.bridge, ALL_UNLOCKED_STEPS.bridge);
 });
