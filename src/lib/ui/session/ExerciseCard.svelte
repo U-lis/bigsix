@@ -80,7 +80,14 @@
   }
 </script>
 
-<article class="card">
+<article
+  class="card"
+  data-progression={plan.progressionId}
+  data-step={plan.step}
+  data-kind={plan.kind}
+  data-active={matchesThisPlan}
+  data-all-done={allSetsDone}
+>
   <!-- FR-21: 목표가 시선의 첫 지점이다. 종목명은 부제로 내린다. -->
   <header>
     <p class="eyebrow">{exerciseTitle(plan)} · {kindLabel(plan.kind)}</p>
@@ -106,7 +113,7 @@
         {@const done = i < workDone}
         {@const value = done && session !== null ? session.workSets[i].value : null}
         {@const rpe = done && session !== null ? session.workSets[i].rpe : undefined}
-        <li class:done>
+        <li class:done data-set-index={i} data-done={done}>
           <span class="target">{setTargetLabel(w.target, w.mode, plan.unit)}</span>
           {#if done}
             <span class="value">→ {value}{unitLabel(plan.unit)}{rpe !== undefined ? ` (RPE ${rpe})` : ''}</span>
@@ -136,13 +143,13 @@
     {/if}
 
     {#if allSetsDone}
-      <button type="button" class="finalize" onclick={() => showFinalizeConfirm = true}>세션 완료 기록</button>
+      <button type="button" class="finalize" data-finalize onclick={() => showFinalizeConfirm = true}>세션 완료 기록</button>
     {/if}
   </section>
 
   <footer>
     {#if matchesThisPlan}
-      <button type="button" class="abandon" onclick={() => showAbandonConfirm = true}>불가능</button>
+      <button type="button" class="abandon" data-abandon onclick={() => showAbandonConfirm = true}>불가능</button>
     {/if}
   </footer>
 </article>

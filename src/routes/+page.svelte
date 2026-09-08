@@ -73,14 +73,14 @@
   }
 </script>
 
-<section>
+<section data-today={screen.kind}>
   {#if screen.kind === 'no-program'}
     <!-- FR-17.1 리다이렉트 아님. 안내와 진입 버튼을 화면에 둔다 (EC-39). -->
     <p class="no-program">선택한 프로그램이 없습니다.</p>
-    <a class="btn" href="/programs">프로그램 선택하기</a>
+    <a class="btn" href="/programs" data-goto-programs>프로그램 선택하기</a>
   {:else if screen.kind === 'rest'}
     {#if staleWarning && inProgress.value !== null}
-      <p class="stale">이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
+      <p class="stale" data-stale>이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
     {/if}
     <p class="rest">
       오늘은 휴식일입니다.
@@ -92,11 +92,11 @@
     </p>
   {:else if screen.kind === 'no-doable'}
     {#if staleWarning && inProgress.value !== null}
-      <p class="stale">이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
+      <p class="stale" data-stale>이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
     {/if}
     <div class="no-doable">
       {#each screen.locked as l (l.progressionId)}
-        <article class="card locked">
+        <article class="card locked" data-progression={l.progressionId} data-locked="true">
           <h3>{progressionName(catalog, l.progressionId)}</h3>
           <p>잠김: {l.reason}</p>
         </article>
@@ -121,7 +121,7 @@
     {/if}
 
     {#if staleWarning && inProgress.value !== null}
-      <p class="stale">이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
+      <p class="stale" data-stale>이 세션은 {inProgress.value.startedAt} 세션입니다.</p>
     {/if}
 
     <div class="cards">
@@ -132,7 +132,7 @@
         {/if}
       {/each}
       {#each screen.agenda.locked as l (l.progressionId)}
-        <article class="card locked">
+        <article class="card locked" data-progression={l.progressionId} data-locked="true">
           <h3>{progressionName(catalog, l.progressionId)}</h3>
           <p>잠김: {l.reason}</p>
         </article>
@@ -145,7 +145,7 @@
 
   <!-- FR-18.1 자유 운동은 언제든 기록할 수 있다. 4상태 모두에서 노출. -->
   <div class="free-entry">
-    <button type="button" onclick={() => (showFreeForm = true)}>자유 운동 기록</button>
+    <button type="button" data-free-open onclick={() => (showFreeForm = true)}>자유 운동 기록</button>
   </div>
 </section>
 

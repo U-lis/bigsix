@@ -65,16 +65,16 @@
   untrack(() => {});
 </script>
 
-<div class="timer">
+<div class="timer" data-timer data-timer-phase={timer.phase}>
   <p class="target">목표 {targetSec}{unitLabel('seconds')}</p>
   {#if timer.phase === 'idle'}
-    <button type="button" onclick={start}>시작</button>
+    <button type="button" data-timer-start onclick={start}>시작</button>
   {:else if timer.phase === 'ready'}
     <p class="ready">준비 {readySec}초</p>
-    <button type="button" onclick={stop}>취소</button>
+    <button type="button" data-timer-cancel onclick={stop}>취소</button>
   {:else if timer.phase === 'running'}
     <p class="elapsed" class:over={overGoal}>{elapsedSec}초</p>
-    <button type="button" class="stop" onclick={stop}>정지 · 기록</button>
+    <button type="button" class="stop" data-timer-stop onclick={stop}>정지 · 기록</button>
   {:else if timer.phase === 'stopped'}
     <p class="elapsed">{elapsedSec}초 · 기록됨</p>
   {/if}
@@ -83,7 +83,7 @@
     <summary>수동 정정</summary>
     <p class="note">타이머가 잘못 잡혔으면 값을 직접 고칠 수 있습니다.</p>
     {#if !manualOverride}
-      <button type="button" onclick={() => manualOverride = true}>수동 입력 열기</button>
+      <button type="button" data-timer-manual-open onclick={() => manualOverride = true}>수동 입력 열기</button>
     {:else}
       <input
         type="number"
@@ -92,8 +92,9 @@
         step="1"
         bind:value={overrideValue}
         aria-label="수동 초 입력"
+        data-timer-manual-value
       />
-      <button type="button" onclick={confirmOverride}>확정</button>
+      <button type="button" data-timer-manual-confirm onclick={confirmOverride}>확정</button>
     {/if}
   </details>
 </div>

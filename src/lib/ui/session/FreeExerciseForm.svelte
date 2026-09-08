@@ -126,6 +126,8 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="backdrop"
+  data-free-form
+  data-locked={gate.unlocked ? 'false' : 'true'}
   role="dialog"
   aria-modal="true"
   aria-labelledby="free-title"
@@ -140,7 +142,7 @@
 
     <label class="row">
       <span>종목</span>
-      <select bind:value={progressionId}>
+      <select bind:value={progressionId} data-free-progression>
         {#each progressionOptions as o (o.id)}
           <option value={o.id}>{o.label}</option>
         {/each}
@@ -149,7 +151,7 @@
 
     <label class="row">
       <span>단계</span>
-      <select bind:value={step}>
+      <select bind:value={step} data-free-step>
         {#each stepOptions as n (n)}
           <option value={n}>{n}단계 · {getStep(catalog, progressionId, n).name.ko}</option>
         {/each}
@@ -158,7 +160,7 @@
 
     <label class="row">
       <span>기준</span>
-      <select bind:value={tier}>
+      <select bind:value={tier} data-free-tier>
         {#each availableTiers as t (t)}
           <option value={t}>{standardLabel(t)} — {standardOf(stepData, t).sets}×{valueOf(standardOf(stepData, t))}{unitLabel(stepData.unit)}</option>
         {/each}
@@ -166,7 +168,7 @@
     </label>
 
     {#if !gate.unlocked}
-      <p class="locked">잠김: {gate.reason}</p>
+      <p class="locked" data-lock-reason>잠김: {gate.reason}</p>
     {:else}
       <fieldset>
         <legend>세트</legend>
@@ -203,8 +205,8 @@
     {/if}
 
     <div class="actions">
-      <button type="button" onclick={onCancel}>취소</button>
-      <button type="button" class="save" disabled={!canSave} onclick={save}>저장</button>
+      <button type="button" data-free-cancel onclick={onCancel}>취소</button>
+      <button type="button" class="save" data-free-save disabled={!canSave} onclick={save}>저장</button>
     </div>
 
     <p class="note">

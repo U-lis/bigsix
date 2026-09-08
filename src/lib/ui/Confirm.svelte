@@ -14,15 +14,15 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onclick={onCancel} onkeydown={(e) => e.key === 'Escape' && onCancel()} tabindex="-1">
+<div class="backdrop" data-confirm role="dialog" aria-modal="true" aria-labelledby="confirm-title" onclick={onCancel} onkeydown={(e) => e.key === 'Escape' && onCancel()} tabindex="-1">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="dialog" role="document" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
     <h2 id="confirm-title">{title}</h2>
     {#if body !== undefined}<p>{body}</p>{/if}
     <div class="row">
-      <button type="button" onclick={onCancel}>{cancelLabel}</button>
-      <button type="button" class="confirm" onclick={onConfirm}>{confirmLabel}</button>
+      <button type="button" data-confirm-cancel onclick={onCancel}>{cancelLabel}</button>
+      <button type="button" class="confirm" data-confirm-yes onclick={onConfirm}>{confirmLabel}</button>
     </div>
   </div>
 </div>

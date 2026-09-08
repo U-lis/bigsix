@@ -18,12 +18,17 @@
   let toKo = $derived(getProgram(catalog, proposal.toProgramId).name.ko);
 </script>
 
-<div class="banner">
+<div
+  class="banner"
+  data-proposal
+  data-proposal-from={proposal.fromProgramId}
+  data-proposal-to={proposal.toProgramId}
+>
   <p><strong>다음 프로그램으로 전환 제안</strong></p>
   <p>{fromKo} → {toKo} ({proposal.proposedAt})</p>
   <div class="row">
-    <button type="button" class="accept" onclick={onAccept}>승인</button>
-    <button type="button" class="decline" onclick={onDecline}>거절</button>
+    <button type="button" class="accept" data-proposal-accept onclick={onAccept}>승인</button>
+    <button type="button" class="decline" data-proposal-decline onclick={onDecline}>거절</button>
   </div>
 </div>
 

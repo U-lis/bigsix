@@ -51,7 +51,7 @@
   }
 </script>
 
-<section>
+<section data-programs>
   <header>
     <h2>프로그램 선택</h2>
     <p class="today">오늘 {todayClock.today}</p>
@@ -61,7 +61,7 @@
     {#each programs as p (p.id)}
       {@const isCurrent = p.id === currentProgramId}
       {@const restDaySelect = isRestOnSelectDay(p.id)}
-      <article class="card" class:current={isCurrent}>
+      <article class="card" class:current={isCurrent} data-program={p.id} data-current={isCurrent}>
         <header>
           <h3>{p.name.ko}</h3>
           {#if isCurrent}<span class="badge">현재</span>{/if}
@@ -74,12 +74,12 @@
           {#if p.note !== undefined}<div><dt>비고</dt><dd>{p.note}</dd></div>{/if}
         </dl>
         {#if !isCurrent && restDaySelect}
-          <p class="rest-note">
+          <p class="rest-note" data-rest-note>
             오늘 {todayClock.today} 은 이 루틴의 휴식일입니다. 다음 첫 운동일
             {firstDayPreview(p.id)} 이 1일차가 됩니다.
           </p>
         {/if}
-        <button type="button" onclick={() => onSelect(p.id)}>
+        <button type="button" data-program-select={p.id} onclick={() => onSelect(p.id)}>
           {isCurrent ? '오늘 세션으로' : (currentProgramId === null ? '선택' : '이 프로그램으로 전환')}
         </button>
       </article>

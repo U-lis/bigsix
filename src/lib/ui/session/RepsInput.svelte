@@ -28,7 +28,7 @@
   }
 </script>
 
-<div class="reps-input">
+<div class="reps-input" data-reps-input>
   <input
     type="number"
     inputmode="numeric"
@@ -36,10 +36,11 @@
     min="1"
     bind:value
     aria-label="세트 수치"
+    data-reps-value
   />
-  <button type="button" onclick={submit}>{label}</button>
+  <button type="button" data-reps-submit onclick={submit}>{label}</button>
   {#if error !== null}
-    <p class="error" role="alert">{error}</p>
+    <p class="error" role="alert" data-reps-error>{error}</p>
   {/if}
 </div>
 

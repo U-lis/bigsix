@@ -53,7 +53,7 @@
   }
 </script>
 
-<section>
+<section data-steps data-first-run={isFirstRun}>
   <header>
     <h2>단계 현황</h2>
     {#if isFirstRun}
@@ -62,7 +62,7 @@
   </header>
 
   {#if errorMsg !== null}
-    <p class="error" role="alert">{errorMsg}</p>
+    <p class="error" role="alert" data-steps-error>{errorMsg}</p>
   {/if}
 
   <div class="cards">
@@ -71,14 +71,20 @@
       {@const current = appState.value.steps[id]}
       {@const step = getStep(catalog, id, current)}
       {@const top = topStandard(step)}
-      <article class="card" class:locked={!gate.unlocked}>
+      <article
+        class="card"
+        class:locked={!gate.unlocked}
+        data-progression={id}
+        data-current-step={current}
+        data-locked={!gate.unlocked}
+      >
         <header>
           <h3>{step.name.ko}</h3>
           <span class="step-badge">{current}단계</span>
         </header>
 
         {#if !gate.unlocked}
-          <p class="lock">잠김: {gate.reason}</p>
+          <p class="lock" data-lock-reason>잠김: {gate.reason}</p>
         {/if}
 
         <dl>
@@ -110,7 +116,7 @@
   </div>
 
   {#if isFirstRun}
-    <button type="button" class="proceed" onclick={goHome}>오늘 세션으로 시작</button>
+    <button type="button" class="proceed" data-proceed onclick={goHome}>오늘 세션으로 시작</button>
   {/if}
 </section>
 
