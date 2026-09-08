@@ -24,6 +24,7 @@
   import { theme, THEME_LABEL } from '$lib/ui/theme.svelte';
   import { wakeLock } from '$lib/ui/wakelock.svelte';
   import { install } from '$lib/ui/install.svelte';
+  import { tabsFor } from '$lib/ui/nav';
   import About from '$lib/ui/About.svelte';
 
   let { children } = $props();
@@ -204,10 +205,10 @@
     {@render children()}
   </main>
 
-  <nav aria-label="화면 이동">
-    <a href="/" class:on={page.url.pathname === '/'}>오늘</a>
-    <a href="/programs" class:on={page.url.pathname === '/programs'}>프로그램</a>
-    <a href="/steps" class:on={page.url.pathname === '/steps'}>단계</a>
+  <nav aria-label="화면 이동" data-nav>
+    {#each tabsFor(page.url.pathname) as tab (tab.href)}
+      <a href={tab.href} data-nav-tab={tab.href} class:on={tab.active}>{tab.label}</a>
+    {/each}
   </nav>
 </div>
 
