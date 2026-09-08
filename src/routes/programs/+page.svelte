@@ -108,7 +108,10 @@
     padding: 1rem;
     border-radius: 8px;
   }
-  .card.current { border-color: var(--accent); background: var(--surface); }
+  /* "현재" 카드는 배지(<span class="badge">현재</span>)가 같은 자리에 이미 서
+     있으니 색은 부가 신호다. 그래도 카드가 여러 장 쌓인 목록에서 테두리 색 하나
+     로는 약해 배경도 한 겹 준다 — 배지가 --ok 계열이라 카드도 그쪽으로 맞춘다. */
+  .card.current { border-color: var(--ok); background: var(--ok-bg); }
   .card header { display: flex; align-items: center; justify-content: space-between; }
   .card h3 { margin: 0; font-size: 1.05rem; }
   .badge {

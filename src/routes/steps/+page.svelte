@@ -12,7 +12,13 @@
   } from '$lib/domain';
   import { appState } from '$lib/ui/state.svelte';
   import { loadCatalog } from '$lib/data/catalog';
+  import ChipGroup from '$lib/ui/ChipGroup.svelte';
   import Confirm from '$lib/ui/Confirm.svelte';
+
+  const STEP_OPTIONS: readonly number[] = Array.from(
+    { length: MAX_STEP - MIN_STEP + 1 },
+    (_, i) => MIN_STEP + i,
+  );
 
   const catalog = loadCatalog();
 
@@ -89,15 +95,14 @@
           <details>
             <summary>단계 조정</summary>
             <p class="warn">되돌릴 수 없습니다. 조정 시점부터 유지 횟수를 다시 셉니다.</p>
-            <div class="step-grid">
-              {#each Array.from({ length: MAX_STEP - MIN_STEP + 1 }, (_, i) => MIN_STEP + i) as n (n)}
-                <button
-                  type="button"
-                  class:current={n === current}
-                  onclick={() => tryAdjust(id, n)}
-                >{n}</button>
-              {/each}
-            </div>
+            <ChipGroup
+              options={STEP_OPTIONS}
+              value={current}
+              onSelect={(n) => tryAdjust(id, n)}
+              ariaLabel="단계 조정"
+              name="step-{id}"
+              cols={5}
+            />
           </details>
         {/if}
       </article>
@@ -162,23 +167,6 @@
     font-size: 0.9rem;
   }
   .warn { color: var(--danger); font-size: 0.85rem; margin: 0.25rem 0 0.5rem; }
-  .step-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.35rem;
-  }
-  .step-grid button {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--fg);
-    cursor: pointer;
-    font-size: 1rem;
-  }
-  .step-grid button.current { background: transparent; color: var(--accent); border-color: var(--accent); }
   .error {
     background: var(--danger-bg);
     color: var(--danger);

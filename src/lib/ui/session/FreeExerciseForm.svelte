@@ -23,7 +23,10 @@
     Standard, StandardLabel, Step,
   } from '../../domain/types.ts';
   import { appState } from '../state.svelte.ts';
+  import ChipGroup from '../ChipGroup.svelte';
   import { progressionName, standardLabel, unitLabel } from './labels.ts';
+
+  const RPES: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   interface Props {
     today: IsoDate;
@@ -185,15 +188,13 @@
 
       <fieldset>
         <legend>RPE (선택)</legend>
-        <div class="rpe">
-          {#each [1,2,3,4,5,6,7,8,9,10] as n (n)}
-            <button
-              type="button"
-              class:selected={rpe === n}
-              onclick={() => (rpe = rpe === n ? undefined : n)}
-            >{n}</button>
-          {/each}
-        </div>
+        <ChipGroup
+          options={RPES}
+          value={rpe}
+          onSelect={(v) => (rpe = rpe === v ? undefined : v)}
+          ariaLabel="RPE 선택"
+          name="free-rpe"
+        />
       </fieldset>
     {/if}
 
@@ -278,19 +279,6 @@
     font-size: 1rem;
   }
   .unit { color: var(--muted); font-size: 0.85rem; }
-  .rpe { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-  .rpe button {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  .rpe button.selected { background: transparent; color: var(--accent); border-color: var(--accent); }
   .locked {
     background: var(--danger-bg);
     color: var(--danger);
