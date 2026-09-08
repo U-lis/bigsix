@@ -170,13 +170,13 @@
 {/if}
 
 <style>
-  section { padding: 1rem; padding-bottom: 5rem; max-width: 720px; margin: 0 auto; }
+  section { padding: 1rem 0; }
   .agenda h2 { margin: 0 0 0.25rem; font-size: 1.25rem; }
-  .date { color: #999; margin: 0 0 1rem; font-size: 0.9rem; }
+  .date { color: var(--muted); margin: 0 0 1rem; font-size: 0.9rem; }
   .stale {
-    background: #322;
-    border: 1px solid #a66;
-    color: #fcc;
+    background: var(--danger-bg);
+    border: 1px solid var(--danger);
+    color: var(--fg);
     padding: 0.75rem;
     border-radius: 6px;
     margin-bottom: 1rem;
@@ -184,18 +184,18 @@
   .stretch {
     margin: 0.75rem 0 0;
     font-size: 0.85rem;
-    color: #888;
+    color: var(--muted);
   }
 
   .rest {
-    color: #ccc;
+    color: var(--fg);
     padding: 1rem;
-    background: #222;
+    background: var(--surface);
     border-radius: 6px;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
   }
   .no-program {
-    color: #ccc;
+    color: var(--muted);
     padding: 1rem 0;
     font-size: 1rem;
   }
@@ -206,15 +206,15 @@
   }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
   .card.locked {
-    border: 1px solid #666;
-    background: #1a1a1a;
+    border: 1px solid var(--border);
+    background: var(--surface);
     padding: 1rem;
     border-radius: 8px;
     /* 잠금 사유는 흐리게 하지 않는다 (FR-21.4) — 사용자의 행동을 바꾸는 정보다.
        흐린 색은 부가 정보에만 쓴다. */
-    color: #ddd;
+    color: var(--fg);
   }
-  a { color: #8cf; }
+  a { color: var(--accent); }
   a.btn {
     display: inline-flex;
     align-items: center;
@@ -222,10 +222,10 @@
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1.25rem;
-    background: #245;
-    color: #cfe;
+    background: transparent;
+    color: var(--accent);
     text-decoration: none;
-    border: 1px solid #58a;
+    border: 1px solid var(--accent);
     border-radius: 6px;
     font-size: 1rem;
   }
@@ -238,9 +238,9 @@
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1.25rem;
-    background: #223;
-    color: #ccc;
-    border: 1px solid #445;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.95rem;

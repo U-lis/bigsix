@@ -173,49 +173,49 @@
 
 <style>
   .card {
-    border: 1px solid #444;
-    background: #1a1a1a;
+    border: 1px solid var(--border);
+    background: var(--surface);
     padding: 1rem;
     border-radius: 8px;
-    color: #eee;
+    color: var(--fg);
   }
   header h3 { margin: 0 0 0.25rem; font-size: 1.15rem; }
-    .eyebrow { margin: 0 0 0.15rem; color: #aaa; font-size: 0.85rem; }
+    .eyebrow { margin: 0 0 0.15rem; color: var(--muted); font-size: 0.85rem; }
   /* 사용자가 지금 해야 할 것. 카드에서 가장 크고 진하다. */
   .goal {
     margin: 0;
     font-size: 1.6rem;
     font-weight: 700;
     line-height: 1.15;
-    color: #fff;
+    color: var(--fg);
   }
-  .goal .std { font-size: 0.9rem; font-weight: 500; color: #bbb; margin-left: 0.35rem; }
-  .streak { margin: 0.2rem 0 0.5rem; color: #ccc; font-size: 0.9rem; }
+  .goal .std { font-size: 0.9rem; font-weight: 500; color: var(--muted); margin-left: 0.35rem; }
+  .streak { margin: 0.2rem 0 0.5rem; color: var(--muted); font-size: 0.9rem; }
   .side-note {
-    background: #232;
-    border: 1px solid #464;
-    color: #cfd;
+    background: var(--ok-bg);
+    border: 1px solid var(--ok);
+    color: var(--ok);
     padding: 0.5rem 0.75rem;
     border-radius: 6px;
     margin: 0.5rem 0;
     font-size: 0.9rem;
   }
-  .reason { color: #bbb; font-size: 0.85rem; margin: 0.5rem 0; }
-  section h4 { margin: 0.75rem 0 0.25rem; font-size: 0.95rem; color: #ccc; }
+  .reason { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0; }
+  section h4 { margin: 0.75rem 0 0.25rem; font-size: 0.95rem; color: var(--muted); }
   ol { margin: 0.25rem 0; padding-left: 1.25rem; }
   li { line-height: 1.6; }
-  li.done .target { color: #888; text-decoration: line-through; }
-  li .value { color: #cfc; margin-left: 0.5rem; }
+  li.done .target { color: var(--muted); text-decoration: line-through; }
+  li .value { color: var(--ok); margin-left: 0.5rem; }
   .input-row { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
-  .hint { color: #ccc; font-size: 0.85rem; margin: 0; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
   .rpe-row { margin-top: 0.25rem; }
   .finalize {
     margin-top: 0.75rem;
     min-height: 44px;
     padding: 0.75rem 1.25rem;
-    background: #253;
-    color: #eee;
-    border: 1px solid #6a6;
+    background: var(--ok-bg);
+    color: var(--fg);
+    border: 1px solid var(--ok);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
@@ -224,9 +224,9 @@
   .abandon {
     min-height: 44px;
     padding: 0.75rem 1rem;
-    background: #422;
-    color: #eee;
-    border: 1px solid #a66;
+    background: var(--danger-bg);
+    color: var(--fg);
+    border: 1px solid var(--danger);
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;

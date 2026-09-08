@@ -50,20 +50,20 @@
     padding: 0.75rem;
     min-width: 6rem;
     min-height: 44px;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #111;
-    color: #eee;
+    background: var(--bg);
+    color: var(--fg);
   }
   button {
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1rem;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #333;
-    color: #eee;
+    background: transparent;
+    color: var(--fg);
     cursor: pointer;
   }
-  .error { color: #f88; margin: 0.25rem 0 0; font-size: 0.85rem; width: 100%; }
+  .error { color: var(--danger); margin: 0.25rem 0 0; font-size: 0.85rem; width: 100%; }
 </style>

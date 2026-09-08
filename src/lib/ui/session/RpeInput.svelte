@@ -29,17 +29,17 @@
     gap: 0.25rem;
     align-items: center;
   }
-  .label { font-size: 0.85rem; color: #ccc; margin-right: 0.25rem; }
+  .label { font-size: 0.85rem; color: var(--muted); margin-right: 0.25rem; }
   button {
     min-width: 44px;
     min-height: 44px;
     padding: 0.5rem;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #222;
-    color: #ccc;
+    background: var(--surface);
+    color: var(--muted);
     cursor: pointer;
     font-size: 0.9rem;
   }
-  button.selected { background: #446; color: #fff; border-color: #88a; }
+  button.selected { background: transparent; color: var(--accent); border-color: var(--accent); }
 </style>

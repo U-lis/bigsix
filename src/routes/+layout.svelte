@@ -1,13 +1,17 @@
 <script lang="ts">
   /**
-   * 루트 레이아웃 (FR-1.7 / FR-1.8 / FR-9 / FR-11).
+   * 루트 레이아웃 (FR-1.7 / FR-1.8 / FR-9 / FR-11 / FR-16 / FR-19).
    *
-   * 부팅 시퀀스 실행 → 스토어에 심음 → 하단 3탭 네비 표시 →
-   * 저장 실패 / 손상 / 미래 버전 배너 → 서비스 워커 등록.
+   * 부팅 시퀀스 실행 → 스토어에 심음 → 상단 바 → 배너 → 하단 3탭 네비.
    *
    * 부팅은 클라이언트 마운트 시점에만 실행한다 (localStorage 는 SSR 에 없다).
    * prerender=true 이므로 서버는 정적 HTML 만 낸다.
+   *
+   * 상단 바는 CubeStudy 의 +layout.svelte 를 그대로 가져왔다 — 아이콘 3종,
+   * pill 버튼, 라벨, 좁은 화면 접기까지 동일하다
+   * (참조: ~/Documents/cube-study/src/routes/+layout.svelte:99~269).
    */
+  import '$lib/styles/app.css';
   import { browser, dev } from '$app/environment';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
@@ -65,86 +69,147 @@
   <meta name="theme-color" content="#111113" />
 </svelte:head>
 
-<!-- FR-16.1 상단 바 — 하단 탭은 그대로 유지한다. -->
-<header class="topbar" aria-label="앱 컨트롤">
-  <span class="brand">bigsix</span>
-  <div class="controls">
+<div class="shell">
+  <!-- FR-16.1 상단 바 -->
+  <div class="bar">
     {#if install.available}
-      <!-- FR-16.2 / EC-31 — 프롬프트 없으면 안 그린다 (NFR-22). -->
-      <button type="button" class="ctrl" onclick={() => void install.prompt()} aria-label="앱 설치">
-        설치
-      </button>
+      <!-- FR-16.2 / EC-31 — 프롬프트가 없으면 아예 안 그린다 (NFR-22). -->
+      <button type="button" data-install onclick={() => void install.prompt()}>설치</button>
     {/if}
-    <!-- FR-16.3 테마 토글. 항상 그린다 (지원 여부와 무관). -->
-    <button type="button" class="ctrl" onclick={() => theme.cycle()}
-            aria-label="테마 순환: 현재 {THEME_LABEL[theme.value]}">
-      {THEME_LABEL[theme.value]}
-    </button>
     {#if wakeLock.supported}
-      <!-- FR-16.5 화면 유지. 지원 안 하면 안 그린다 (NFR-22 / EC-33).
-           enabled / held 를 구분해 표시한다 (FR-16.7 / EC-34). -->
-      <button type="button" class="ctrl"
-              class:on={wakeLock.enabled}
-              class:pending={wakeLock.enabled && !wakeLock.held}
-              onclick={() => void wakeLock.toggle()}
-              aria-label={wakeLock.enabled
-                ? (wakeLock.held ? '화면 유지: 켜짐' : '화면 유지: 켜짐(대기 중)')
-                : '화면 유지: 꺼짐'}>
-        화면
+      <!-- 세션 도중 세트를 세느라 화면에 손이 안 닿아 꺼진다 (FR-16.5 / EC-33).
+           enabled(켜두겠다) 와 held(실제로 잡혔다) 를 구분한다 (FR-16.7 / EC-34). -->
+      <button
+        type="button"
+        data-wake-lock={wakeLock.enabled}
+        class:on={wakeLock.enabled}
+        class:pending={wakeLock.enabled && !wakeLock.held}
+        onclick={() => void wakeLock.toggle()}
+        aria-pressed={wakeLock.enabled}
+        aria-label="화면 자동 꺼짐 방지"
+        title={wakeLock.enabled
+          ? wakeLock.held
+            ? '화면을 켜둡니다'
+            : '화면을 켜둡니다 (대기 중)'
+          : '화면 자동 꺼짐 방지'}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="13"
+            rx="2"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path d="M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          {#if wakeLock.enabled}
+            <circle cx="12" cy="10.5" r="2.5" fill="currentColor" />
+          {/if}
+        </svg>
+        <!-- 아이콘만으로는 무슨 버튼인지 알 수 없다. 상태는 색이, 정체는 글자가 맡는다. -->
+        <span class="btn-label">화면 켜기</span>
       </button>
     {/if}
+
+    <!--
+      아이콘으로 보여준다. '시스템' 이라는 글자만 있으면 테마 버튼인 줄 모르고
+      시스템 정보를 보여주는 버튼으로 읽힌다.
+    -->
+    <button
+      type="button"
+      data-theme-toggle
+      data-theme={theme.value}
+      onclick={() => theme.cycle()}
+      aria-label={`테마 전환 (현재 ${THEME_LABEL[theme.value]})`}
+      title={`테마: ${THEME_LABEL[theme.value]}`}
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        {#if theme.value === 'light'}
+          <!-- 해 -->
+          <circle cx="12" cy="12" r="4.5" fill="currentColor" />
+          {#each [0, 45, 90, 135, 180, 225, 270, 315] as deg (deg)}
+            <path
+              d="M12 2.5v3"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              transform="rotate({deg} 12 12)"
+            />
+          {/each}
+        {:else if theme.value === 'dark'}
+          <!-- 달 -->
+          <path
+            d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"
+            fill="currentColor"
+            stroke="none"
+          />
+        {:else}
+          <!-- 시스템: 반은 해, 반은 달 -->
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2" />
+          <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" />
+        {/if}
+      </svg>
+      <span class="theme-label">{THEME_LABEL[theme.value]}</span>
+    </button>
     <!-- FR-19.1 About 진입. -->
-    <button type="button" class="ctrl" onclick={openAbout} aria-label="정보">
-      정보
+    <button type="button" data-about-open onclick={openAbout} aria-label="앱 정보">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+        <circle cx="12" cy="7.6" r="1.2" fill="currentColor" />
+        <path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
     </button>
   </div>
-</header>
 
-{#if booted}
-  {#if appState.saveStatus === 'write-blocked'}
-    <div class="banner err" role="alert">
-      저장 실패 — 다음 조작이 반영되지 않을 수 있습니다. 저장 용량 또는 사생활 보호
-      모드를 확인하세요.
-    </div>
+  {#if booted}
+    {#if appState.saveStatus === 'write-blocked'}
+      <div class="banner err" role="alert">
+        저장 실패 — 다음 조작이 반영되지 않을 수 있습니다. 저장 용량 또는 사생활 보호
+        모드를 확인하세요.
+      </div>
+    {/if}
+
+    {#if appState.storageStatus === 'corrupt'}
+      <div class="banner warn" role="alert">
+        저장 데이터가 손상되었습니다. 원본은 그대로 보존되어 있습니다.
+        <button type="button" onclick={openAbout}>초기 상태로 시작</button>
+      </div>
+    {/if}
+
+    {#if appState.storageStatus === 'future-version'}
+      <div class="banner warn" role="alert">
+        알 수 없는 최신 버전(v{appState.futureVersion}) 의 저장 데이터를 발견했습니다.
+        덮어쓰지 않기 위해 임시 상태로 실행 중입니다. 앱을 최신으로 갱신하세요.
+      </div>
+    {/if}
+
+    {#if appState.storageStatus === 'read-blocked'}
+      <div class="banner err" role="alert">
+        저장소에 접근할 수 없습니다. 사생활 보호 모드이거나 브라우저 설정으로 차단되어
+        있습니다. 이 세션의 조작은 유지되지 않습니다.
+      </div>
+    {/if}
+
+    {#if inProgress.saveStatus === 'write-blocked'}
+      <div class="banner err" role="alert">
+        진행 중 세션 저장 실패 — 앱이 죽으면 지금까지의 세트를 잃을 수 있습니다.
+      </div>
+    {/if}
   {/if}
 
-  {#if appState.storageStatus === 'corrupt'}
-    <div class="banner warn" role="alert">
-      저장 데이터가 손상되었습니다. 원본은 그대로 보존되어 있습니다.
-      <button type="button" onclick={openAbout}>초기 상태로 시작</button>
-    </div>
-  {/if}
+  <main class:booted>
+    {@render children()}
+  </main>
 
-  {#if appState.storageStatus === 'future-version'}
-    <div class="banner warn" role="alert">
-      알 수 없는 최신 버전(v{appState.futureVersion}) 의 저장 데이터를 발견했습니다.
-      덮어쓰지 않기 위해 임시 상태로 실행 중입니다. 앱을 최신으로 갱신하세요.
-    </div>
-  {/if}
-
-  {#if appState.storageStatus === 'read-blocked'}
-    <div class="banner err" role="alert">
-      저장소에 접근할 수 없습니다. 사생활 보호 모드이거나 브라우저 설정으로 차단되어
-      있습니다. 이 세션의 조작은 유지되지 않습니다.
-    </div>
-  {/if}
-
-  {#if inProgress.saveStatus === 'write-blocked'}
-    <div class="banner err" role="alert">
-      진행 중 세션 저장 실패 — 앱이 죽으면 지금까지의 세트를 잃을 수 있습니다.
-    </div>
-  {/if}
-{/if}
-
-<main class:booted>
-  {@render children()}
-</main>
-
-<nav class="tabs" aria-label="화면 이동">
-  <a href="/" class:active={page.url.pathname === '/'}>오늘</a>
-  <a href="/programs" class:active={page.url.pathname === '/programs'}>프로그램</a>
-  <a href="/steps" class:active={page.url.pathname === '/steps'}>단계</a>
-</nav>
+  <nav aria-label="화면 이동">
+    <a href="/" class:on={page.url.pathname === '/'}>오늘</a>
+    <a href="/programs" class:on={page.url.pathname === '/programs'}>프로그램</a>
+    <a href="/steps" class:on={page.url.pathname === '/steps'}>단계</a>
+  </nav>
+</div>
 
 <!-- About 모달: 상단 바에서도, 손상 배너에서도 여는 진입점 (FR-19.4). -->
 <About bind:this={about} />
@@ -155,147 +220,90 @@
 {/if}
 
 <style>
-  /*
-   * FR-16.4 CSS 이중 정의.
-   *
-   * 세 겹으로 나눠 놓아 테마 토글이 시스템 미디어 쿼리를 이긴다:
-   * 1) `:root` — 라이트 팔레트 기본값.
-   * 2) `@media (prefers-color-scheme: dark)` — 시스템이 다크면 다크 팔레트.
-   * 3) `:root[data-theme="dark|light"]` — 사용자가 명시 선택하면 그 값이 이긴다.
-   */
-  :global(:root) {
-    --bg: #fafafa;
-    --fg: #111113;
-    --muted: #666;
-    --card-bg: #fff;
-    --card-border: #ddd;
-    --banner-err-bg: #fee;
-    --banner-err-fg: #822;
-    --banner-err-border: #c66;
-    --banner-warn-bg: #ffd;
-    --banner-warn-fg: #653;
-    --banner-warn-border: #b93;
-    --tab-bg: #f0f0f0;
-    --tab-fg: #666;
-    --tab-active-bg: #fff;
-    --tab-active-fg: #111;
-    --tab-active-mark: #6a6;
-    --ctrl-bg: #eee;
-    --ctrl-fg: #222;
-    --ctrl-border: #bbb;
-    --ctrl-on: #245;
-    --ctrl-on-fg: #cfe;
-  }
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme="light"])) {
-      --bg: #111113;
-      --fg: #eee;
-      --muted: #999;
-      --card-bg: #1a1a1a;
-      --card-border: #333;
-      --banner-err-bg: #422;
-      --banner-err-fg: #fcc;
-      --banner-err-border: #a66;
-      --banner-warn-bg: #322;
-      --banner-warn-fg: #fca;
-      --banner-warn-border: #a86;
-      --tab-bg: #1a1a1a;
-      --tab-fg: #aaa;
-      --tab-active-bg: #222;
-      --tab-active-fg: #fff;
-      --tab-active-mark: #6a6;
-      --ctrl-bg: #222;
-      --ctrl-fg: #ccc;
-      --ctrl-border: #444;
-      --ctrl-on: #245;
-      --ctrl-on-fg: #cfe;
-    }
-  }
-  :global(:root[data-theme="dark"]) {
-    --bg: #111113;
-    --fg: #eee;
-    --muted: #999;
-    --card-bg: #1a1a1a;
-    --card-border: #333;
-    --banner-err-bg: #422;
-    --banner-err-fg: #fcc;
-    --banner-err-border: #a66;
-    --banner-warn-bg: #322;
-    --banner-warn-fg: #fca;
-    --banner-warn-border: #a86;
-    --tab-bg: #1a1a1a;
-    --tab-fg: #aaa;
-    --tab-active-bg: #222;
-    --tab-active-fg: #fff;
-    --tab-active-mark: #6a6;
-    --ctrl-bg: #222;
-    --ctrl-fg: #ccc;
-    --ctrl-border: #444;
-    --ctrl-on: #245;
-    --ctrl-on-fg: #cfe;
-  }
-
-  :global(html, body) {
-    background: var(--bg);
-    color: var(--fg);
-    margin: 0;
-    padding: 0;
-    font-family: system-ui, -apple-system, sans-serif;
-    overflow-x: hidden;
-  }
-  :global(body[data-flash="on"]) {
+  /* 색 토큰은 `$lib/styles/app.css` 한 곳에만 있다 (FR-16.4). 여기서 다시 정의하지 않는다. */
+  :global(body[data-flash='on']) {
     animation: flash 0.5s steps(2, end) infinite;
   }
   @keyframes flash {
-    from { background: var(--bg); }
-    to { background: #363; }
+    from {
+      background: var(--bg);
+    }
+    to {
+      background: var(--ok-bg);
+    }
   }
-  main { min-height: 100vh; padding-bottom: 4rem; padding-top: 3rem; }
-  main:not(.booted) { visibility: hidden; }
 
-  /* FR-16.1 상단 바 */
-  .topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+  .shell {
     display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem 0;
+  }
+  /* 설치 버튼은 설치 가능할 때만 나타난다. 눈에 띄어야 하지만 강요하지 않는다. */
+  .bar button[data-install] {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  /* 켜져 있는 토글은 색으로 알린다. 아이콘만으로는 상태가 안 읽힌다. */
+  .bar button.on {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  /* 켜달라고 했으나 아직 못 잡은 상태 (절전 모드 등, EC-34). */
+  .bar button.pending {
+    opacity: 0.6;
+  }
+  .bar button svg {
+    flex: none;
+  }
+  /*
+   * 아이콘 옆 글자. 아이콘만으로는 무슨 버튼인지 알 수 없으므로 되도록 남긴다.
+   * 330px 보다 좁을 때만 아이콘으로 접는다.
+   */
+  .theme-label,
+  .btn-label {
+    margin-left: 0.35rem;
+    white-space: nowrap;
+  }
+  @media (max-width: 330px) {
+    .theme-label,
+    .btn-label {
+      display: none;
+    }
+  }
+  .bar button {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.25rem 0.75rem;
-    background: var(--tab-bg);
-    border-bottom: 1px solid var(--card-border);
-    min-height: 3rem;
-    z-index: 9;
-  }
-  .brand {
-    font-weight: 600;
-    color: var(--fg);
-    font-size: 1rem;
-  }
-  .controls { display: flex; gap: 0.35rem; }
-  .ctrl {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0.35rem 0.65rem;
-    background: var(--ctrl-bg);
-    color: var(--ctrl-fg);
-    border: 1px solid var(--ctrl-border);
-    border-radius: 6px;
-    font-size: 0.85rem;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 0.6rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
     cursor: pointer;
   }
-  .ctrl.on {
-    background: var(--ctrl-on);
-    color: var(--ctrl-on-fg);
-    border-color: var(--ctrl-on);
+
+  main {
+    flex: 1;
+    padding: 0 0.9rem 1rem;
   }
-  .ctrl.pending {
-    opacity: 0.7;
+  main:not(.booted) {
+    visibility: hidden;
   }
 
   .banner {
+    margin: 0.5rem 0.9rem 0;
     padding: 0.75rem 1rem;
+    border-radius: 8px;
     font-size: 0.9rem;
     display: flex;
     justify-content: space-between;
@@ -305,46 +313,46 @@
   .banner button {
     min-height: 44px;
     padding: 0.5rem 1rem;
-    background: var(--ctrl-bg);
-    color: var(--ctrl-fg);
-    border: 1px solid var(--ctrl-border);
-    border-radius: 6px;
+    color: var(--fg);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
     cursor: pointer;
   }
   .banner.err {
-    background: var(--banner-err-bg);
-    color: var(--banner-err-fg);
-    border-bottom: 1px solid var(--banner-err-border);
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
   }
   .banner.warn {
-    background: var(--banner-warn-bg);
-    color: var(--banner-warn-fg);
-    border-bottom: 1px solid var(--banner-warn-border);
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--accent);
   }
-  .tabs {
-    position: fixed;
+
+  nav {
+    position: sticky;
     bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
-    background: var(--tab-bg);
-    border-top: 1px solid var(--card-border);
-    z-index: 10;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
   }
-  .tabs a {
+  nav a {
     flex: 1;
-    text-align: center;
-    padding: 0.85rem 0.25rem;
-    color: var(--tab-fg);
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    color: var(--muted);
     text-decoration: none;
-    font-size: 0.9rem;
-    min-height: 44px;
   }
-  .tabs a.active {
-    color: var(--tab-active-fg);
-    background: var(--tab-active-bg);
-    border-top: 2px solid var(--tab-active-mark);
-    padding-top: calc(0.85rem - 2px);
+  nav a.on {
+    color: var(--accent);
+    font-weight: 600;
   }
-  .dev-note { padding: 1rem; color: var(--muted); }
+  .dev-note {
+    padding: 1rem;
+    color: var(--muted);
+  }
 </style>

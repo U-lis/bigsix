@@ -98,35 +98,35 @@
 {/if}
 
 <style>
-  section { padding: 1rem; padding-bottom: 5rem; max-width: 720px; margin: 0 auto; color: #eee; }
+  section { padding: 1rem 0; }
   header h2 { margin: 0; font-size: 1.25rem; }
-  .today { color: #999; margin: 0.25rem 0 1rem; font-size: 0.9rem; }
+  .today { color: var(--muted); margin: 0.25rem 0 1rem; font-size: 0.9rem; }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
   .card {
-    border: 1px solid #444;
-    background: #1a1a1a;
+    border: 1px solid var(--border);
+    background: var(--surface);
     padding: 1rem;
     border-radius: 8px;
   }
-  .card.current { border-color: #6a6; background: #142; }
+  .card.current { border-color: var(--accent); background: var(--surface); }
   .card header { display: flex; align-items: center; justify-content: space-between; }
   .card h3 { margin: 0; font-size: 1.05rem; }
   .badge {
-    background: #253;
-    color: #cfc;
-    border: 1px solid #6a6;
+    background: var(--ok-bg);
+    color: var(--ok);
+    border: 1px solid var(--ok);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
   }
   dl { margin: 0.75rem 0; display: grid; grid-template-columns: 1fr; gap: 0.25rem 0; }
   dl div { display: flex; gap: 0.5rem; font-size: 0.9rem; }
-  dt { color: #999; min-width: 4.5rem; }
+  dt { color: var(--muted); min-width: 4.5rem; }
   dd { margin: 0; }
   .rest-note {
-    color: #fcc;
-    background: #322;
-    border: 1px solid #a66;
+    color: var(--danger);
+    background: var(--danger-bg);
+    border: 1px solid var(--danger);
     padding: 0.5rem;
     border-radius: 6px;
     font-size: 0.85rem;
@@ -136,10 +136,10 @@
     margin-top: 0.5rem;
     min-height: 44px;
     padding: 0.75rem 1.25rem;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #333;
-    color: #eee;
+    background: transparent;
+    color: var(--fg);
     cursor: pointer;
     font-size: 1rem;
     width: 100%;

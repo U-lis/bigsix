@@ -217,7 +217,7 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgb(0 0 0 / 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -225,15 +225,15 @@
     padding: 1rem;
   }
   .dialog {
-    background: #1a1a1a;
-    color: #eee;
+    background: var(--surface);
+    color: var(--fg);
     padding: 1.25rem;
     border-radius: 10px;
     max-width: 480px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    border: 1px solid #555;
+    border: 1px solid var(--border);
   }
   h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
   .row {
@@ -242,65 +242,65 @@
     gap: 0.5rem;
     margin: 0.5rem 0;
   }
-  .row > span { min-width: 3.5rem; color: #ccc; font-size: 0.9rem; }
+  .row > span { min-width: 3.5rem; color: var(--muted); font-size: 0.9rem; }
   select {
     flex: 1;
     min-height: 44px;
     padding: 0.5rem;
-    background: #222;
-    color: #eee;
-    border: 1px solid #555;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 0.95rem;
   }
   fieldset {
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 0.5rem 0.75rem;
     margin: 0.75rem 0;
   }
-  legend { color: #ccc; font-size: 0.85rem; padding: 0 0.25rem; }
+  legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.25rem; }
   .set-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin: 0.35rem 0;
   }
-  .set-row > span { min-width: 3rem; color: #ccc; font-size: 0.9rem; }
+  .set-row > span { min-width: 3rem; color: var(--muted); font-size: 0.9rem; }
   input[type="number"] {
     width: 6rem;
     min-height: 44px;
     padding: 0.5rem;
-    background: #222;
-    color: #eee;
-    border: 1px solid #555;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 1rem;
   }
-  .unit { color: #999; font-size: 0.85rem; }
+  .unit { color: var(--muted); font-size: 0.85rem; }
   .rpe { display: flex; flex-wrap: wrap; gap: 0.25rem; }
   .rpe button {
     min-width: 44px;
     min-height: 44px;
     padding: 0.5rem;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #222;
-    color: #ccc;
+    background: var(--surface);
+    color: var(--muted);
     cursor: pointer;
     font-size: 0.9rem;
   }
-  .rpe button.selected { background: #446; color: #fff; border-color: #88a; }
+  .rpe button.selected { background: transparent; color: var(--accent); border-color: var(--accent); }
   .locked {
-    background: #322;
-    color: #fcc;
+    background: var(--danger-bg);
+    color: var(--danger);
     padding: 0.75rem;
-    border: 1px solid #a66;
+    border: 1px solid var(--danger);
     border-radius: 6px;
     margin: 0.5rem 0;
   }
   .error {
-    color: #f88;
+    color: var(--danger);
     margin: 0.5rem 0;
     font-size: 0.9rem;
   }
@@ -314,26 +314,27 @@
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1.25rem;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #333;
-    color: #eee;
+    background: transparent;
+    color: var(--fg);
     cursor: pointer;
     font-size: 1rem;
   }
   .actions button.save {
-    background: #245;
-    border-color: #58a;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
   }
   .actions button.save[disabled] {
-    background: #222;
-    border-color: #444;
-    color: #666;
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
     cursor: not-allowed;
   }
   .note {
     margin: 0.75rem 0 0;
-    color: #888;
+    color: var(--muted);
     font-size: 0.8rem;
   }
 </style>

@@ -29,9 +29,9 @@
 
 <style>
   .banner {
-    border: 1px solid #4a6;
-    background: #132;
-    color: #eee;
+    border: 1px solid var(--ok);
+    background: var(--ok-bg);
+    color: var(--fg);
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
@@ -43,10 +43,10 @@
     min-width: 44px;
     padding: 0.75rem 1.25rem;
     border-radius: 6px;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     cursor: pointer;
     font-size: 1rem;
   }
-  .accept { background: #253; color: #eee; }
-  .decline { background: #333; color: #ccc; }
+  .accept { background: var(--ok-bg); color: var(--fg); border-color: var(--ok); }
+  .decline { background: transparent; color: var(--muted); }
 </style>

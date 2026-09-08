@@ -31,7 +31,7 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgb(0 0 0 / 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,27 +39,27 @@
     padding: 1rem;
   }
   .dialog {
-    background: #1a1a1a;
-    color: #eee;
+    background: var(--surface);
+    color: var(--fg);
     padding: 1.25rem;
     border-radius: 10px;
     max-width: 480px;
     width: 100%;
-    border: 1px solid #555;
+    border: 1px solid var(--border);
   }
   h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
-  p { margin: 0 0 1rem; color: #ccc; font-size: 0.95rem; }
+  p { margin: 0 0 1rem; color: var(--muted); font-size: 0.95rem; }
   .row { display: flex; gap: 0.5rem; justify-content: flex-end; }
   button {
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1.25rem;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #333;
-    color: #eee;
+    background: transparent;
+    color: var(--fg);
     cursor: pointer;
     font-size: 1rem;
   }
-  button.confirm { background: #522; border-color: #a66; }
+  button.confirm { background: var(--danger-bg); border-color: var(--danger); color: var(--fg); }
 </style>

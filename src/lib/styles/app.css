@@ -1,0 +1,86 @@
+/* 테마 토큰과 글꼴 스택. 색은 여기서만 정의한다 — CubeStudy 의 app.css 를 그대로 가져왔다.
+   (참조: ~/Documents/cube-study/src/lib/styles/app.css)
+
+   FR-16.4 세 겹 정의: `:root` 라이트 기본 → `prefers-color-scheme: dark` 시스템 다크 →
+   `:root[data-theme]` 사용자 명시 선택이 언제나 이긴다. */
+
+:root {
+	--mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono',
+		'DejaVu Sans Mono', monospace;
+	--sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+
+	--bg: #ffffff;
+	--surface: #f4f4f5;
+	--fg: #18181b;
+	--muted: #71717a;
+	--border: #d4d4d8;
+	--insert: #b91c1c;
+	--interchange: #1d4ed8;
+	--danger: #dc2626;
+	--danger-bg: #fee2e2;
+	--ok: #166534;
+	--ok-bg: #dcfce7;
+	--accent: #9333a8;
+}
+
+/* 다크 토큰. 시스템 설정을 기본으로 하되 수동 선택이 항상 이긴다. */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--bg: #111113;
+		--surface: #1c1c1f;
+		--fg: #ededf0;
+		--muted: #a1a1aa;
+		--border: #333338;
+		--insert: #f87171;
+		--interchange: #7dabff;
+		--danger: #f87171;
+		--danger-bg: #451a1a;
+		--ok: #5cd696;
+		--ok-bg: #14311f;
+		--accent: #d99ae0;
+	}
+}
+
+:root[data-theme='dark'] {
+	--bg: #111113;
+	--surface: #1c1c1f;
+	--fg: #ededf0;
+	--muted: #a1a1aa;
+	--border: #333338;
+	--insert: #f87171;
+	--interchange: #7dabff;
+	--danger: #f87171;
+	--danger-bg: #451a1a;
+	--ok: #5cd696;
+	--ok-bg: #14311f;
+	--accent: #d99ae0;
+}
+
+:root[data-theme='light'] {
+	--bg: #ffffff;
+	--surface: #f4f4f5;
+	--fg: #18181b;
+	--muted: #71717a;
+	--border: #d4d4d8;
+	--insert: #b91c1c;
+	--interchange: #1d4ed8;
+	--danger: #dc2626;
+	--danger-bg: #fee2e2;
+	--ok: #166534;
+	--ok-bg: #dcfce7;
+	--accent: #9333a8;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: var(--sans);
+	-webkit-text-size-adjust: 100%;
+}

@@ -100,23 +100,23 @@
 
 <style>
   .timer { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
-  .target { margin: 0; color: #ccc; font-size: 0.9rem; }
+  .target { margin: 0; color: var(--muted); font-size: 0.9rem; }
   .ready { margin: 0; font-size: 2rem; font-weight: bold; }
   .elapsed { margin: 0; font-size: 2.5rem; font-weight: bold; font-variant-numeric: tabular-nums; }
-  .elapsed.over { color: #6f6; }
+  .elapsed.over { color: var(--ok); }
   button {
     min-height: 44px;
     min-width: 44px;
     padding: 0.75rem 1.25rem;
-    border: 1px solid #666;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #333;
-    color: #eee;
+    background: transparent;
+    color: var(--fg);
     cursor: pointer;
     font-size: 1rem;
   }
-  button.stop { background: #611; }
-  .manual { margin-top: 0.5rem; font-size: 0.85rem; color: #ccc; }
+  button.stop { background: var(--danger-bg); border-color: var(--danger); }
+  .manual { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
   .manual summary { cursor: pointer; padding: 0.5rem 0; }
   .note { margin: 0.25rem 0; }
   input {
@@ -124,10 +124,10 @@
     padding: 0.5rem;
     min-height: 44px;
     min-width: 6rem;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #111;
-    color: #eee;
+    background: var(--bg);
+    color: var(--fg);
     margin-right: 0.5rem;
   }
 </style>

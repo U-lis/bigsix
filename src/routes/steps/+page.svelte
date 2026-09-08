@@ -120,32 +120,32 @@
 {/if}
 
 <style>
-  section { padding: 1rem; padding-bottom: 5rem; max-width: 720px; margin: 0 auto; color: #eee; }
+  section { padding: 1rem 0; }
   header h2 { margin: 0 0 0.25rem; font-size: 1.25rem; }
-  .hint { color: #ccc; margin: 0 0 1rem; font-size: 0.9rem; }
+  .hint { color: var(--muted); margin: 0 0 1rem; font-size: 0.9rem; }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
   .card {
-    border: 1px solid #444;
-    background: #1a1a1a;
+    border: 1px solid var(--border);
+    background: var(--surface);
     padding: 1rem;
     border-radius: 8px;
   }
   /* 잠금 사유는 흐리게 하지 않는다 (FR-21.4). 카드 배경만 구분한다. */
-  .card.locked { background: #191919; }
+  .card.locked { background: var(--surface); }
   .card header { display: flex; justify-content: space-between; align-items: baseline; }
   .card h3 { margin: 0; font-size: 1.05rem; }
   .step-badge {
-    background: #446;
-    color: #fff;
-    border: 1px solid #88a;
+    background: var(--accent);
+    color: var(--bg);
+    border: 1px solid var(--accent);
     padding: 0.15rem 0.5rem;
     border-radius: 4px;
     font-size: 0.85rem;
   }
   .lock {
-    background: #322;
-    border: 1px solid #a66;
-    color: #fcc;
+    background: var(--danger-bg);
+    border: 1px solid var(--danger);
+    color: var(--danger);
     padding: 0.5rem;
     border-radius: 6px;
     margin: 0.5rem 0;
@@ -153,15 +153,15 @@
   }
   dl { margin: 0.5rem 0; display: grid; grid-template-columns: 1fr; gap: 0.15rem; }
   dl div { display: flex; gap: 0.5rem; font-size: 0.9rem; }
-  dt { color: #999; min-width: 4.5rem; }
+  dt { color: var(--muted); min-width: 4.5rem; }
   dd { margin: 0; }
   details summary {
     cursor: pointer;
     padding: 0.5rem 0;
-    color: #ccc;
+    color: var(--muted);
     font-size: 0.9rem;
   }
-  .warn { color: #fcc; font-size: 0.85rem; margin: 0.25rem 0 0.5rem; }
+  .warn { color: var(--danger); font-size: 0.85rem; margin: 0.25rem 0 0.5rem; }
   .step-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -171,19 +171,19 @@
     min-height: 44px;
     min-width: 44px;
     padding: 0.5rem;
-    border: 1px solid #444;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #222;
-    color: #eee;
+    background: var(--bg);
+    color: var(--fg);
     cursor: pointer;
     font-size: 1rem;
   }
-  .step-grid button.current { background: #446; border-color: #88a; }
+  .step-grid button.current { background: transparent; color: var(--accent); border-color: var(--accent); }
   .error {
-    background: #422;
-    color: #fcc;
+    background: var(--danger-bg);
+    color: var(--danger);
     padding: 0.75rem;
-    border: 1px solid #a66;
+    border: 1px solid var(--danger);
     border-radius: 6px;
     margin-bottom: 1rem;
   }
@@ -192,9 +192,9 @@
     width: 100%;
     min-height: 44px;
     padding: 0.75rem 1.25rem;
-    background: #253;
-    color: #eee;
-    border: 1px solid #6a6;
+    background: var(--ok-bg);
+    color: var(--fg);
+    border: 1px solid var(--ok);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
