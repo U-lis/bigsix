@@ -26,6 +26,7 @@
   import { install } from '$lib/ui/install.svelte';
   import { tabsFor } from '$lib/ui/nav';
   import About from '$lib/ui/About.svelte';
+  import Toast from '$lib/ui/Toast.svelte';
 
   let { children } = $props();
   let booted = $state(false);
@@ -214,6 +215,14 @@
 
 <!-- About 모달: 상단 바에서도, 손상 배너에서도 여는 진입점 (FR-19.4). -->
 <About bind:this={about} />
+
+<!--
+  sw 갱신 완료 알림 — 지나가도 되는 통지라 Toast 로 낸다.
+  저장 실패 · 손상 · 미래 버전은 사용자가 조치해야 하므로 위쪽 배너를 유지한다.
+-->
+{#if sw.justUpdated}
+  <Toast text="새 버전으로 업데이트했습니다" onclose={() => sw.dismiss()} />
+{/if}
 
 <!-- dev 안내 (dev 에서만) -->
 {#if dev && !booted}

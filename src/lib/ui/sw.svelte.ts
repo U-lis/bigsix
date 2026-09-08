@@ -74,6 +74,11 @@ class ServiceWorkerState {
    * 실제 갱신이 있으면 controllerchange 리스너가 location.reload() 를 부른다 —
    * 이 함수는 그 트리거만 걸고 결과 문구를 세팅한다.
    */
+  /** 갱신 알림을 사용자가 확인해 닫는다 — 다음 페이지 뷰까지 다시 뜨지 않는다. */
+  dismiss(): void {
+    this.justUpdated = false;
+  }
+
   async checkNow(): Promise<void> {
     if (this.checking) return;
     this.checking = true;
