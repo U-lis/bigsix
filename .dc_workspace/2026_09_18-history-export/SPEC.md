@@ -103,7 +103,9 @@ UI 에서 부르는 곳이 없다. 지난 날 무엇을 했는지, 빠진 날이
 - [ ] FR-26.3: **CSV** 는 **세트 한 줄**(long format)이다. 열:
       `date, completed_at, program, day_number, progression, step, performed_step, step_name, unit,
       kind, outcome, set_index, value, set_rpe, session_rpe, goal_label, goal_sets, goal_value,
-      target, promoted_to, blocked_by`.
+      target, target_mode, promoted_to, blocked_by` (22열).
+      `target` 은 그 세트의 목표 **숫자만**, `target_mode` 는 `fixed`(이만큼만) / `max`(이 값을 하한으로 최대한).
+      한 열에 `>=25` 식으로 섞으면 스프레드시트에서 숫자 열이 되지 않아 둘로 나눈다 (2026-09-18 설계 검토).
       세션 단위 값은 그 세션의 모든 세트 줄에 반복한다. 없는 값은 빈 칸. UTF-8 BOM 을 붙인다
       (엑셀 한글 깨짐 방지).
 - [ ] FR-26.4: 파일명은 `bigsix-YYYY-MM-DD.json` / `.csv` (내보낸 날, `todayClock.today`).
