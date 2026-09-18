@@ -143,6 +143,28 @@ UI 에서 부르는 곳이 없다. 지난 날 무엇을 했는지, 빠진 날이
       옛 기록은 새 필드가 없는 채로 읽힌다. **과거 기록을 재계산으로 채우지 않는다** (EC-57).
       진행 중 세션 봉투도 v4 로 올리고, `target` 이 없는 옛 진행 중 세션은 없는 채로 완료된다.
 
+### FR-29: 구조 정리 — 틀어진 규칙 바로잡기 (기능 작업의 선행)
+
+2026-09-18 구조 점검에서 SvelteKit 표준 위반(Svelte 4 문법 · 서버 파일 · 도메인의 UI 역참조 ·
+컴포넌트 hex)은 0건이었으나, **규칙이 틀어진 곳이 셋** 나왔다. 기록 기능이 그 위에 쌓이기 전에 바로잡는다.
+**동작은 바꾸지 않는다** — 이 FR 의 커밋은 전부 이동 · import 경로 변경뿐이고, 테스트 수와 결과가 그대로여야 한다.
+
+| # | 틀어진 곳 | 증거 | 바로잡은 상태 |
+|---|---|---|---|
+| R-1 | UI 가 도메인 공개 API(`domain/index.ts`)를 우회해 **내부 파일을 직접 import** | `routes/+page.svelte:15` (`schedule`), `ui/session/labels.ts:8-9` (`catalog` · `date`), `ui/todayScreen.ts:16` (`date`), `ui/session/ProposalBanner.svelte:7` (`schedule`), `ui/session/FreeExerciseForm.svelte:20` (`catalog`) — 6곳 | UI · 라우트는 `$lib/domain` 만 부른다 (타입은 `$lib/domain/types` 허용). 필요한 함수는 index 에 export 를 더한다 |
+| R-2 | import 표기가 **두 가지로 갈림** | 라우트·컴포넌트 일부는 `$lib/...`(확장자 없음, `src/` 전체 35곳), `src/lib/ui` 는 `../domain/index.ts` 식 상대 경로 + `.ts` 확장자 (`ui/` 아래 13개 파일). `.ts` 확장자는 Node 단독 실행 시절(0.1.0)의 흔적 | **층을 넘는 import 는 `$lib/...` 별칭, 확장자 없음.** 같은 층 안(예: `domain/*` 끼리, `ui/session/*` 끼리)은 상대 경로 허용, 역시 확장자 없음. 대상은 `src/` 전체. `tests/` 는 러너 경로라 이번 범위 밖 |
+| R-3 | `src/lib/ui` 가 **평평함** — 컴포넌트(`.svelte`) · 룬 스토어(`.svelte.ts`) · 순수 함수(`.ts`) · 저장 계층이 한 폴더에 섞이고 하위 폴더는 `session/` 하나 | `src/lib/ui/` 직속 파일 18개 | **역할별 하위 폴더로 나눈다.** 기능 단위(`session/`, `history/`)와 공용 단위(예: 앱 껍데기 — 상단 바·테마·화면 유지·설치·서비스워커·About·토스트 / 저장·상태 — storage · state · boot · today · reset / 공용 컴포넌트 — ChipGroup · Confirm)로. 정확한 폴더명과 배정은 설계(GLOBAL)에서 정한다 |
+
+- [ ] FR-29.1: R-1 — 6곳을 index 경유로 바꾼다.
+- [ ] FR-29.2: R-2 — `src/` 의 import 표기를 위 규칙으로 통일한다.
+- [ ] FR-29.3: R-3 — `src/lib/ui` 를 역할별 하위 폴더로 옮긴다. **이동 커밋은 내용 무변경**(git 이 rename 으로
+      인식하게), 경로 갱신은 다음 커밋 — 선례 `184fcff` 와 같은 방식.
+- [ ] FR-29.4: **재발 방지 검사.** 위 세 규칙을 단위 테스트로 못박는다 — `src/` 를 읽어
+      (a) UI · 라우트에서 `domain/` 내부 파일 import 0건, (b) `src/` 에서 `.ts` 확장자 import 0건,
+      (c) 층을 넘는 상대 경로(`../domain`, `../../domain` 등) 0건, (d) `src/lib/ui` 직속에 규칙 밖 파일 0건.
+      cube-study 의 `tests/unit/routes.test.ts` 처럼 규약을 테스트로 두는 방식.
+- [ ] FR-29.5: `CLAUDE.md` 「코드」 절에 R-1~R-3 규칙을, 「규약을 어긴 실제 사례」에 이번 건을 적는다.
+
 ---
 
 ## Non-Functional Requirements
@@ -179,10 +201,7 @@ UI 에서 부르는 곳이 없다. 지난 날 무엇을 했는지, 빠진 날이
   컴포넌트(`.svelte`)를 한 폴더에, 역할별 파일로.
 - 라우트는 `src/routes/history/+page.svelte` 하나. 화면에 계산 로직을 두지 않는다 — 순수 함수를 부르고 그린다.
 - 도메인은 **`$lib/domain`(index)으로만** 부른다. 필요한 함수가 index 에 없으면 index 에 export 를 더한다.
-- 도메인 내부 파일을 직접 import 하는 기존 6곳(`routes/+page.svelte:15`, `ui/session/labels.ts:8-9`,
-  `ui/todayScreen.ts:16`, `ui/session/ProposalBanner.svelte:7`, `ui/session/FreeExerciseForm.svelte:20`)을
-  첫 페이즈에서 index 경유로 바꾼다.
-- import 표기(`$lib/...`, 확장자 없음)는 **새로 만들거나 손대는 파일에만** 적용한다. 전역 일괄 변경은 하지 않는다.
+- 기존 코드의 틀어진 곳은 **FR-29 로 전부 바로잡는다** (부분 적용 아님). 기능 작업보다 먼저 한다.
 - `+layout.svelte` 에는 탭 추가 외에 아무것도 더하지 않는다.
 
 ---
