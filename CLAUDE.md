@@ -45,7 +45,20 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   비공개 환경변수. 데이터는 정적 JSON 과 `localStorage` 뿐
 - **도메인 계층 불가침.** `src/lib/domain/**` 은 이번 UI 작업에서 손대지 않는다.
   UI 는 도메인이 노출한 순수 함수를 부를 뿐이다
-- 순수 로직은 룬을 쓰지 않는 순수 함수로 뺀다 (`src/lib/ui/nav.ts`, `todayScreen.ts`).
+- **도메인 참조는 `$lib/domain`(값) · `$lib/domain/types`(타입) 로만.**
+  `$lib/domain/schedule` · `../domain/date` 식으로 내부 파일을 직접 부르지 않는다.
+  필요한 함수가 index 에 없으면 index 에 export 를 더한다 (FR-29.1 / ADR-21)
+- **`src/` 안 import 표기.** 층을 넘으면 `$lib/...` 별칭, 같은 층은 상대 경로.
+  확장자 표기 금지 (`state.svelte.ts` 는 `state.svelte` 로 — 컴포넌트 `.svelte` 는 해석에
+  필요하므로 유지). 예외 — `src/lib/domain/**` 은 상대 경로 + `.ts` 확장자를 유지하고
+  `$lib` 를 쓰지 않는다 (plain Node 로도 돈다 — `tests/unit/tz-probe` · `runUnderTZ`
+  가 그렇게 도메인을 직접 띄운다) (FR-29.2 / ADR-27)
+- **`src/lib/ui/` 는 역할별 하위 폴더로 나눈다.** 직속에 파일을 두지 않는다.
+  현재 폴더: `shell` (앱 껍데기 — 상단 바 · About · sw), `state` (storage · state ·
+  boot · today · reset), `common` (재사용 폼), `today` (오늘 화면 파생),
+  `session` (진행 중 세션 · 타이머 · 알림 · 세션 컴포넌트), 그리고 `history`
+  (기록 탭, Phase 4 에서 추가) (FR-29.3 / ADR-26)
+- 순수 로직은 룬을 쓰지 않는 순수 함수로 뺀다 (`ui/shell/nav.ts`, `ui/today/todayScreen.ts`).
   `localStorage` 나 브라우저 상태에 닿지 않으므로 SSR/하이드레이션이 어긋나지 않는다
 - `{화면}/+page.svelte` 는 `padding: 1rem 0` 만. 좌우 padding · `max-width` · `margin`
   · `padding-bottom: 5rem` 을 다시 주지 않는다 — `.shell` 과 `main` 이 이미 준다
@@ -58,6 +71,9 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   에서 토큰화. 재발 방지는 이 문서와 `pnpm test` 후 hex grep
 - 상단 바의 wake lock · 테마 버튼이 초기에 아이콘만이었다 → "무슨 버튼인지 모르겠다"
   지적을 받고 라벨을 붙였다. 이 문서 "화면" 절의 아이콘 규칙이 그 결과
+- 도메인 내부 파일 직접 참조 6곳 · `.ts` 확장자 흔적 · `src/lib/ui/` 평평함 —
+  2026-09-18 SPEC3 진입 전 구조 점검에서 발견. FR-29 (Phase 1) 로 정정.
+  재발 방지는 `tests/unit/structure.test.ts` (ADR-27 네 규칙을 정적으로 못박음)
 
 ## 명령
 
