@@ -1,19 +1,18 @@
 <script lang="ts">
   /**
-   * 기록 탭 (FR-23, FR-24).
+   * 기록 탭 (FR-23, FR-24, FR-25).
    *
    * 세로 순서 (UI-1): <h1>기록</h1> → SegToggle(날짜별/종목별) → 본문
-   *   → 「이전 30일 더 보기」 → (Phase 6 의 ExportBar 자리 예약).
+   *   → 「이전 30일 더 보기」(날짜별에서만) → (Phase 6 의 ExportBar 자리 예약).
    *
    * booted 이전에도 자리를 예약한다 (UI-6) — 목록은 localStorage 에서 오는
    * 데이터라 프리렌더 시점과 부팅 후가 다르다.
-   *
-   * 「종목별」 본문은 Phase 5 에서 채운다 — 지금은 자리만 예약한다.
    */
   import type { AppState, Catalog, IsoDate } from '$lib/domain/types';
   import { historyRange, windowsBack, type DateWindow } from './range';
   import { buildDayRows } from './dayList';
   import DayList from './DayList.svelte';
+  import ProgressionTable from './ProgressionTable.svelte';
   import SegToggle from '$lib/ui/common/SegToggle.svelte';
 
   interface Props {
@@ -84,11 +83,13 @@
           </button>
         {/if}
       {/if}
+    {:else if !booted}
+      <!-- 부팅 이전 자리 예약. 종목별도 상태에서 오는 데이터라 부팅 전엔 비어 있다. -->
+      <p class="hint" data-history-loading>불러오는 중…</p>
+    {:else if range === null}
+      <p class="empty" data-history-empty>아직 기록이 없습니다.</p>
     {:else}
-      <!-- Phase 5: 종목별 추이 자리. 자리를 지켜 세로 순서(UI-1)가 흔들리지 않게 한다. -->
-      <p class="hint" data-history-progression-placeholder>
-        종목별 추이는 다음 단계에서 채웁니다.
-      </p>
+      <ProgressionTable {appState} {catalog} />
     {/if}
   </div>
 
