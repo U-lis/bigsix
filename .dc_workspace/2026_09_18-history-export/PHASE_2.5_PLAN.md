@@ -57,3 +57,24 @@ FR-30.1~30.6 · UI-11 · EC-71~73 · H-8. FR-30.7(사진 자료 보강)은 이 �
 
 이 페이즈에 포함하지 않는다. 다만 사용자가 "운동하면서 쓰겠다" 고 하면 이 페이즈까지만 올린
 임시 배포가 의미 있다 — 판단은 사용자가 한다.
+
+---
+
+## Completion Checklist
+
+- [x] `src/lib/ui/session/howto.ts` 신규: `howtoFor` 순수 함수 구현 (verified: `src/lib/ui/session/howto.ts:38`)
+- [x] `Howto` 인터페이스: `step, nameKo, nameEn, unit, perSide, page, lines` 필드 (verified: `src/lib/ui/session/howto.ts:18-30`)
+- [x] EC-71: `summary` 빈 단계는 결과에서 제외 (verified: `src/lib/ui/session/howto.ts:54`)
+- [x] FR-30.4 / EC-73: `pairWith` 있으면 수행 단계 → 동반 단계 순으로 2개 반환 (verified: `src/lib/ui/session/howto.ts:46-49`)
+- [x] `src/lib/ui/session/Howto.svelte` 신규: `<details>` 접기, DOM 에서 제거 않음 (verified: `Howto.svelte:35`)
+- [x] `data-howto` · `data-howto-toggle` 훅 (verified: `Howto.svelte:35-36`)
+- [x] FR-30.6: 출처 문구 ("동작 설명은 책 원문이 아니라 자체 요약") (verified: `Howto.svelte:54`)
+- [x] `ExerciseCard.svelte`: 목표 아래 `Howto` 배치, `performedStep` 전달 (verified: `ExerciseCard.svelte:104-105`)
+- [x] EC-72: 다지기(`kind='consolidation'`)에서 `plan.performedStep` 이 이전 단계 → Howto 가 이전 단계 설명 노출 (verified: `ExerciseCard.svelte:105`)
+- [x] `FreeExerciseForm.svelte`: 선택 단계의 설명 노출 (verified: `FreeExerciseForm.svelte:171`)
+- [x] `CLAUDE.md`: `data-howto` · `data-howto-toggle` 훅 목록 추가 (verified: `CLAUDE.md:35`)
+- [x] `tests/unit/howto.test.ts` 신규: 8개 테스트 케이스 (verified: `tests/unit/howto.test.ts`)
+- [x] 도메인·데이터 변경 없음 — `src/lib/data/`, `src/lib/domain/`(index 제외) diff 없음 (verified: `git diff 914ad99 b315613 --stat`)
+- [x] `pnpm check`: 오류 0 · 경고 0 (실측: 2026-09-21)
+- [x] `pnpm test`: 674 통과 30 파일 (실측: 2026-09-21, 기준선 665 대비 +9)
+- [x] FR-30.7 (사진 자료): 범위 제외

@@ -473,7 +473,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 |---|---|---|---|---|
 | 1 | 구조 정리 (FR-29) | Complete | 도메인 index 경유 + 파일 이동 + import 표기 통일 + 재발 방지 테스트 + CLAUDE.md 규칙 | FR-29.1~29.5 |
 | 2 | 4탭 확장 + /history stub | Complete | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
-| 2.5 | 동작 설명 노출 | Not Started | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
+| 2.5 | 동작 설명 노출 | Complete | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
 | 3 | 스키마 v4 & 세션 기록 보강 | Not Started | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
 | 4 | 기록 탭 뼈대 + 날짜별 목록 | Not Started | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
 | 5 | 종목별 추이 | Not Started | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
