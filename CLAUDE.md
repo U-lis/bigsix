@@ -11,8 +11,10 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | 문서 | 무엇 |
 |---|---|
 | `README.md` | 도메인 사용 예, 규칙 요약, 데이터 출처 |
-| `.dc_workspace/2026_09_05-ui-2/SPEC.md` | 이번 개정의 요구·수용 기준 |
-| `.dc_workspace/2026_09_05-ui-2/GLOBAL.md` | 이번 개정의 ADR·데이터 모델·페이즈 |
+| `.dc_workspace/2026_09_05-ui-2/SPEC.md` | UI 2차 개정 (SPEC2) — 이력 |
+| `.dc_workspace/2026_09_05-ui-2/GLOBAL.md` | UI 2차 개정 (SPEC2) ADR — 이력 |
+| `.dc_workspace/2026_09_18-history-export/SPEC.md` | **이번 개정 (SPEC3)** 요구·수용 기준 |
+| `.dc_workspace/2026_09_18-history-export/GLOBAL.md` | **이번 개정 (SPEC3)** ADR·데이터 모델·페이즈 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 
@@ -26,13 +28,38 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - 색만으로 알리지 않는다 — 같은 자리에 문구가 함께 선다
 - 아이콘만 있는 버튼을 만들지 않는다. 상태는 색이, 정체는 글자가 맡는다.
   좁은 화면에서 접을 때에도 라벨은 최대한 남긴다 (`+layout.svelte` 상단 바 참고)
-- 터치 타깃 44px 이상. 하단 네비만 52px
+- 터치 타깃 44px 이상. 하단 네비만 52px. 하단 네비는 **4탭** (오늘 · 프로그램 · 단계 · 기록)
 - 접기는 CSS 로 한다. `{#if}` 로 DOM 에서 빼지 않는다 — 자리를 지켜야 하이드레이션과
   포커스가 흔들리지 않는다. 잠금은 색 하나가 아니라 투명도 + 커서 + `disabled` 로 표시
 - 상태와 정체는 `data-*` 훅으로 낸다. 테스트와 CSS 가 같은 신호를 본다.
-  기존 훅: `data-install`, `data-wake-lock`, `data-theme-toggle`, `data-about-open`,
-  `data-about-close`, `data-check-update`, `data-update-message`, `data-reset`,
-  `data-info`, `data-toast`, `data-howto`, `data-howto-toggle`. 같은 규약(`data-{역할}`)으로 늘린다
+  같은 규약(`data-{역할}`)으로 늘린다.
+  **앱 껍데기·오늘 화면**: `data-install`, `data-wake-lock`, `data-theme-toggle`,
+  `data-about-open`, `data-about-close`, `data-check-update`, `data-update-message`,
+  `data-reset`, `data-info`, `data-toast`.
+  **동작 설명 (Phase 2.5)**: `data-howto`, `data-howto-toggle`.
+  **하단 네비**: `data-nav`, `data-nav-tab`.
+  **기록 탭 (Phase 4~7)**:
+  `data-history-view`(값: `'day'|'progression'`, HistoryView 루트),
+  `data-history-loading`(로딩 중 안내),
+  `data-history-empty`(기록 없음 안내 영역),
+  `data-history-toggle`(날짜별/종목별 SegToggle 그룹),
+  `data-day-row`(값: `YYYY-MM-DD`),
+  `data-day-status`(값: `'rest'|'done'|'partial'|'missed'`),
+  `data-day-session`(값: `id:{index}`),
+  `data-day-more`(이전 30일 더 보기 버튼),
+  `data-history-progression`(값: `ProgressionId`, 종목 선택 ChipGroup),
+  `data-prog-row`(값: `YYYY-MM-DD:{idx}`),
+  `data-prog-meets`(값: `'yes'|'no'|''`),
+  `data-prog-boundary`(값: 단계 번호, 단계 경계 행),
+  `data-prog-empty`(종목 기록 없음 안내),
+  `data-prog-legend`(단계명 범례),
+  **내보내기·가져오기 (Phase 6~7)**:
+  `data-export-bar`(내보내기·가져오기 영역),
+  `data-export-json`, `data-export-csv`, `data-import`(버튼),
+  `data-export-status`(값: `'downloaded'|'shared'|'unavailable'`),
+  `data-import-dialog`(확인 다이얼로그 루트),
+  `data-import-error`(값: `'not-json'|'shape'|'future-version'|'schema-missing'`),
+  `data-import-block`(값: `'inprogress'`)
 - UI 문구는 사실만 적는다. 백분율·격려·게이미피케이션 금지
 - 문자열은 도메인이 준 것을 가공 없이 노출한다 (NFR-2). 시스템 시각을 UI 에서 부르지
   않는다 — 오늘 날짜는 `todayClock.today` 하나가 근원 (FR-4.4)
