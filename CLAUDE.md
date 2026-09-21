@@ -36,7 +36,7 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   **앱 껍데기·오늘 화면**: `data-install`, `data-wake-lock`, `data-theme-toggle`,
   `data-about-open`, `data-about-close`, `data-check-update`, `data-update-message`,
   `data-reset`, `data-info`, `data-toast`.
-  **동작 설명 (Phase 2.5)**: `data-howto`, `data-howto-toggle`.
+  **동작 설명 (Phase 2.5)**: `data-howto`, `data-howto-toggle`, `data-howto-step`(값: 단계 번호).
   **하단 네비**: `data-nav`, `data-nav-tab`.
   **기록 탭 (Phase 4~7)**:
   `data-history-view`(값: `'day'|'progression'`, HistoryView 루트),
@@ -45,7 +45,12 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-history-toggle`(날짜별/종목별 SegToggle 그룹),
   `data-day-row`(값: `YYYY-MM-DD`),
   `data-day-status`(값: `'rest'|'done'|'partial'|'missed'`),
+  `data-day-status-label`(값: 같음, 색이 아니라 글자로 서는 상태 문구),
+  `data-day-note`(값: `'stint-started'|'proposal-accepted'`, 루틴 갈아탄 날),
+  `data-day-planned`(그날 계획 목록),
   `data-day-session`(값: `id:{index}`),
+  `data-day-sets`(세트 값 목록), `data-day-target`(저장된 목표), `data-day-rpe`(세션 RPE),
+  `data-day-promoted`(승급 표기), `data-day-blocked`(승급 보류 사유),
   `data-day-more`(이전 30일 더 보기 버튼),
   `data-history-progression`(값: `ProgressionId`, 종목 선택 ChipGroup),
   `data-prog-row`(값: `YYYY-MM-DD:{idx}`),

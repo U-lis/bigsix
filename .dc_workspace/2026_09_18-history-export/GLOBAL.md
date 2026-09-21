@@ -489,7 +489,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 | 5 | 종목별 추이 | Complete | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
 | 6 | 내보내기 (JSON + CSV) | Complete | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
 | 7 | 가져오기 | Complete | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
-| 8 | 문서 갱신 | Not Started | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
+| 8 | 문서 갱신 | Complete | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
 
 임시 배포는 페이즈에 넣지 않는다 — 사용자가 별도 지시로 `deploy/README.md` 절차를 수행한다.
 
