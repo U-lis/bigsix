@@ -234,6 +234,14 @@ FR-30 — 운동 중 자세·방법을 알 수 없다. 설명 본문을 어디�
 
 **vitest.config.ts `$lib` alias** — Phase 1 커밋 a(0cc45cb) 에서 추가. FR-29.1 이후 `todayScreen.ts` 등이 `$lib/domain` 을 직접 사용하기 시작해, tests 러너가 이 파일들을 transitive import 할 때 `$lib` 를 해석하지 못하는 문제 방지. SvelteKit 이 앱 빌드 시 자동으로 심는 별칭을 vitest 설정에도 명시한 것으로, 동작상 neutral — 필수. 계획에 없던 변경이지만 타당성 검증됨 (Phase 1 검증 2026-09-21).
 
+**Phase 3 검증 확인 사항 (2026-09-21)**
+
+1. **domain/index.ts export * 쟁점 (PLAN 정오)**: `PHASE_3_PLAN.md` 는 `SessionTarget · SessionExtras` 를 `index.ts` 에 명시 추가하도록 지시했으나, `index.ts` 1행 `export * from './types.ts'` 가 이미 모든 타입을 자동 재수출한다. 코더 판단(명시 추가 불필요)이 옳다. 결과는 동일 — 두 타입 모두 `$lib/domain` 으로 접근 가능. PLAN 체크리스트에 정오 기재.
+
+2. **formatIsoLocal(date, offsetMinutes) 순수 포매터 export (PLAN 외 추가, 승인)**: `src/lib/ui/state/today.svelte.ts` 에 계획에 없던 `formatIsoLocal` 을 export 함. 오프셋 계산 로직을 분리해 프로세스 TZ 를 강제하지 않고도 테스트에서 직접 검증 가능하게 한다. `nowIsoLocal()` 내부는 이 함수를 호출한다. ADR-24 취지(결정성 확보)에 부합 — 승인. PLAN 체크리스트에 기재.
+
+3. **recompute clock 주입 변경 (기존 동작 무변경)**: `recompute(now: Date = new Date(this.#clock.now()))` — 기본값이 `new Date()` 에서 `new Date(this.#clock.now())` 로 변경. 프로덕션에서 `#clock` 은 항상 `Date.now` 이므로 동작 변화 없음. `setClock` 주입 시 `today` 와 `nowIsoLocal()` 의 시각 근원이 일관되는 효과 — 테스트 결정성 향상. 기존 테스트 전부 통과 확인.
+
 **FR-29.4 재발 방지 검사** — `tests/unit/structure.test.ts` 신규:
 
 - (a) UI · 라우트에서 `$lib/domain/{index or types}` 이외의 domain 참조 0건. 상대 경로에 `domain/` 등장 0건.
@@ -474,7 +482,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 | 1 | 구조 정리 (FR-29) | Complete | 도메인 index 경유 + 파일 이동 + import 표기 통일 + 재발 방지 테스트 + CLAUDE.md 규칙 | FR-29.1~29.5 |
 | 2 | 4탭 확장 + /history stub | Complete | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
 | 2.5 | 동작 설명 노출 | Complete | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
-| 3 | 스키마 v4 & 세션 기록 보강 | Not Started | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
+| 3 | 스키마 v4 & 세션 기록 보강 | Complete | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
 | 4 | 기록 탭 뼈대 + 날짜별 목록 | Not Started | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
 | 5 | 종목별 추이 | Not Started | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
 | 6 | 내보내기 (JSON + CSV) | Not Started | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |

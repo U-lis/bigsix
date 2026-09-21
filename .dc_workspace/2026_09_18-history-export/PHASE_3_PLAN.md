@@ -39,6 +39,35 @@ FR-28 을 완결한다. 도메인 · 스토리지 · 세션 스토어 · 시각 
 - `tests/unit/today.test.ts` — nowIsoLocal 형식과 Clock 주입 결정성.
 - `tests/unit/consistency.test.ts` — `CURRENT_SCHEMA_VERSION === 4`.
 
+## Completion Checklist
+
+### 커밋 1 — feat(domain): SessionInput 에 target · setRpes · completedAt 추가 (744eeb8)
+
+- [x] `src/lib/domain/types.ts`: `SessionTarget` · `SessionExtras` 인터페이스 신설. `SessionInput` 에 `target?`, `setRpes?`, `completedAt?` 선택 필드 추가.
+- [x] `src/lib/domain/session.ts`: `abandonChallenge` · `recordConsolidation` 7번째 `extras?: SessionExtras` 추가. `applyExtras` 내부 헬퍼로 필드 조건부 대입.
+- [x] `src/lib/domain/index.ts`: `SessionTarget` · `SessionExtras` 는 이미 존재하는 `export * from './types.ts'` 로 자동 재수출됨. 별도 explicit export 불필요 (PLAN 정오 — 결과는 동일).
+- [x] `tests/unit/session.test.ts`: extras 7인자 전달 시 record 에 세 필드 존재, 6인자 backward-compat 통과.
+- [x] `tests/unit/evaluate.test.ts`: `applySession` 스프레드로 세 필드 담기 확인. 판정이 setRpes/target/completedAt 에 영향받지 않음.
+
+### 커밋 2 — feat(state): 봉투 스키마 v4 와 InProgressSession.target (1435eae)
+
+- [x] `src/lib/ui/state/storage.ts`: `CURRENT_SCHEMA_VERSION = 4`. `APP_STATE_MIGRATIONS[3]` · `IN_PROGRESS_MIGRATIONS[3]` no-op 마이그레이터 추가.
+- [x] `src/lib/ui/state/storage.ts`: `InProgressSession.target?: SessionTarget` 필드 추가.
+- [x] `src/lib/ui/state/storage.ts`: `isInProgressShape` target 있으면 `{ goal, work }` 얕은 검사, 없으면 통과.
+- [x] `src/lib/ui/state/storage.ts`: `validateAndMigrateAppStateEnvelope` export. `migrateAppStateEnvelope` + `isAppStateShape` 재사용.
+- [x] `tests/unit/storage.test.ts`: v3→v4 no-op, target 저장·복원, target 없는 v3 → undefined, isInProgressShape 양방향, validateAndMigrateAppStateEnvelope 3시나리오 + v3 체인 테스트.
+- [x] `tests/unit/consistency.test.ts`: `CURRENT_SCHEMA_VERSION === 4`.
+
+### 커밋 3 — feat(ui): todayClock.nowIsoLocal 과 세션 완료 필드 채우기 (732494d)
+
+- [x] `src/lib/ui/state/today.svelte.ts`: `Clock` 인터페이스 · `setClock` · `nowIsoLocal()` 추가. 반환 형식 `YYYY-MM-DDTHH:mm:ss±HH:MM`.
+- [x] `src/lib/ui/state/today.svelte.ts`: `formatIsoLocal(date, offsetMinutes)` 순수 포매터 export — PLAN 에 없던 추가. 오프셋 계산을 분리해 프로세스 TZ 강제 없이 검증 가능하게 함. 타당성 확인됨.
+- [x] `src/lib/ui/state/today.svelte.ts`: `recompute()` 기본값이 `new Date(this.#clock.now())` 로 변경 — setClock 주입 시 `today` 와 `nowIsoLocal` 의 시각 근원이 일관됨. 프로덕션 동작 무변경.
+- [x] `src/lib/ui/session/session.svelte.ts`: `begin` 이 `plan.goal · plan.work` 를 target 스냅샷으로 저장. `beginFree` 는 target 없이 시작.
+- [x] `src/lib/ui/session/session.svelte.ts`: `buildExtras` 헬퍼. `finalize` · `abandon` 이 extras 구성해 도메인에 전달.
+- [x] `tests/unit/today.test.ts`: `formatIsoLocal` 순수 검증 (UTC, KST, UTC+5), `setClock` 고정 시 `nowIsoLocal` 결정성, 형식 정규식 통과.
+- [x] `tests/unit/inprogress.test.ts`: begin target 스냅샷, beginFree target 없음, finalize setRpes/completedAt/target, abandon 세 필드 전달.
+
 ## 커밋 경계 (3개)
 
 1. `feat(domain): SessionInput 에 target · setRpes · completedAt 추가`
