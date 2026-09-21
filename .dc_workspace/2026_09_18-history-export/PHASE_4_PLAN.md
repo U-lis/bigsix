@@ -51,14 +51,36 @@ FR-23, FR-24, UI-1~9 (아이콘 제외). 기록 탭이 열리면 날짜별 목�
 
 ## 완료 기준
 
-- 기록 · 구간 모두 없는 상태에서 "아직 기록이 없습니다" 문구만 뜬다.
-- 기록이 있으면 오늘부터 최근 30일 목록이 뜬다.
-- "이전 30일 더 보기" 버튼으로 창이 늘어난다.
-- 상태 (`수행`/`일부`/`미수행`/`휴식`) 가 색 + 문구로 함께 표시.
-- 승급/보류/자유/다지기/중단/루틴 갈아탄 날이 문구로 표시.
-- 미수행일에 계획 종목명만 노출 (목표 수치 없음).
-- 같은 날 같은 종목 세션 2개가 모두 표시 (EC-58).
-- `pnpm check` 0/0, `pnpm test` 전부 통과.
+- [x] 기록 · 구간 모두 없는 상태에서 "아직 기록이 없습니다" 문구만 뜬다.
+- [x] 기록이 있으면 오늘부터 최근 30일 목록이 뜬다.
+- [x] "이전 30일 더 보기" 버튼으로 창이 늘어난다.
+- [x] 상태 (`수행`/`일부`/`미수행`/`휴식`) 가 색 + 문구로 함께 표시.
+- [x] 승급/보류/자유/다지기/중단/루틴 갈아탄 날이 문구로 표시.
+- [x] 미수행일에 계획 종목명만 노출 (목표 수치 없음).
+- [x] 같은 날 같은 종목 세션 2개가 모두 표시 (EC-58).
+- [x] `pnpm check` 0/0, `pnpm test` 전부 통과.
+
+## 검증 시 확인 사항 (2026-09-21)
+
+### 1. `withNoStintPerformed` 헬퍼 (EC-66)
+
+`dayList.ts` 에 PLAN 외 추가된 private 헬퍼. 승인.
+
+- **(a) EC-66 해석 타당성**: 타당하다. `reviewDay`는 stint가 없는 날에 `noStintReview(date)`를 반환하고(`calendar.ts:84`), `noStintReview`는 항상 `performed: []`를 반환한다(`calendar.ts:46-56`). 자유 운동 기록이 있어도 도메인은 의도적으로 빈 배열을 반환한다 — 「계획 없는 날」이 도메인 판정 로직이다. `withNoStintPerformed`는 화면 목록에 이 기록을 표시해야 한다는 EC-66 요구를 UI 계층에서 처리한다.
+- **(b) 도메인 판정(status) 오염**: 없다. 헬퍼는 `review.programId !== null`이면 즉시 반환하므로 stint가 있는 날에는 절대 개입하지 않는다. stint 없는 날도 `status` 를 건드리지 않는다 (코드 주석: "status 판정은 그대로 두어 rest 로 남는다").
+- **(c) 도메인 중복 계산 여부**: 중복 아니다. `reviewDay`의 stint=null 경로는 `performed`를 채우지 않는다. `withNoStintPerformed`는 도메인이 주지 않는 값을 UI 계층에서 보완한다. stint가 있는 날은 `programId !== null` 체크로 개입을 방지하므로 도메인 로직과 충돌 없다.
+
+### 2. SegToggle 동일성
+
+`diff ~/Documents/cube-study/src/lib/ui/SegToggle.svelte src/lib/ui/common/SegToggle.svelte` — 출력 없음. 완전 동일.
+
+### 3. HistoryView prop 이름 `appState`
+
+GLOBAL.md ADR-20 (line 69)에 이미 `appState`로 명시. Svelte 5에서 `state`를 prop 이름으로 쓰면 svelte-check가 `$state` rune 충돌 경고를 낸다. `appState`로 변경한 것은 타당하며, PLAN 명세와도 일치한다. `pnpm check` 0/0 확인.
+
+### 4. 테스트 픽스처 프로그램 ID
+
+`progressions.json`에 `classic` 없음. `veterano` (id: "veterano") 존재. `good_behavior` 스케줄(월수금 운동, 화목토일 휴식) 실제 데이터 일치 확인. `MON=2026-08-31(월)` 기준 요일 계산 정확.
 
 ## 임시 배포
 

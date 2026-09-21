@@ -483,7 +483,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 | 2 | 4탭 확장 + /history stub | Complete | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
 | 2.5 | 동작 설명 노출 | Complete | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
 | 3 | 스키마 v4 & 세션 기록 보강 | Complete | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
-| 4 | 기록 탭 뼈대 + 날짜별 목록 | Not Started | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
+| 4 | 기록 탭 뼈대 + 날짜별 목록 | Complete | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
 | 5 | 종목별 추이 | Not Started | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
 | 6 | 내보내기 (JSON + CSV) | Not Started | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
 | 7 | 가져오기 | Not Started | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
@@ -497,7 +497,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 - **RISK-1**: FR-29 이동 커밋(Phase 1 커밋 2, 30ae3b7)이 `pnpm test`/`check` 를 잠시 깨뜨렸다 — **실제 발생 확인 (Phase 1 검증 2026-09-21)**. NFR-25 「각 커밋 통과」와 충돌하지만 선례 `184fcff` 로 정당화. ADR-26 의 "이번엔 예외 없이" 원칙과 상충하나, 이동 + 경로 수정을 커밋 b·c 로 분리해 처리하는 방식이 채택됐다. 커밋 b·c 는 짝으로 push · merge — 커밋 b 단독 push 금지.
 - **RISK-2**: R-2 의 「같은 층」 판정 대상이 각 subfolder 단위 → 구현 시 층 경계 판정 함수가 잘못되면 검사가 너무 헐거워지거나 빡빡해진다. `LAYER_ROOTS` 상수를 명시하고 그 상수 자체를 테스트한다.
-- **RISK-3**: `NFR-24` — 1년치 데이터에서 스크롤이 30일 단위로 확장될 때마다 `reviewDay` 30회를 다시 부른다. 실측 없이 문제라 단정하지 않으므로 memoization 은 우선 두지 않는다 (YAGNI). Phase 4 에서 실측 후 결정.
+- **RISK-3**: `NFR-24` — 1년치 데이터에서 스크롤이 30일 단위로 확장될 때마다 `reviewDay` 30회를 다시 부른다. **Phase 4 실측 결과 (2026-09-21)**: 30일 창 평균 **0.18ms**, 1년 창(365일) 평균 **1.22ms** — memoization 불필요. YAGNI 결정 유지. (vitest 환경, AMD Ryzen 기준. 태스크 설계 당시 참조 수치 2.58ms/35.87ms보다 유의하게 빠름 — 환경 차이로 추정)
 - **RISK-4**: `completedAt` 이 로컬 오프셋 포함 문자열이라 세션 도중 타임존 이동(비행 등)이 있으면 표시가 어긋난다. 도메인은 이 값을 판정에 쓰지 않으므로 표시상 이슈 — 알려진 한계로 CHANGELOG 에 적는다.
 - **RISK-5**: Web Share API 감지 — iOS 독립 실행 모드에서 `<a download>` 가 무시되는 케이스가 있으나 확실한 사전 감지가 어렵다. 사전 판정(`navigator.canShare?.({ files: [test] })`) + 시도 시 예외 catch 두 겹으로 감지. 둘 다 안 되면 「내려받기·공유 모두 안 됩니다」 문구 (EC-61).
 - **RISK-6**: 진행 중 세션의 `target` 스냅샷 — SPEC2 시절 v3 봉투에는 이 필드가 없다. v3→v4 no-op 이 값을 채우지 않으므로 그 진행 중 세션은 `target === undefined` 로 완료된다 (FR-28.6 명시).
