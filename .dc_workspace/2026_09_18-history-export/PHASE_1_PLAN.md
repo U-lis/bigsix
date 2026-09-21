@@ -111,6 +111,16 @@
 - `ls src/lib/ui/` 결과: `shell/ state/ common/ today/ session/` — 파일 0개.
 - 앱을 열어 오늘/프로그램/단계 화면이 이전과 동일하게 동작 (동작 무변경).
 
+## Completion Checklist
+
+- [x] (a) `refactor(domain)`: 도메인 index 경유 6곳 정리. Verified in `src/routes/+page.svelte`, `src/lib/ui/session/labels.ts`, `src/lib/ui/today/todayScreen.ts`, `src/lib/ui/session/ProposalBanner.svelte`, `src/lib/ui/session/FreeExerciseForm.svelte`. `pnpm check` 0/0, `pnpm test` 657.
+- [x] (a) `vitest.config.ts` `$lib` alias 추가. Verified in `vitest.config.ts`. `$lib/domain` 경유 전환 후 tests transitive import 해석에 필요 — 타당 (쟁점 2 검증).
+- [x] (b) `refactor(ui)`: `src/lib/ui/` 18개 파일 역할별 하위 폴더로 `git mv`. Verified: `git show -M --stat 30ae3b7` 18개 전부 rename. 이 커밋에서 테스트 깨짐 (쟁점 1).
+- [x] (c) `refactor`: R-2 import 표기 통일. Verified: `grep -rnE "from.*\.ts'" src/ --exclude-dir=domain` 결과 없음. `pnpm test` 657.
+- [x] (d) `test`: `tests/unit/structure.test.ts` 신규. Verified: 7 assertions passed (LAYER_ROOTS 9개, 5가지 규약 검사). `pnpm test` 664.
+- [x] (e) `docs`: `CLAUDE.md` FR-29 규칙·사례 추가. Verified: `CLAUDE.md:48–75`. `pnpm test` 664.
+- [x] 완료 기준 전부 충족: `pnpm check` 0/0, `pnpm test` 664 (657+7), 구조 검사 통과, import grep 결과 없음.
+
 ## 임시 배포
 
 이 페이즈에 포함하지 않는다.

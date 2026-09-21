@@ -232,6 +232,8 @@ FR-30 — 운동 중 자세·방법을 알 수 없다. 설명 본문을 어디�
 - `ui/state/boot.ts` 가 `data/catalog` 부를 때: `import { loadCatalog } from '$lib/data/catalog'`.
 - `ui/state/boot.ts` 가 `domain/index` 부를 때: `import { ... } from '$lib/domain'`.
 
+**vitest.config.ts `$lib` alias** — Phase 1 커밋 a(0cc45cb) 에서 추가. FR-29.1 이후 `todayScreen.ts` 등이 `$lib/domain` 을 직접 사용하기 시작해, tests 러너가 이 파일들을 transitive import 할 때 `$lib` 를 해석하지 못하는 문제 방지. SvelteKit 이 앱 빌드 시 자동으로 심는 별칭을 vitest 설정에도 명시한 것으로, 동작상 neutral — 필수. 계획에 없던 변경이지만 타당성 검증됨 (Phase 1 검증 2026-09-21).
+
 **FR-29.4 재발 방지 검사** — `tests/unit/structure.test.ts` 신규:
 
 - (a) UI · 라우트에서 `$lib/domain/{index or types}` 이외의 domain 참조 0건. 상대 경로에 `domain/` 등장 0건.
@@ -467,17 +469,17 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 병렬 조건 검토: 파일 겹침 · 런타임 의존 · 테스트 자원 세 축 모두에서 뒤로 갈수록 앞 산출물을 사용 → 병렬 불가. SPEC2 GLOBAL ADR-14 「개발자 1인, 순차」 원칙 승계.
 
-| # | 이름 | 요지 | SPEC 참조 |
-|---|---|---|---|
-| 1 | 구조 정리 (FR-29) | 도메인 index 경유 + 파일 이동 + import 표기 통일 + 재발 방지 테스트 + CLAUDE.md 규칙 | FR-29.1~29.5 |
-| 2 | 4탭 확장 + /history stub | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
-| 2.5 | 동작 설명 노출 | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
-| 3 | 스키마 v4 & 세션 기록 보강 | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
-| 4 | 기록 탭 뼈대 + 날짜별 목록 | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
-| 5 | 종목별 추이 | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
-| 6 | 내보내기 (JSON + CSV) | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
-| 7 | 가져오기 | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
-| 8 | 문서 갱신 | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
+| # | 이름 | Status | 요지 | SPEC 참조 |
+|---|---|---|---|---|
+| 1 | 구조 정리 (FR-29) | Complete | 도메인 index 경유 + 파일 이동 + import 표기 통일 + 재발 방지 테스트 + CLAUDE.md 규칙 | FR-29.1~29.5 |
+| 2 | 4탭 확장 + /history stub | Not Started | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
+| 2.5 | 동작 설명 노출 | Not Started | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
+| 3 | 스키마 v4 & 세션 기록 보강 | Not Started | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
+| 4 | 기록 탭 뼈대 + 날짜별 목록 | Not Started | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
+| 5 | 종목별 추이 | Not Started | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
+| 6 | 내보내기 (JSON + CSV) | Not Started | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
+| 7 | 가져오기 | Not Started | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
+| 8 | 문서 갱신 | Not Started | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
 
 임시 배포는 페이즈에 넣지 않는다 — 사용자가 별도 지시로 `deploy/README.md` 절차를 수행한다.
 
@@ -485,7 +487,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 ## 위험 · 트레이드오프
 
-- **RISK-1**: FR-29 이동 커밋(Phase 1 커밋 2)이 `pnpm test`/`check` 를 잠시 깨뜨린다. NFR-25 「각 커밋 통과」와 충돌하지만 선례 `184fcff` 가 정당화. 이동과 경로 갱신은 반드시 짝으로 push · merge.
+- **RISK-1**: FR-29 이동 커밋(Phase 1 커밋 2, 30ae3b7)이 `pnpm test`/`check` 를 잠시 깨뜨렸다 — **실제 발생 확인 (Phase 1 검증 2026-09-21)**. NFR-25 「각 커밋 통과」와 충돌하지만 선례 `184fcff` 로 정당화. ADR-26 의 "이번엔 예외 없이" 원칙과 상충하나, 이동 + 경로 수정을 커밋 b·c 로 분리해 처리하는 방식이 채택됐다. 커밋 b·c 는 짝으로 push · merge — 커밋 b 단독 push 금지.
 - **RISK-2**: R-2 의 「같은 층」 판정 대상이 각 subfolder 단위 → 구현 시 층 경계 판정 함수가 잘못되면 검사가 너무 헐거워지거나 빡빡해진다. `LAYER_ROOTS` 상수를 명시하고 그 상수 자체를 테스트한다.
 - **RISK-3**: `NFR-24` — 1년치 데이터에서 스크롤이 30일 단위로 확장될 때마다 `reviewDay` 30회를 다시 부른다. 실측 없이 문제라 단정하지 않으므로 memoization 은 우선 두지 않는다 (YAGNI). Phase 4 에서 실측 후 결정.
 - **RISK-4**: `completedAt` 이 로컬 오프셋 포함 문자열이라 세션 도중 타임존 이동(비행 등)이 있으면 표시가 어긋난다. 도메인은 이 값을 판정에 쓰지 않으므로 표시상 이슈 — 알려진 한계로 CHANGELOG 에 적는다.
@@ -498,4 +500,4 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 - SPEC FR-25.3 「재계산으로 채워 넣지 않는다 (EC-57)」는 정확하다. `plannedExercises` 는 현재 단계 기준의 재계산 값이라 옛 세션의 실제 목표가 아니다 (`src/lib/domain/types.ts:262-268` 주석).
 - SPEC UI-3 「종목 선택은 6개라 SegToggle 범위(2~4)를 넘으므로 `ChipGroup`」이 명시적으로 있어, `ChipGroup` 은 hint 라인이 없지만 종목명 라벨만으로 사용처가 충족된다 — 실무상 문제 없음.
-- 테스트 기준선: `pnpm test` 실측 결과 **657 tests passed (28 files)**. NFR-25 의 「기준선 657개」는 정확하다. 각 페이즈 커밋 후 이 숫자 이상을 유지한다 (신규 테스트로 늘어난다).
+- 테스트 기준선: `pnpm test` 실측 결과 **657 tests passed (28 files)**. NFR-25 의 「기준선 657개」는 정확하다. 각 페이즈 커밋 후 이 숫자 이상을 유지한다 (신규 테스트로 늘어난다). Phase 1 완료 후 현재 기준선: **664 tests (29 files)** — structure.test.ts 7건 추가.
