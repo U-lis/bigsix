@@ -1,8 +1,21 @@
 import { applySession, type Evaluation } from './evaluate.ts';
 import { canConsolidate, planConsolidation } from './plan.ts';
 import type {
-  AppState, Catalog, IsoDate, PlannedExercise, ProgressionId, SessionInput, SessionRecord,
+  AppState, Catalog, IsoDate, PlannedExercise, ProgressionId,
+  SessionExtras, SessionInput, SessionRecord,
 } from './types.ts';
+
+/**
+ * `extras` 의 세 필드를 `SessionInput` 에 채운다 (FR-28 / ADR-23).
+ * 필드가 없으면 명시 대입하지 않는다 — `record = { ...input }` 스프레드에서
+ * `key: undefined` 로 실리지 않게 하기 위함이다 (기존 rpe 처리 방식과 같다).
+ */
+function applyExtras(input: SessionInput, extras?: SessionExtras): void {
+  if (extras === undefined) return;
+  if (extras.target !== undefined) input.target = extras.target;
+  if (extras.setRpes !== undefined) input.setRpes = extras.setRpes;
+  if (extras.completedAt !== undefined) input.completedAt = extras.completedAt;
+}
 
 /**
  * 세션 진행 흐름 (FR-7).
@@ -46,6 +59,7 @@ export function abandonChallenge(
   date: IsoDate,
   sets: number[],
   rpe?: number,
+  extras?: SessionExtras,
 ): AbandonResult {
   const input: SessionInput = {
     date,
@@ -57,6 +71,7 @@ export function abandonChallenge(
   };
   // 값이 없을 때 undefined 를 명시 대입하지 않는다 — 필드 자체를 만들지 않는다.
   if (rpe !== undefined) input.rpe = rpe;
+  applyExtras(input, extras);
 
   const applied = applySession(state, catalog, input);
 
@@ -101,6 +116,7 @@ export function recordConsolidation(
   date: IsoDate,
   sets: number[],
   rpe?: number,
+  extras?: SessionExtras,
 ): { state: AppState; record: SessionRecord } {
   const step = state.steps[progressionId];
   if (step <= 1) {
@@ -116,6 +132,7 @@ export function recordConsolidation(
     kind: 'consolidation',
   };
   if (rpe !== undefined) input.rpe = rpe;
+  applyExtras(input, extras);
 
   const applied = applySession(state, catalog, input);
   return { state: applied.state, record: applied.record };

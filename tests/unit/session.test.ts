@@ -503,3 +503,71 @@ test('포기 → 다지기 를 4회 반복하면 3회마다 10% 증량이 적용
   assert.deepEqual(seen, [25, 25, 25, Math.round(25 * 1.1)]);
   assert.equal(s.steps.pushup, 5, '흐름 전체에서 단계가 유지된다');
 });
+
+// =====================================================================
+// FR-28 / ADR-23 extras — target · setRpes · completedAt 저장
+// =====================================================================
+
+const target5 = {
+  goal: { label: 'progression' as const, sets: 2, value: 20 },
+  work: [
+    { target: 20, mode: 'fixed' as const },
+    { target: 20, mode: 'fixed' as const },
+  ],
+};
+
+test('FR-28.1 abandonChallenge extras — target/setRpes/completedAt 이 record 에 남는다', () => {
+  const r = abandonChallenge(
+    atStep('pushup', 5), catalog, 'pushup', '2026-09-07', [3, 2], 8,
+    { target: target5, setRpes: [8, 8], completedAt: '2026-09-07T13:45:23+09:00' },
+  );
+  assert.deepEqual(r.record.target, target5);
+  assert.deepEqual(r.record.setRpes, [8, 8]);
+  assert.equal(r.record.completedAt, '2026-09-07T13:45:23+09:00');
+});
+
+test('FR-28.1 recordConsolidation extras — target/setRpes/completedAt 이 record 에 남는다', () => {
+  const r = recordConsolidation(
+    atStep('pushup', 5), catalog, 'pushup', '2026-09-07', [25, 25], 7,
+    { target: target5, setRpes: [7, null], completedAt: '2026-09-07T14:00:00+09:00' },
+  );
+  assert.deepEqual(r.record.target, target5);
+  assert.deepEqual(r.record.setRpes, [7, null]);
+  assert.equal(r.record.completedAt, '2026-09-07T14:00:00+09:00');
+});
+
+test('FR-28 기존 6인자 호출은 그대로 통과 — record 에 세 필드는 undefined (backward-compat)', () => {
+  const r = abandonChallenge(atStep('pushup', 5), catalog, 'pushup', '2026-09-07', [3, 2], 8);
+  assert.equal(r.record.target, undefined);
+  assert.equal(r.record.setRpes, undefined);
+  assert.equal(r.record.completedAt, undefined);
+  // undefined 를 명시 대입하지 않는다 — 필드 자체가 없다.
+  assert.equal('target' in r.record, false);
+  assert.equal('setRpes' in r.record, false);
+  assert.equal('completedAt' in r.record, false);
+
+  const c = recordConsolidation(atStep('pushup', 5), catalog, 'pushup', '2026-09-07', [25, 25], 7);
+  assert.equal('target' in c.record, false);
+  assert.equal('setRpes' in c.record, false);
+  assert.equal('completedAt' in c.record, false);
+});
+
+test('FR-28.2 extras.setRpes 길이가 sets 와 달라도 판정에 영향 없다 — record 에 그대로 실린다', () => {
+  // 판정은 계속 record.rpe 만 본다 (세션 rpe = 세트 rpe 최댓값). setRpes 는 저장 전용.
+  const st = { ...atStep('pushup', 5), history: onePassFromPromotion('pushup', 5) };
+  // 3회 연속을 완성하는 세션. rpe 낮게 넘겨 승급 허용.
+  const r = recordSession(st, catalog, {
+    date: '2026-09-07',
+    progressionId: 'pushup',
+    step: 5,
+    sets: topSets('pushup', 5),
+    kind: 'work',
+    rpe: 6,
+    setRpes: [6, 6, 6, 6, 6], // 세트 수와 길이가 달라도 판정에 영향 없다
+  });
+  // 판정: 승급.
+  assert.equal(r.state.steps.pushup, 6);
+  assert.equal(r.record.promotedTo, 6);
+  // record 에 그대로 실린다.
+  assert.deepEqual(r.record.setRpes, [6, 6, 6, 6, 6]);
+});

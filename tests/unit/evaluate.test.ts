@@ -426,3 +426,51 @@ test('rpeVeto 는 free 세션의 RPE 를 창에 넣지 않는다', () => {
   assert.equal(evaluation.promote, true, 'free 는 RPE 창에 포함되지 않는다');
   assert.equal(evaluation.blockedBy, undefined);
 });
+
+// ── FR-28 applySession — target · setRpes · completedAt 스프레드 ─────────
+
+const targetPushup5 = {
+  goal: { label: 'progression' as const, sets: 2, value: 20 },
+  work: [
+    { target: 20, mode: 'fixed' as const },
+    { target: 20, mode: 'fixed' as const },
+  ],
+};
+
+test('FR-28.1 applySession 은 새 세 필드를 record 로 스프레드한다', () => {
+  const { record } = applySession(stateAt({ pushup: 5 }), catalog, input('pushup', 5, [20, 20], {
+    target: targetPushup5,
+    setRpes: [7, 8],
+    completedAt: '2026-09-02T13:45:23+09:00',
+  }));
+  assert.deepEqual(record.target, targetPushup5);
+  assert.deepEqual(record.setRpes, [7, 8]);
+  assert.equal(record.completedAt, '2026-09-02T13:45:23+09:00');
+});
+
+test('FR-28.2 새 세 필드는 승급 판정에 영향이 없다', () => {
+  // ready() 로 승급 직전 상태. 새 세 필드를 넣거나 빼도 승급 결과가 같아야 한다.
+  const stateReady = stateAt({ pushup: 5 }, ready());
+  const withoutExtras = applySession(stateReady, catalog, input('pushup', 5, topSets('pushup', 5)));
+  const withExtras = applySession(stateReady, catalog, input('pushup', 5, topSets('pushup', 5), {
+    target: targetPushup5,
+    setRpes: [10, 10],           // 세트별 RPE 는 판정에 안 쓰인다 — 세션 rpe 만.
+    completedAt: '2026-09-02T13:45:23+09:00',
+  }));
+  assert.equal(withoutExtras.evaluation.promote, true);
+  assert.equal(withExtras.evaluation.promote, true);
+  assert.equal(withoutExtras.state.steps.pushup, 6);
+  assert.equal(withExtras.state.steps.pushup, 6);
+});
+
+test('FR-28.2 강등·유지 판정도 새 세 필드에 영향받지 않는다', () => {
+  // 미달 세션에 세 필드를 얹어도 여전히 유지.
+  const st = stateAt({ pushup: 5 });
+  const with3 = applySession(st, catalog, input('pushup', 5, [19, 18], {
+    target: targetPushup5,
+    setRpes: [8, 9],
+    completedAt: '2026-09-02T13:45:23+09:00',
+  }));
+  assert.equal(with3.evaluation.promote, false);
+  assert.equal(with3.state.steps.pushup, 5);
+});

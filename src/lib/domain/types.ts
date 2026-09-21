@@ -68,6 +68,35 @@ export interface Catalog {
   programs: Program[];
 }
 
+/**
+ * 세션 시작 당시의 목표 스냅샷 (FR-28.1 / ADR-22).
+ *
+ * `plan.goal` 과 `plan.work` 를 그대로 복사한 값이다 — 세션이 끝난 뒤에도 그날의 목표가
+ * 무엇이었는지 재계산 없이 알 수 있어야 하기 때문이다. 단계는 세션 뒤 오르내리므로
+ * 당시 목표를 상태로부터 재구성하는 것은 안전하지 않다.
+ *
+ * 자유 운동은 계획이 없으므로 이 값이 없다.
+ */
+export interface SessionTarget {
+  /** 시작 시점의 목표 라벨·세트·값. `plan.goal` 스냅샷. */
+  goal: { label: StandardLabel; sets: number; value: number };
+  /** 세트별 목표. `plan.work` 스냅샷. `sets` 배열과 인덱스로 대응한다. */
+  work: TargetSet[];
+}
+
+/**
+ * `abandonChallenge` / `recordConsolidation` 이 뒤에 받는 옵션 객체 (FR-28 / ADR-23).
+ * 위치 인자로 넣지 않는 이유는 기존 6인자 호출부의 diff 를 피하기 위함이다.
+ */
+export interface SessionExtras {
+  /** 시작 당시 목표. 자유 운동은 없다 (FR-28.1). */
+  target?: SessionTarget;
+  /** 세트별 RPE. `sets.length` 와 길이가 같아야 한다. 미입력 세트는 null (FR-28.1). */
+  setRpes?: (number | null)[];
+  /** 완료 또는 중단 시각. ISO 8601 로컬 오프셋 포함. UI 가 채운다 (FR-28.4). */
+  completedAt?: string;
+}
+
 /** 한 번의 운동 기록으로 사용자·UI 가 제출하는 입력. 파생 필드가 없다. */
 export interface SessionInput {
   date: IsoDate;
@@ -91,6 +120,19 @@ export interface SessionInput {
   kind: 'work' | 'consolidation' | 'free';
   /** abandoned = 사용자가 도중에 '불가능' 을 눌러 중단한 도전. */
   outcome?: 'completed' | 'abandoned';
+
+  // ── FR-28.1 신규 (선택) ─────────────────────────────────────────────
+  //
+  // 세 필드 전부 저장 전용이다 — 판정(`evaluateSession`)은 계속 기존 `rpe` 만 본다.
+  // `applySession` 이 `record = { ...input }` 로 스프레드하므로 시그니처를 손대지
+  // 않아도 새 필드가 record 에 자동으로 실린다.
+
+  /** 시작 당시 목표. 자유 운동은 없다. */
+  target?: SessionTarget;
+  /** 세트별 RPE. `sets.length` 와 길이가 같아야 한다. 미입력 세트는 null. */
+  setRpes?: (number | null)[];
+  /** 완료 또는 중단 시각. ISO 8601 로컬 오프셋 포함. UI 가 채운다. */
+  completedAt?: string;
 }
 
 /** history 에 저장되는 기록. 입력에 엔진이 계산한 파생 필드가 붙는다. */
