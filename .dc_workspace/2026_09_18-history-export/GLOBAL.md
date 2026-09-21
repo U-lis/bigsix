@@ -484,7 +484,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 | 2.5 | 동작 설명 노출 | Complete | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
 | 3 | 스키마 v4 & 세션 기록 보강 | Complete | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
 | 4 | 기록 탭 뼈대 + 날짜별 목록 | Complete | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
-| 5 | 종목별 추이 | Not Started | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
+| 5 | 종목별 추이 | Complete | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
 | 6 | 내보내기 (JSON + CSV) | Not Started | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
 | 7 | 가져오기 | Not Started | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
 | 8 | 문서 갱신 | Not Started | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
