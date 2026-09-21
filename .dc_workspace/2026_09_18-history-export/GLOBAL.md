@@ -199,6 +199,25 @@ SPEC 「R-3」: `src/lib/ui/` 직속 파일 18개가 컴포넌트 · 룬 스토�
 
 ---
 
+### ADR-28 — 동작 설명은 데이터를 그대로 낸다. 새 저장소도, 새 화면도 만들지 않는다.
+
+**Problem**
+FR-30 — 운동 중 자세·방법을 알 수 없다. 설명 본문을 어디서 가져오고 어디에 둘 것인가.
+
+**Decision**
+- 본문의 출처는 `src/lib/data/progressions.json` 의 `Step.summary` 하나다. 60단계 전부에 이미 있다. **새 파일·새 필드·새 저장소를 만들지 않는다.**
+- 표시 자리는 오늘 화면의 운동 카드 안 하나다 (H-8). 단계 화면과 별도 동작 화면은 범위 밖 — 탭이 늘지 않는다.
+- 화면 층은 순수 함수(`ui/session/howto.ts`) + 표시 컴포넌트(`Howto.svelte`) 로 나눈다. ADR-20 과 같은 구조.
+- 접기는 `<details>` — 포커스·키보드·ESC 처리를 브라우저에 맡긴다. `{#if}` 로 DOM 에서 빼지 않는다 (CONVENTIONS 5.1).
+- 보강(FR-30.7)은 **데이터만 고치는 일**이다. 사진 자료가 도착하면 `progressions.json` 의 `summary` 를 늘리고 `python3 tools/gen_movements.py` 로 `docs/MOVEMENTS.md` 를 다시 만든다. 화면 코드는 그대로다.
+
+**Rejected 대안**
+- 설명 전용 화면 + 5번째 탭 — 운동 중에 화면을 옮겨야 한다. 불편의 원인 그대로.
+- 책 원문 전재 — 저작권. README 「데이터 출처」가 그은 선을 넘지 않는다.
+- 이미지 추가 — 이슈 #3. 이번엔 글만 (사용자 요청 문구 그대로 "글로 설명").
+
+---
+
 ### ADR-27 — R-2 import 표기 규칙과 FR-29.4 재발 방지 검사.
 
 **규칙**
@@ -444,7 +463,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 ---
 
-## Phase 목록 (총 8개, 전부 순차)
+## Phase 목록 (총 9개, 전부 순차)
 
 병렬 조건 검토: 파일 겹침 · 런타임 의존 · 테스트 자원 세 축 모두에서 뒤로 갈수록 앞 산출물을 사용 → 병렬 불가. SPEC2 GLOBAL ADR-14 「개발자 1인, 순차」 원칙 승계.
 
@@ -452,6 +471,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 |---|---|---|---|
 | 1 | 구조 정리 (FR-29) | 도메인 index 경유 + 파일 이동 + import 표기 통일 + 재발 방지 테스트 + CLAUDE.md 규칙 | FR-29.1~29.5 |
 | 2 | 4탭 확장 + /history stub | 하단 네비 4탭, 기록 라우트 stub | FR-23.1 |
+| 2.5 | 동작 설명 노출 | 운동 카드에서 그 단계의 자세·방법을 읽는다. 데이터(`summary`)는 이미 있어 화면에서 부르기만 한다. 도메인·데이터 변경 없음 | FR-30, UI-11, EC-71~73 |
 | 3 | 스키마 v4 & 세션 기록 보강 | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
 | 4 | 기록 탭 뼈대 + 날짜별 목록 | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
 | 5 | 종목별 추이 | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |

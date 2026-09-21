@@ -13,7 +13,7 @@
 
 - `CLAUDE.md`:
   - 「문서 지도」 표에 `.dc_workspace/2026_09_18-history-export/` 을 이번 개정 자리로 추가하고, `2026_09_05-ui-2/` 는 이력으로 남긴다.
-  - 「화면을 만들거나 고칠 때」 절의 `data-*` 훅 목록에 이번 개정 훅 15개 추가:
+  - 「화면을 만들거나 고칠 때」 절의 `data-*` 훅 목록에 이번 개정 훅 15개 + 동작 설명 훅 2개(`data-howto`, `data-howto-toggle`, Phase 2.5 에서 이미 추가했으면 확인만) 반영:
     - `data-history-view`, `data-history-empty`, `data-history-toggle`, `data-day-row`, `data-day-status`, `data-day-session`, `data-day-more`, `data-history-progression`, `data-prog-row`, `data-prog-meets`, `data-export-json`, `data-export-csv`, `data-import`, `data-export-status`, `data-import-dialog`, `data-import-error`, `data-import-block`.
   - 「하단 3탭」 · 「3탭」 관련 서술 → 「하단 4탭」 · 「4탭」 으로 정정 (Phase 2 에서 이미 nav.ts 는 4탭이 됨).
   - Phase 1 이 이미 갱신한 「코드」 절 규칙은 그대로 유지.
