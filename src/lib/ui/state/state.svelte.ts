@@ -85,6 +85,27 @@ class AppStateStore {
     }
   }
 
+  /**
+   * 가져오기(FR-27.3) 로 앱 상태를 통째로 교체한다.
+   *
+   * `apply` 와 달리 `future-version` 잠금을 해제한다 — 사용자가 확인 다이얼로그를
+   * 통과시킨 봉투가 새 근원이 된다. 봉투는 `validateAndMigrateAppStateEnvelope`
+   * 를 이미 통과했으므로 그대로 저장한다.
+   */
+  replace(next: AppState): void {
+    this.#state = next;
+    this.#storageStatus = 'ok';
+    this.#futureVersion = null;
+    this.#corruptRaw = null;
+    this.#readError = null;
+    try {
+      writeAppState(next);
+      this.#saveStatus = 'ok';
+    } catch {
+      this.#saveStatus = 'write-blocked';
+    }
+  }
+
   /** 사용자가 "초기 상태로 시작" 을 눌렀을 때. */
   resetToInitial(): void {
     this.#state = initialState();

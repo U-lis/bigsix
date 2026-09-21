@@ -14,14 +14,20 @@
    * 별도 라이브러리를 쓰지 않아 CC BY 4.0 표기 의무가 없다 — 「직접 그리기」 경로
    * (GLOBAL 「아이콘」 3항).
    *
-   * 상태를 바꾸지 않는다 (FR-26.6) — 읽기만 하고 파일을 낸다.
+   * Phase 7 부터 「JSON 가져오기」 버튼(`ImportDialog`) 을 옆에 붙인다 (FR-27.1).
+   * 가져오기는 확인 후 스토어를 통째로 바꾸므로 이 컴포넌트가 스토어를 직접
+   * 부른다 (`appStateStore.replace`). 내보내기 자체는 여전히 상태를 바꾸지
+   * 않는다 (FR-26.6).
    */
   import type { AppState, Catalog, IsoDate } from '$lib/domain/types';
   import { todayClock } from '$lib/ui/state/today.svelte';
   import { CURRENT_SCHEMA_VERSION } from '$lib/ui/state/storage';
+  import { appState as appStateStore } from '$lib/ui/state/state.svelte';
+  import { inProgress } from '$lib/ui/session/session.svelte';
   import { buildExportJson, type ExportMeta } from './exportJson';
   import { buildExportCsv } from './exportCsv';
   import { saveFile, type SaveResult } from './download.svelte';
+  import ImportDialog from './ImportDialog.svelte';
 
   interface Props {
     appState: AppState;
@@ -62,6 +68,13 @@
       mime: 'text/csv;charset=utf-8',
       content,
     });
+  }
+
+  // FR-27.4 (EC-62): 진행 중 세션이 있으면 가져오기 자체가 열리지 않는다.
+  let hasInProgress = $derived(inProgress.value !== null);
+
+  function onImportConfirm(next: AppState) {
+    appStateStore.replace(next);
   }
 </script>
 
@@ -110,6 +123,8 @@
     </svg>
     <span class="btn-label">CSV 내보내기</span>
   </button>
+
+  <ImportDialog {appState} {hasInProgress} onConfirm={onImportConfirm} />
 
   {#if status !== null}
     <p class="status" data-export-status={status}>
