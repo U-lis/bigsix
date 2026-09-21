@@ -449,6 +449,8 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 
 최종 선택은 Phase 5~6 구현 시 실물 확인 후 확정한다.
 
+**Phase 6 확정 (2026-09-22)**: ExportBar 아이콘을 **직접 그리기** (3항) 로 채택. 기존 상단 바 아이콘이 전부 24×24 선형(`stroke="currentColor"`) SVG 이고 FA Free 는 filled 계열이어서 2항 조건(「톤과 어긋나면」)에 해당한다. CC BY 4.0 표기 의무 없음. **Phase 8 라이선스 표기 범위에서 FA Free 아이콘 항목을 제외한다.**
+
 ---
 
 ## SegToggle 이식 (UI-3)
@@ -485,7 +487,7 @@ Phase 3~6 에서 도입되고 Phase 8 에서 `CLAUDE.md` 훅 목록에 더한다
 | 3 | 스키마 v4 & 세션 기록 보강 | Complete | ADR-22 · ADR-23 · ADR-24. storage v4 · types 확장 · session.svelte finalize · nowIsoLocal | FR-28.1~28.6 |
 | 4 | 기록 탭 뼈대 + 날짜별 목록 | Complete | SegToggle 이식. `history/range.ts`, `history/dayList.ts`, HistoryView·DayList·DayRow. 30일 페이지 | FR-23.2/3, FR-24.1~7, UI-1~9 |
 | 5 | 종목별 추이 | Complete | `history/progression.ts`, ProgressionTable. HistoryView 배치 | FR-25.1~5 |
-| 6 | 내보내기 (JSON + CSV) | Not Started | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
+| 6 | 내보내기 (JSON + CSV) | Complete | `history/exportJson.ts`, `history/exportCsv.ts`, `history/download.svelte.ts`, ExportBar | FR-26.1~6 |
 | 7 | 가져오기 | Not Started | `history/importJson.ts`, ImportDialog | FR-27.1~5 |
 | 8 | 문서 갱신 | Not Started | README · CHANGELOG · CLAUDE.md 4탭 · data-* 훅 목록 · 문서 지도 | Constraints |
 
