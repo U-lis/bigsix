@@ -12,6 +12,7 @@
   import RepsInput from './RepsInput.svelte';
   import TimerInput from './TimerInput.svelte';
   import RpeInput from './RpeInput.svelte';
+  import Howto from './Howto.svelte';
   import Confirm from '$lib/ui/common/Confirm.svelte';
 
   interface Props {
@@ -99,6 +100,9 @@
       <p class="streak">{plan.streak}/{PROMOTION_STREAK}회 연속</p>
     {/if}
   </header>
+
+  <!-- FR-30 · UI-11: 목표 아래 자리. 접힌 채로 시작하고 DOM 에서 빠지지 않는다. -->
+  <Howto {catalog} progressionId={plan.progressionId} performedStep={plan.performedStep} />
 
   {#if plan.sideNote !== undefined && plan.sideNote !== null}
     <p class="side-note">{plan.sideNote}</p>

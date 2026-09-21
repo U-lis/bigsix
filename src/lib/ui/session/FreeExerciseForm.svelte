@@ -23,6 +23,7 @@
   } from '$lib/domain/types';
   import { appState } from '$lib/ui/state/state.svelte';
   import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
+  import Howto from './Howto.svelte';
   import { progressionName, standardLabel, unitLabel } from './labels';
 
   const RPES: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -165,6 +166,9 @@
         {/each}
       </select>
     </label>
+
+    <!-- FR-30 · UI-11: 사용자가 고른 단계의 동작 설명. 접힌 채로 자리를 지킨다. -->
+    <Howto {catalog} {progressionId} performedStep={step} />
 
     {#if !gate.unlocked}
       <p class="locked" data-lock-reason>잠김: {gate.reason}</p>

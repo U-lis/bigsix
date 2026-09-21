@@ -32,7 +32,7 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - 상태와 정체는 `data-*` 훅으로 낸다. 테스트와 CSS 가 같은 신호를 본다.
   기존 훅: `data-install`, `data-wake-lock`, `data-theme-toggle`, `data-about-open`,
   `data-about-close`, `data-check-update`, `data-update-message`, `data-reset`,
-  `data-info`, `data-toast`. 같은 규약(`data-{역할}`)으로 늘린다
+  `data-info`, `data-toast`, `data-howto`, `data-howto-toggle`. 같은 규약(`data-{역할}`)으로 늘린다
 - UI 문구는 사실만 적는다. 백분율·격려·게이미피케이션 금지
 - 문자열은 도메인이 준 것을 가공 없이 노출한다 (NFR-2). 시스템 시각을 UI 에서 부르지
   않는다 — 오늘 날짜는 `todayClock.today` 하나가 근원 (FR-4.4)
