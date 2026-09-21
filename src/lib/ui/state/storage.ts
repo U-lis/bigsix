@@ -16,7 +16,7 @@
  * 경로는 만들지 않는다.
  */
 
-import type { AppState, ProgressionId } from '$lib/domain/types';
+import type { AppState, ProgressionId, SessionTarget } from '$lib/domain/types';
 
 // ── 키 & 버전 ──────────────────────────────────────────────────────────────
 
@@ -28,9 +28,13 @@ export const IN_PROGRESS_KEY = 'bigsix.session.inprogress';
  *
  * v1 → v2: `AppState.adjustedAtSessionIndex` 필드가 추가됐다. 값이 없는 v1 데이터를
  * 읽으면 그 필드가 `undefined` 인 채로 정상 복원된다 (앵커 없음 = 조정한 적 없음).
- * FR-1.4 마이그레이션 체인의 첫 단계 v1→v2 는 이 no-op 이다.
+ * v2 → v3: `warmupSets` 제거 (FR-20.3 / EC-48).
+ * v3 → v4: `SessionInput.target/setRpes/completedAt` · `InProgressSession.target`
+ *   신설 (FR-28 / ADR-22). 모두 선택 필드라 옛 데이터에 대한 마이그레이션은 no-op.
+ *   옛 진행 중 세션은 `target === undefined` 로 완료된다 (FR-28.6 / RISK-6).
+ * FR-1.4 마이그레이션 체인.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 // ── 봉투 스키마 ────────────────────────────────────────────────────────────
 
@@ -69,6 +73,12 @@ export interface InProgressSession {
   kind: 'work' | 'consolidation' | 'free';
   /** 입력된 본 세트. 순서대로 채워진다. 미입력 세트는 아직 배열에 없다. */
   workSets: SetEntry[];
+  /**
+   * 시작 시점의 목표 스냅샷 (FR-28.3 / ADR-22). `begin(startedAt, plan)` 에서
+   * `plan.goal` · `plan.work` 를 그대로 저장한다. 자유 운동은 없다.
+   * 옛 v3 이하 봉투를 읽으면 이 필드가 undefined 로 정상 복원된다 (RISK-6).
+   */
+  target?: SessionTarget;
 }
 
 export interface SetEntry {
@@ -113,6 +123,15 @@ function isInProgressShape(value: unknown): value is InProgressSession {
   if (typeof v.performedStep !== 'number') return false;
   if (v.kind !== 'work' && v.kind !== 'consolidation' && v.kind !== 'free') return false;
   if (!Array.isArray(v.workSets)) return false;
+  // target 은 선택 필드다. 있으면 { goal, work } 형태만 얕게 확인 —
+  // 값이 있는데 형태가 다르면 corrupt (부분 손상을 조용히 넘기지 않는다).
+  if ('target' in v && v.target !== undefined) {
+    const t = v.target;
+    if (t === null || typeof t !== 'object') return false;
+    const tt = t as Record<string, unknown>;
+    if (tt.goal === null || typeof tt.goal !== 'object') return false;
+    if (!Array.isArray(tt.work)) return false;
+  }
   return true;
 }
 
@@ -132,9 +151,16 @@ const migrateV1toV2: Migrator = (envelope) => {
 /** v2 → v3: 워밍업 제거 (FR-20). `AppState` 봉투에는 워밍업이 없어 no-op 이다. */
 const migrateV2toV3: Migrator = (envelope) => ({ ...envelope, schemaVersion: 3 });
 
+/**
+ * v3 → v4: `SessionInput.target/setRpes/completedAt` 신설 (FR-28.6 / ADR-22).
+ * 셋 다 선택 필드라 옛 record 는 필드 없이 그대로 남는다 — no-op.
+ */
+const migrateV3toV4: Migrator = (envelope) => ({ ...envelope, schemaVersion: 4 });
+
 const APP_STATE_MIGRATIONS: Record<number, Migrator> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
+  3: migrateV3toV4,
 };
 
 /**
@@ -175,9 +201,16 @@ const migrateInProgressV2toV3: Migrator = (envelope) => {
   return { ...envelope, inProgress: rest, schemaVersion: 3 };
 };
 
+/**
+ * v3 → v4: `InProgressSession.target` 신설 (FR-28.3 / ADR-22).
+ * 옛 진행 중 세션에는 target 이 없으므로 그 세션은 target 없이 완료된다 (RISK-6).
+ */
+const migrateInProgressV3toV4: Migrator = (envelope) => ({ ...envelope, schemaVersion: 4 });
+
 const IN_PROGRESS_MIGRATIONS: Record<number, Migrator> = {
   1: migrateInProgressV1toV2,
   2: migrateInProgressV2toV3,
+  3: migrateInProgressV3toV4,
 };
 
 function migrateInProgressEnvelope(raw: Record<string, unknown>): Record<string, unknown> | null {
@@ -340,4 +373,38 @@ export function clearInProgress(): void {
   const storage = getStorage();
   if (!storage.ok) throw storage.error;
   storage.store.removeItem(IN_PROGRESS_KEY);
+}
+
+// ── 봉투 재사용 검증 (ADR-25 / B.6) ───────────────────────────────────────
+
+/**
+ * `validateAndMigrateAppStateEnvelope` 의 결과 판별 유니온.
+ * 성공/미래 버전/손상 세 갈래는 `readAppState` 와 대응한다.
+ */
+export type EnvelopeValidation =
+  | { ok: true; state: AppState }
+  | { ok: false; reason: 'future-version'; version: number }
+  | { ok: false; reason: 'corrupt' };
+
+/**
+ * 임의의 봉투를 마이그레이션 체인 + 형태 검증으로 통과시킨다 (ADR-25).
+ *
+ * 가져오기(FR-27)가 파일에서 봉투를 재조립해 이 함수를 호출한다.
+ * 새 검증 경로를 만들지 않고 기존 `migrateAppStateEnvelope` + `isAppStateShape` 를
+ * 그대로 재사용한다 — 진짜 검증 규칙은 `readAppState` 와 하나여야 하기 때문이다.
+ */
+export function validateAndMigrateAppStateEnvelope(
+  envelope: { schemaVersion: number; appState: unknown },
+): EnvelopeValidation {
+  if (typeof envelope.schemaVersion !== 'number') return { ok: false, reason: 'corrupt' };
+  if (envelope.schemaVersion > CURRENT_SCHEMA_VERSION) {
+    return { ok: false, reason: 'future-version', version: envelope.schemaVersion };
+  }
+  const migrated = migrateAppStateEnvelope(
+    envelope as unknown as Record<string, unknown>,
+  );
+  if (migrated === null) return { ok: false, reason: 'corrupt' };
+  const appState = migrated.appState;
+  if (!isAppStateShape(appState)) return { ok: false, reason: 'corrupt' };
+  return { ok: true, state: appState };
 }

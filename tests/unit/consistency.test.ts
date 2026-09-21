@@ -9,6 +9,7 @@ import { PROGRAM_ORDER } from '../../src/lib/domain/proposal.ts';
 import { LABEL_TO_ID } from '../../src/lib/domain/schedule.ts';
 import { firstTrainingDay } from '../../src/lib/domain/program.ts';
 import type { Catalog, ProgressionId, Weekday } from '../../src/lib/domain/types.ts';
+import { CURRENT_SCHEMA_VERSION } from '../../src/lib/ui/state/storage.ts';
 import { catalog } from './helpers.ts';
 
 const WEEKDAYS: Weekday[] = ['월', '화', '수', '목', '금', '토', '일'];
@@ -116,6 +117,14 @@ describe('perSide 데이터 (FR-1)', () => {
 });
 
 // ── firstTrainingDay 방어적 예외 (program.ts) ────────────────────────────────
+
+// ── FR-28.6: 스키마 버전 상수 ────────────────────────────────────────────
+
+describe('CURRENT_SCHEMA_VERSION — 저장 스키마 상수 (FR-28.6 / ADR-22)', () => {
+  test('상수가 4다', () => {
+    assert.equal(CURRENT_SCHEMA_VERSION, 4);
+  });
+});
 
 describe('firstTrainingDay — 요일표에 운동일이 없는 경우', () => {
   test('7일 안에 운동일을 찾지 못하면 예외를 던진다 — 조용히 틀린 날짜를 돌려주지 않는다', () => {

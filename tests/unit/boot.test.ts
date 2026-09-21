@@ -158,8 +158,8 @@ describe('boot — v1 데이터를 CURRENT 로 정상 복원 (FR-1.4)', () => {
     const env = JSON.parse(raw as string);
     // 아직 v1 그대로다 — 실제 상태 전이가 일어나야 CURRENT 로 재저장된다.
     assert.equal(env.schemaVersion, 1);
-    // FR-20 이 워밍업을 없애며 v3 로 올렸다.
-    assert.equal(CURRENT_SCHEMA_VERSION, 3);
+    // FR-28 이 세션 스냅샷 세 필드를 얹으며 v4 로 올렸다.
+    assert.equal(CURRENT_SCHEMA_VERSION, 4);
   });
 });
 

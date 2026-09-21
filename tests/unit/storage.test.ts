@@ -15,12 +15,13 @@ import {
   clearInProgress,
   readAppState,
   readInProgress,
+  validateAndMigrateAppStateEnvelope,
   writeAppState,
   writeInProgress,
   type InProgressSession,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
-import type { AppState } from '../../src/lib/domain/types.ts';
+import type { AppState, SessionTarget } from '../../src/lib/domain/types.ts';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -345,7 +346,183 @@ describe('FR-20.3 v2 봉투의 warmupSets 를 버리고 읽는다 (EC-48)', () =
     if (r.status !== 'ok') return;
     writeInProgress(r.value);
     const env = JSON.parse(window.localStorage.getItem(IN_PROGRESS_KEY) as string);
-    assert.equal(env.schemaVersion, 3);
+    // 재저장은 항상 CURRENT (FR-28 로 v4).
+    assert.equal(env.schemaVersion, CURRENT_SCHEMA_VERSION);
     assert.equal('warmupSets' in env.inProgress, false);
+  });
+});
+
+// ── FR-28 / ADR-22: v3 → v4 no-op 마이그레이션 & InProgress.target ────────
+
+const sampleTarget: SessionTarget = {
+  goal: { label: 'progression', sets: 2, value: 20 },
+  work: [
+    { target: 20, mode: 'fixed' },
+    { target: 20, mode: 'fixed' },
+  ],
+};
+
+describe('FR-28.6 CURRENT_SCHEMA_VERSION === 4', () => {
+  it('상수가 4다', () => {
+    assert.equal(CURRENT_SCHEMA_VERSION, 4);
+  });
+});
+
+describe('FR-28.6 v3 → v4 no-op 마이그레이션 (AppState)', () => {
+  it('v3 봉투를 읽으면 상태가 그대로 복원된다', () => {
+    const v3 = initialState();
+    window.localStorage.setItem(
+      APP_STATE_KEY,
+      JSON.stringify({ schemaVersion: 3, appState: v3 }),
+    );
+    const r = readAppState();
+    assert.equal(r.status, 'ok');
+    if (r.status === 'ok') assert.deepEqual(r.value, v3);
+  });
+});
+
+describe('FR-28.3 InProgressSession.target 저장·복원', () => {
+  it('target 이 있는 봉투를 쓰고 읽으면 깊은 동등으로 복원된다', () => {
+    const ip: InProgressSession = {
+      startedAt: '2026-09-18',
+      progressionId: 'pushup',
+      step: 4,
+      performedStep: 4,
+      kind: 'work',
+      workSets: [{ value: 20, rpe: 7 }],
+      target: sampleTarget,
+    };
+    writeInProgress(ip);
+    const r = readInProgress();
+    assert.equal(r.status, 'ok');
+    if (r.status === 'ok') {
+      assert.deepEqual(r.value, ip);
+      assert.deepEqual(r.value.target, sampleTarget);
+    }
+  });
+
+  it('target 없는 v3 봉투를 v4 로 읽으면 target === undefined', () => {
+    // 옛 진행 중 세션은 스냅샷 없이 완료된다 (FR-28.6 / RISK-6).
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({
+        schemaVersion: 3,
+        inProgress: {
+          startedAt: '2026-09-18',
+          progressionId: 'pushup',
+          step: 4,
+          performedStep: 4,
+          kind: 'work',
+          workSets: [],
+        },
+      }),
+    );
+    const r = readInProgress();
+    assert.equal(r.status, 'ok');
+    if (r.status === 'ok') {
+      assert.equal(r.value.target, undefined);
+      assert.equal('target' in (r.value as unknown as Record<string, unknown>), false);
+    }
+  });
+
+  it('isInProgressShape — target 있는 · 없는 두 형태 모두 통과 (읽기가 성공하면 곧 이 함수의 통과다)', () => {
+    // target 있는 형태.
+    const withTarget: InProgressSession = {
+      startedAt: '2026-09-18',
+      progressionId: 'squat',
+      step: 3,
+      performedStep: 3,
+      kind: 'work',
+      workSets: [],
+      target: sampleTarget,
+    };
+    writeInProgress(withTarget);
+    assert.equal(readInProgress().status, 'ok');
+    // target 없는 형태.
+    window.localStorage.clear();
+    const noTarget: InProgressSession = { ...withTarget };
+    delete (noTarget as unknown as Record<string, unknown>).target;
+    writeInProgress(noTarget);
+    assert.equal(readInProgress().status, 'ok');
+  });
+
+  it('isInProgressShape — target 형태 어긋난 값은 corrupt 로 거절된다', () => {
+    // `{ goal: null }` 은 target 형태가 아니다.
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        inProgress: {
+          startedAt: '2026-09-18',
+          progressionId: 'pushup',
+          step: 4,
+          performedStep: 4,
+          kind: 'work',
+          workSets: [],
+          target: { goal: null, work: [] },
+        },
+      }),
+    );
+    assert.equal(readInProgress().status, 'corrupt');
+    // work 가 배열이 아닌 경우도 corrupt.
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        inProgress: {
+          startedAt: '2026-09-18',
+          progressionId: 'pushup',
+          step: 4,
+          performedStep: 4,
+          kind: 'work',
+          workSets: [],
+          target: { goal: {}, work: 'oops' },
+        },
+      }),
+    );
+    assert.equal(readInProgress().status, 'corrupt');
+  });
+});
+
+// ── ADR-25 / B.6: validateAndMigrateAppStateEnvelope ────────────────────
+
+describe('validateAndMigrateAppStateEnvelope — 가져오기용 봉투 재조립 (ADR-25)', () => {
+  it('v4 정상 봉투는 { ok: true, state } 를 반환한다', () => {
+    const r = validateAndMigrateAppStateEnvelope({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      appState: initialState(),
+    });
+    assert.equal(r.ok, true);
+    if (r.ok) assert.deepEqual(r.state, initialState());
+  });
+
+  it('미래 버전은 { ok: false, reason: future-version, version } 을 반환한다', () => {
+    const r = validateAndMigrateAppStateEnvelope({
+      schemaVersion: 99,
+      appState: initialState(),
+    });
+    assert.equal(r.ok, false);
+    if (!r.ok && r.reason === 'future-version') {
+      assert.equal(r.version, 99);
+    } else {
+      assert.fail('reason: future-version 이어야 한다');
+    }
+  });
+
+  it('형태가 어긋난 appState 는 { ok: false, reason: corrupt } 를 반환한다', () => {
+    const r = validateAndMigrateAppStateEnvelope({
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      appState: { steps: {} }, // history/stints/proposals 누락 — isAppStateShape 실패.
+    });
+    assert.equal(r.ok, false);
+    if (!r.ok) assert.equal(r.reason, 'corrupt');
+  });
+
+  it('v3 봉투도 마이그레이션 체인을 타 v4 로 검증된다', () => {
+    const r = validateAndMigrateAppStateEnvelope({
+      schemaVersion: 3,
+      appState: initialState(),
+    });
+    assert.equal(r.ok, true);
   });
 });
