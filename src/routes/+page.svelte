@@ -9,10 +9,9 @@
    * 이 파일 안에서 new Date() 를 부르지 않는다 (FR-4.4). 오늘 날짜는 todayClock 하나.
    */
   import {
-    acceptProposal, declineProposal,
+    acceptProposal, declineProposal, getProgram,
     type PlannedExercise,
   } from '$lib/domain';
-  import { getProgram } from '$lib/domain/schedule';
   import { appState } from '$lib/ui/state.svelte';
   import { inProgress, isStaleStartedAt } from '$lib/ui/session.svelte';
   import { todayClock } from '$lib/ui/today.svelte';

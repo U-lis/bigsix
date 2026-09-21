@@ -13,12 +13,11 @@
  * 컴포넌트에서 마운트하지 않고도 단위 테스트로 4상태 분기를 검증한다 (NFR-14).
  */
 
-import { addDays } from '../domain/date.ts';
-import { planOn, nextDoableTrainingDay } from '../domain/index.ts';
+import { addDays, planOn, nextDoableTrainingDay } from '$lib/domain';
 import type {
   AppState, Catalog, IsoDate, PlannedExercise, ProgressionId,
   SwitchProposal, Weekday,
-} from '../domain/types.ts';
+} from '$lib/domain/types';
 
 export type TodayScreenState =
   | { kind: 'no-program' }

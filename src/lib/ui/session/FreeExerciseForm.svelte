@@ -15,13 +15,12 @@
 
   import {
     applySession, checkGate, MAX_STEP, MIN_STEP, PROMOTION_STREAK,
-    valueOf,
-  } from '../../domain/index.ts';
-  import { getProgression, getStep, topLabel, topStandard } from '../../domain/catalog.ts';
+    valueOf, getProgression, getStep, topLabel, topStandard,
+  } from '$lib/domain';
   import type {
     AppState, Catalog, IsoDate, ProgressionId, SessionInput,
     Standard, StandardLabel, Step,
-  } from '../../domain/types.ts';
+  } from '$lib/domain/types';
   import { appState } from '../state.svelte.ts';
   import ChipGroup from '../ChipGroup.svelte';
   import { progressionName, standardLabel, unitLabel } from './labels.ts';

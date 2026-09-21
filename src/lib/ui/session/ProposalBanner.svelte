@@ -3,8 +3,8 @@
    * 전환 제안 배너 (FR-5.7).
    * `proposal` 이 pending 이면 승인/거절 두 동작을 제공한다.
    */
-  import type { SwitchProposal, Catalog } from '../../domain/types.ts';
-  import { getProgram } from '../../domain/schedule.ts';
+  import type { SwitchProposal, Catalog } from '$lib/domain/types';
+  import { getProgram } from '$lib/domain';
 
   interface Props {
     proposal: SwitchProposal;

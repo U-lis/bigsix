@@ -5,11 +5,10 @@
  * (NFR-2 / FR-5.3). 이 파일은 배치용 헤더 문구·라벨 정도만 만든다.
  */
 
-import { getProgression } from '../../domain/catalog.ts';
-import { weekdayOf } from '../../domain/date.ts';
+import { getProgression, weekdayOf } from '$lib/domain';
 import type {
   Catalog, IsoDate, PlannedExercise, ProgressionId, SetMode, StandardLabel, Unit,
-} from '../../domain/types.ts';
+} from '$lib/domain/types';
 
 /**
  * 종목 이름. 표시는 한국어로 고정한다 (D-15) — `progressionId` 원문('pushup')을
