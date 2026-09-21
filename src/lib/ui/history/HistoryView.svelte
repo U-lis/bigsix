@@ -13,6 +13,7 @@
   import { buildDayRows } from './dayList';
   import DayList from './DayList.svelte';
   import ProgressionTable from './ProgressionTable.svelte';
+  import ExportBar from './ExportBar.svelte';
   import SegToggle from '$lib/ui/common/SegToggle.svelte';
 
   interface Props {
@@ -93,8 +94,8 @@
     {/if}
   </div>
 
-  <!-- Phase 6 의 ExportBar 자리. 지금은 자리만 (UI-1 · UI-6). -->
-  <div class="export-slot" data-export-slot aria-hidden="true"></div>
+  <!-- 내보내기 바 (FR-26). UI-1 순서상 화면 최하단. -->
+  <ExportBar {appState} {catalog} {today} />
 </section>
 
 <style>
@@ -135,9 +136,5 @@
   }
   .more:hover {
     background: var(--bg);
-  }
-  .export-slot {
-    /* Phase 6 에서 채운다. 지금은 자리만. */
-    min-height: 3rem;
   }
 </style>
