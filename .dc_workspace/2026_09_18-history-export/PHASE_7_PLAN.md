@@ -64,3 +64,37 @@ FR-27. 「JSON 가져오기」 버튼으로 파일을 골라 확인 후 덮어�
 ## 임시 배포
 
 이 페이즈에 포함하지 않는다.
+
+## Completion Checklist
+
+- [x] `src/lib/ui/history/importJson.ts`: `parseImport` 구현. Verified in `importJson.ts:60`.
+- [x] `parseImport` 흐름 1~5 (JSON 파싱 → schema 확인 → 봉투 조립 → 검증 재사용 → counts 계산). Verified in `importJson.ts:60-108`.
+- [x] `validateAndMigrateAppStateEnvelope` 재사용 — 새 검증 경로 없음 (FR-27.2). Verified in `storage.ts:396`, `importJson.ts:87`.
+- [x] `ImportResult` 판별 유니온 (GLOBAL B.5) 정의. Verified in `importJson.ts:34-40`.
+- [x] `src/lib/ui/history/ImportDialog.svelte`: `<input type="file" accept="application/json">`. Verified in `ImportDialog.svelte:104`.
+- [x] `data-import-dialog` 루트 훅. Verified in `ImportDialog.svelte:94`.
+- [x] `data-import-block="inprogress"` — 진행 중 세션 차단 안내. Verified in `ImportDialog.svelte:96`.
+- [x] `data-import-error="{reason}"` 4가지 사유 문구. Verified in `ImportDialog.svelte:125-135`.
+- [x] `Confirm.svelte` 재사용 — 확인 창 열기. Verified in `ImportDialog.svelte:139-147`.
+- [x] FR-27.5 백업 안내 문구. Verified in `ImportDialog.svelte:18`.
+- [x] `src/lib/ui/state/state.svelte.ts`: `replace(next: AppState)` 추가. Verified in `state.svelte.ts:95`.
+- [x] `replace` 내부: `writeAppState(next)` + `$state` 갱신 + `storageStatus` → `'ok'` 리셋. Verified in `state.svelte.ts:95-107`.
+- [x] `src/lib/ui/history/ExportBar.svelte`: `ImportDialog` 배치 및 `onImportConfirm` 연결. Verified in `ExportBar.svelte:76-78,127`.
+- [x] `hasInProgress` 파생 — `inProgress.value !== null`. Verified in `ExportBar.svelte:74`.
+- [x] `tests/unit/history-importJson.test.ts` 신규. Verified: 20+ cases.
+- [x] `tests/unit/history-roundtrip.test.ts` 신규 (NFR-27). Verified: 4 cases.
+- [x] `pnpm check` 0/0. Verified: 0 errors, 0 warnings (2026-09-22).
+- [x] `pnpm test` 전부 통과. Verified: 797 passed (baseline 774 → 797, +23). (2026-09-22).
+
+### 배포 후 확인
+
+- [ ] 정상 파일 선택 → Confirm 다이얼로그가 열림.
+- [ ] 본문에 "현재 기록: N건 (from ~ to)" · "가져올 기록: M건 (from ~ to)" · 백업 안내.
+- [ ] 취소 → 상태 불변.
+- [ ] 확인 → `appState` 가 imported 로 교체되고 화면 즉시 갱신.
+- [ ] 진행 중 세션 있을 때 파일 입력이 열리지 않고 안내 문구 표시.
+- [ ] 세션 완료/취소 후 다시 시도 시 정상 진입.
+- [ ] JSON 아닌 파일 → "JSON 이 아닙니다".
+- [ ] `meta` 없는 파일 → "이 파일은 bigsix 내보내기 형식이 아닙니다".
+- [ ] 형태 어긋난 파일 → "저장 형태가 맞지 않습니다".
+- [ ] 미래 버전 → "앱이 이 파일보다 오래됐습니다. 앱을 갱신하세요".
