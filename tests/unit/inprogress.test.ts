@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { inProgress, isStaleStartedAt, maxSetRpe } from '../../src/lib/ui/session/session.svelte.ts';
+import { todayClock } from '../../src/lib/ui/state/today.svelte.ts';
 import {
   IN_PROGRESS_KEY,
   readInProgress,
@@ -319,5 +320,112 @@ describe('FR-18 자유 운동 세션', () => {
     inProgress.pushWorkSet({ value: 10 });
     const { record } = inProgress.finalize(state, catalog);
     assert.equal(record.rpe, undefined);
+  });
+});
+
+// ── FR-28 target · setRpes · completedAt (ADR-22 / ADR-23 / ADR-24) ──────
+
+const FIXED_COMPLETED_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
+
+describe('FR-28.3 begin — plan 의 goal/work 를 target 스냅샷으로 저장', () => {
+  it('begin 후 store.value.target 이 { goal: plan.goal, work: plan.work } 와 깊은 동등', () => {
+    const plan = makePlan();
+    inProgress.begin('2026-09-05', plan);
+    const t = inProgress.value?.target;
+    assert.ok(t, 'target 이 저장돼야 한다');
+    assert.deepEqual(t!.goal, plan.goal);
+    assert.deepEqual(t!.work, plan.work);
+  });
+
+  it('beginFree 후 target === undefined — 자유 운동은 계획이 없다', () => {
+    inProgress.beginFree('2026-09-05', 'pushup', 3);
+    assert.equal(inProgress.value?.target, undefined);
+  });
+
+  it('target 은 봉투에도 저장되어 재부팅 후에도 복원된다', () => {
+    const plan = makePlan();
+    inProgress.begin('2026-09-05', plan);
+    const saved = readInProgress();
+    assert.equal(saved.status, 'ok');
+    if (saved.status === 'ok') {
+      assert.deepEqual(saved.value.target?.goal, plan.goal);
+      assert.deepEqual(saved.value.target?.work, plan.work);
+    }
+  });
+});
+
+describe('FR-28 finalize — setRpes/completedAt/target 이 record 에 남는다', () => {
+  it('세트마다 rpe 를 넣고 finalize 하면 setRpes 가 세트 수와 같은 배열, 미입력은 null', () => {
+    inProgress.begin('2026-09-05', makePlan());
+    inProgress.pushWorkSet({ value: 20, rpe: 7 });
+    inProgress.pushWorkSet({ value: 18 }); // 미입력
+    inProgress.pushWorkSet({ value: 16, rpe: 8 });
+    const { record } = inProgress.finalize(stateAt({ pushup: 3 }), catalog);
+    assert.deepEqual(record.setRpes, [7, null, 8]);
+    assert.equal(record.setRpes?.length, record.sets.length);
+  });
+
+  it('completedAt 이 로컬 오프셋 포함 ISO 문자열 (FR-28.4 / ADR-24)', () => {
+    inProgress.begin('2026-09-05', makePlan());
+    inProgress.pushWorkSet({ value: 20 });
+    const { record } = inProgress.finalize(stateAt({ pushup: 3 }), catalog);
+    assert.ok(record.completedAt);
+    assert.match(record.completedAt!, FIXED_COMPLETED_AT);
+  });
+
+  it('record.target.goal 이 begin 시점 스냅샷과 동등 — 중간에 흔들어도 재계산되지 않는다', () => {
+    const plan = makePlan();
+    inProgress.begin('2026-09-05', plan);
+    inProgress.pushWorkSet({ value: 20 });
+    // steps 를 흔든다 — 스토어의 target 은 begin 시점 스냅샷이라 영향 없어야 한다.
+    const state: AppState = stateAt({ pushup: 9 });
+    const { record } = inProgress.finalize(state, catalog);
+    assert.deepEqual(record.target?.goal, plan.goal);
+    assert.deepEqual(record.target?.work, plan.work);
+  });
+
+  it('setClock 로 고정된 completedAt 이 결정적이다', () => {
+    const fixed = new Date(2026, 8, 5, 13, 45, 23).getTime();
+    todayClock.setClock({ now: () => fixed });
+    try {
+      inProgress.begin('2026-09-05', makePlan());
+      inProgress.pushWorkSet({ value: 20 });
+      const { record: r1 } = inProgress.finalize(stateAt({ pushup: 3 }), catalog);
+      inProgress.begin('2026-09-05', makePlan());
+      inProgress.pushWorkSet({ value: 18 });
+      const { record: r2 } = inProgress.finalize(stateAt({ pushup: 3 }), catalog);
+      assert.equal(r1.completedAt, r2.completedAt);
+    } finally {
+      todayClock.setClock({ now: () => Date.now() });
+    }
+  });
+});
+
+describe('FR-28 abandon — target/setRpes/completedAt 이 record 에 남는다', () => {
+  it('중단해도 세 필드가 record 에 실린다', () => {
+    const plan = makePlan();
+    inProgress.begin('2026-09-05', plan);
+    inProgress.pushWorkSet({ value: 5, rpe: 9 });
+    inProgress.pushWorkSet({ value: 3 });
+    const r = inProgress.abandon(stateAt({ pushup: 3 }), catalog);
+    // history 의 마지막이 우리 기록.
+    const rec = r.state.history.at(-1)!;
+    assert.equal(rec.outcome, 'abandoned');
+    assert.deepEqual(rec.setRpes, [9, null]);
+    assert.deepEqual(rec.target?.goal, plan.goal);
+    assert.deepEqual(rec.target?.work, plan.work);
+    assert.ok(rec.completedAt);
+    assert.match(rec.completedAt!, FIXED_COMPLETED_AT);
+  });
+
+  it('자유 운동을 finalize 하면 target 이 없어 record 에도 없다 (자유 운동에는 계획이 없다)', () => {
+    inProgress.beginFree('2026-09-05', 'pushup', 3);
+    inProgress.pushWorkSet({ value: 10, rpe: 6 });
+    const { record } = inProgress.finalize(stateAt({ pushup: 3 }), catalog);
+    assert.equal(record.target, undefined);
+    assert.equal('target' in (record as unknown as Record<string, unknown>), false);
+    // setRpes/completedAt 은 자유 운동에도 채운다.
+    assert.deepEqual(record.setRpes, [6]);
+    assert.match(record.completedAt!, FIXED_COMPLETED_AT);
   });
 });

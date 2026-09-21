@@ -6,7 +6,13 @@
  *
  * 완료 시 세트별 RPE 중 **최댓값**을 세션 RPE 로 넘긴다 (FR-6.7a / D-11).
  * 하나도 없으면 필드 자체를 만들지 않는다 — 0 으로 대체하지 않는다.
- * 세트별 RPE 원본은 완료된 세션 기록에 남지 않는다 (FR-6.7b / L-8).
+ * 세트별 RPE 원본은 진행 중 세션 스토어에는 있고, 완료 시 `setRpes` 로 도메인 기록에
+ * 넘어간다 (FR-28.1). `SessionRecord.rpe` 는 계속 최댓값 하나이며 판정만 그것을 본다.
+ *
+ * 완료 시 세션 스냅샷 세 필드를 도메인에 얹는다 (FR-28 / ADR-23):
+ *   - `target` — begin 시점의 `plan.goal` · `plan.work` 스냅샷.
+ *   - `setRpes` — 세트별 RPE 배열 (미입력 자리는 null).
+ *   - `completedAt` — `todayClock.nowIsoLocal()` 이 낸 로컬 오프셋 포함 ISO 문자열.
  *
  * 완료·중단 시 `applySession` / `abandonChallenge` 로 도메인에 반영하고 진행 중
  * 데이터를 제거한다 (FR-2.5).
@@ -24,6 +30,7 @@ import type {
   IsoDate,
   PlannedExercise,
   ProgressionId,
+  SessionExtras,
   SessionInput,
   SessionRecord,
 } from '$lib/domain/types';
@@ -33,6 +40,7 @@ import {
   type InProgressSession,
   type SetEntry,
 } from '$lib/ui/state/storage';
+import { todayClock } from '$lib/ui/state/today.svelte';
 
 class InProgressStore {
   #session = $state<InProgressSession | null>(null);
@@ -55,6 +63,10 @@ class InProgressStore {
   /**
    * 진행 중 세션을 시작한다.
    * `startedAt` 은 UI 층이 주입한다 (todayClock 값) — 이 값이 완료 시 SessionInput.date 가 된다.
+   *
+   * `plan.goal` · `plan.work` 를 `target` 스냅샷으로 저장한다 (FR-28.3 / ADR-22).
+   * 세션이 끝난 뒤 단계가 오르내려도 시작 시점 목표는 그대로 남는다 —
+   * 그래서 재계산이 아니라 스냅샷이 필요하다.
    */
   begin(startedAt: IsoDate, plan: PlannedExercise): void {
     this.#session = {
@@ -64,6 +76,7 @@ class InProgressStore {
       performedStep: plan.performedStep,
       kind: plan.kind,
       workSets: [],
+      target: { goal: plan.goal, work: plan.work },
     };
     this.persist();
   }
@@ -118,6 +131,7 @@ class InProgressStore {
     const s = this.#session;
     const values = s.workSets.map((e) => e.value);
     const sessionRpe = maxSetRpe(s.workSets);
+    const extras = buildExtras(s);
 
     let nextState: AppState;
     let record: SessionRecord;
@@ -130,6 +144,7 @@ class InProgressStore {
         s.startedAt,
         values,
         sessionRpe,
+        extras,
       );
       nextState = result.state;
       record = result.record;
@@ -145,6 +160,11 @@ class InProgressStore {
         kind: s.kind, // 'work' | 'free'
       };
       if (sessionRpe !== undefined) input.rpe = sessionRpe;
+      // FR-28: extras.target/setRpes/completedAt 을 입력에 실어 넘긴다. undefined 인
+      // 필드는 명시 대입하지 않아 record 스프레드에 undefined 로 실리지 않게 한다.
+      if (extras.target !== undefined) input.target = extras.target;
+      if (extras.setRpes !== undefined) input.setRpes = extras.setRpes;
+      if (extras.completedAt !== undefined) input.completedAt = extras.completedAt;
       const result = applySession(state, catalog, input);
       nextState = result.state;
       record = result.record;
@@ -168,6 +188,7 @@ class InProgressStore {
     const s = this.#session;
     const values = s.workSets.map((e) => e.value);
     const sessionRpe = maxSetRpe(s.workSets);
+    const extras = buildExtras(s);
 
     const result = abandonChallenge(
       state,
@@ -176,6 +197,7 @@ class InProgressStore {
       s.startedAt, // FR-2.8
       values,
       sessionRpe,
+      extras,
     );
 
     this.#session = null;
@@ -216,6 +238,23 @@ export function maxSetRpe(entries: SetEntry[]): number | undefined {
   const rpes = entries.map((e) => e.rpe).filter((r): r is number => r !== undefined);
   if (rpes.length === 0) return undefined;
   return Math.max(...rpes);
+}
+
+/**
+ * 진행 중 세션에서 FR-28 세 필드를 만든다 (ADR-23).
+ *
+ * - `target` — 시작 시점의 스냅샷. begin 이 저장해 두었다. 자유 운동은 없다.
+ * - `setRpes` — 세트마다의 RPE 배열. 미입력은 null (세션 RPE 인 최댓값과 다르다 —
+ *   완료 후에도 세트별 원본을 남기기 위한 저장 필드).
+ * - `completedAt` — 완료·중단 시각. `todayClock.nowIsoLocal()` 로 로컬 오프셋 포함.
+ */
+function buildExtras(session: InProgressSession): SessionExtras {
+  const extras: SessionExtras = {
+    setRpes: session.workSets.map((e) => e.rpe ?? null),
+    completedAt: todayClock.nowIsoLocal(),
+  };
+  if (session.target !== undefined) extras.target = session.target;
+  return extras;
 }
 
 /**
