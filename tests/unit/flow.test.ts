@@ -78,7 +78,7 @@ describe('관통 — 선택부터 승급까지', () => {
   });
 
   it('저장 계층이 왕복한다 — 쓰고 읽으면 같은 상태다', async () => {
-    const { readAppState, writeAppState } = await import('../../src/lib/ui/storage.ts');
+    const { readAppState, writeAppState } = await import('../../src/lib/ui/state/storage.ts');
     let s: AppState = selectProgram(initialState(2), loadCatalog(), 'new_blood', '2026-09-07');
     s = setStep(s, loadCatalog(), 'pushup', 4);
     writeAppState(s);

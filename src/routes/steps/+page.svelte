@@ -10,10 +10,10 @@
     checkGate, getStep, setStep, topStandard, valueOf, MIN_STEP, MAX_STEP,
     type ProgressionId,
   } from '$lib/domain';
-  import { appState } from '$lib/ui/state.svelte';
+  import { appState } from '$lib/ui/state/state.svelte';
   import { loadCatalog } from '$lib/data/catalog';
-  import ChipGroup from '$lib/ui/ChipGroup.svelte';
-  import Confirm from '$lib/ui/Confirm.svelte';
+  import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
+  import Confirm from '$lib/ui/common/Confirm.svelte';
 
   const STEP_OPTIONS: readonly number[] = Array.from(
     { length: MAX_STEP - MIN_STEP + 1 },

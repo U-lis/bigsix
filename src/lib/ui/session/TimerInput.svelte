@@ -4,9 +4,9 @@
    * 정지 시각이 곧 그 세트 기록이다.
    */
   import { onDestroy, untrack } from 'svelte';
-  import { createTimer } from '../timer.svelte.ts';
-  import { alert as notifyAlert, type NotifyHandle } from '../notify.ts';
-  import { unitLabel } from './labels.ts';
+  import { createTimer } from './timer.svelte';
+  import { alert as notifyAlert, type NotifyHandle } from './notify';
+  import { unitLabel } from './labels';
 
   interface Props {
     targetSec: number;

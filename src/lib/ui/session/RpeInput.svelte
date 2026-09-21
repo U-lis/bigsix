@@ -7,7 +7,7 @@
    * ChipGroup 을 쓰기로 통일 (steps 조정 · FreeExerciseForm RPE 와 같은 컴포넌트).
    * 이미 선택된 값을 다시 탭하면 해제한다.
    */
-  import ChipGroup from '../ChipGroup.svelte';
+  import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
 
   interface Props {
     value: number | undefined;

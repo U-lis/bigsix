@@ -4,15 +4,15 @@
    *
    * 도메인 문자열(reason / sideNote) 는 가공 없이 그대로 노출한다 (NFR-2 / FR-5.3).
    */
-  import type { AppState, Catalog, IsoDate, PlannedExercise, SessionRecord } from '../../domain/types.ts';
-  import { PROMOTION_STREAK } from '../../domain/index.ts';
-  import { inProgress } from '../session.svelte.ts';
-  import { appState } from '../state.svelte.ts';
-  import { exerciseTitle, kindLabel, setTargetLabel, standardLabel, unitLabel } from './labels.ts';
+  import type { AppState, Catalog, IsoDate, PlannedExercise, SessionRecord } from '$lib/domain/types';
+  import { PROMOTION_STREAK } from '$lib/domain';
+  import { inProgress } from './session.svelte';
+  import { appState } from '$lib/ui/state/state.svelte';
+  import { exerciseTitle, kindLabel, setTargetLabel, standardLabel, unitLabel } from './labels';
   import RepsInput from './RepsInput.svelte';
   import TimerInput from './TimerInput.svelte';
   import RpeInput from './RpeInput.svelte';
-  import Confirm from '../Confirm.svelte';
+  import Confirm from '$lib/ui/common/Confirm.svelte';
 
   interface Props {
     plan: PlannedExercise;

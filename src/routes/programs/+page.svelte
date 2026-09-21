@@ -7,10 +7,10 @@
    */
   import { goto } from '$app/navigation';
   import { describePrograms, selectProgram, switchProgram, currentStint, firstTrainingDay } from '$lib/domain';
-  import { appState } from '$lib/ui/state.svelte';
-  import { todayClock } from '$lib/ui/today.svelte';
+  import { appState } from '$lib/ui/state/state.svelte';
+  import { todayClock } from '$lib/ui/state/today.svelte';
   import { loadCatalog } from '$lib/data/catalog';
-  import Confirm from '$lib/ui/Confirm.svelte';
+  import Confirm from '$lib/ui/common/Confirm.svelte';
   import { progressionName } from '$lib/ui/session/labels';
 
   const catalog = loadCatalog();

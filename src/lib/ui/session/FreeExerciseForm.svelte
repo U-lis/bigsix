@@ -21,9 +21,9 @@
     AppState, Catalog, IsoDate, ProgressionId, SessionInput,
     Standard, StandardLabel, Step,
   } from '$lib/domain/types';
-  import { appState } from '../state.svelte.ts';
-  import ChipGroup from '../ChipGroup.svelte';
-  import { progressionName, standardLabel, unitLabel } from './labels.ts';
+  import { appState } from '$lib/ui/state/state.svelte';
+  import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
+  import { progressionName, standardLabel, unitLabel } from './labels';
 
   const RPES: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 

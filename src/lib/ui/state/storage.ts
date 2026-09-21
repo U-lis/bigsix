@@ -16,7 +16,7 @@
  * 경로는 만들지 않는다.
  */
 
-import type { AppState, ProgressionId } from '../domain/types.ts';
+import type { AppState, ProgressionId } from '$lib/domain/types';
 
 // ── 키 & 버전 ──────────────────────────────────────────────────────────────
 

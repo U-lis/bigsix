@@ -17,7 +17,7 @@ import {
   applySession,
   recordConsolidation,
   type AbandonResult,
-} from '../domain/index.ts';
+} from '$lib/domain';
 import type {
   AppState,
   Catalog,
@@ -26,13 +26,13 @@ import type {
   ProgressionId,
   SessionInput,
   SessionRecord,
-} from '../domain/types.ts';
+} from '$lib/domain/types';
 import {
   clearInProgress,
   writeInProgress,
   type InProgressSession,
   type SetEntry,
-} from './storage.ts';
+} from '$lib/ui/state/storage';
 
 class InProgressStore {
   #session = $state<InProgressSession | null>(null);

@@ -21,15 +21,15 @@ import {
   type Catalog,
   type DayAgenda,
   type IsoDate,
-} from '../domain/index.ts';
-import { loadCatalog } from '../data/catalog.ts';
+} from '$lib/domain';
+import { loadCatalog } from '$lib/data/catalog';
 import {
   readAppState,
   readInProgress,
   writeAppState,
   type InProgressSession,
-} from './storage.ts';
-import type { StorageStatus } from './state.svelte.ts';
+} from './storage';
+import type { StorageStatus } from './state.svelte';
 
 export interface BootResult {
   state: AppState;

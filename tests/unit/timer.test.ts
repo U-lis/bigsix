@@ -5,7 +5,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { createTimer, READY_MS, type Clock } from '../../src/lib/ui/timer.svelte.ts';
+import { createTimer, READY_MS, type Clock } from '../../src/lib/ui/session/timer.svelte.ts';
 
 /** 테스트용 목 클록. */
 function fakeClock(start: number): Clock & { advance(ms: number): void; value: number } {

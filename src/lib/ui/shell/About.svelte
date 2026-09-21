@@ -10,10 +10,10 @@
    * 전체 데이터 초기화 (FR-19.4): 2단계 확인 후 실행.
    */
   import { goto } from '$app/navigation';
-  import { sw } from './sw.svelte.ts';
+  import { sw } from './sw.svelte';
   import {
     nextResetState, isResetReady, performReset, type ResetState,
-  } from './reset.ts';
+  } from '$lib/ui/state/reset';
 
   let dialog: HTMLDialogElement | undefined = $state();
 

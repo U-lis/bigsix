@@ -3,7 +3,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { tabsFor } from '../../src/lib/ui/nav.ts';
+import { tabsFor } from '../../src/lib/ui/shell/nav.ts';
 
 describe('nav.tabsFor — 하단 3탭 소속/순서/활성', () => {
   it('세 탭이 순서대로 나온다: 오늘 → 프로그램 → 단계', () => {

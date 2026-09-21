@@ -5,7 +5,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { computeIsoLocal } from '../../src/lib/ui/today.svelte.ts';
+import { computeIsoLocal } from '../../src/lib/ui/state/today.svelte.ts';
 
 describe('computeIsoLocal — 로컬 자정 기준 (FR-4.2)', () => {
   it('로컬 자정 이전 23:59 은 그날 날짜', () => {

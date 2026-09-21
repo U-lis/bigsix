@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 
 const KEY = 'bigsix.theme';
 
-async function freshMod(): Promise<typeof import('../../src/lib/ui/theme.svelte.ts')> {
+async function freshMod(): Promise<typeof import('../../src/lib/ui/shell/theme.svelte.ts')> {
   vi.resetModules();
-  return await import('../../src/lib/ui/theme.svelte.ts');
+  return await import('../../src/lib/ui/shell/theme.svelte.ts');
 }
 
 beforeEach(() => {

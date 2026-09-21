@@ -6,14 +6,14 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { boot } from '../../src/lib/ui/boot.ts';
+import { boot } from '../../src/lib/ui/state/boot.ts';
 import {
   APP_STATE_KEY,
   CURRENT_SCHEMA_VERSION,
   IN_PROGRESS_KEY,
   writeAppState,
   writeInProgress,
-} from '../../src/lib/ui/storage.ts';
+} from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 
 beforeEach(() => {

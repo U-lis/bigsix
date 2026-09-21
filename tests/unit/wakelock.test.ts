@@ -33,9 +33,9 @@ function stubWakeLock(
   };
 }
 
-async function freshMod(): Promise<typeof import('../../src/lib/ui/wakelock.svelte.ts')> {
+async function freshMod(): Promise<typeof import('../../src/lib/ui/shell/wakelock.svelte.ts')> {
   vi.resetModules();
-  return await import('../../src/lib/ui/wakelock.svelte.ts');
+  return await import('../../src/lib/ui/shell/wakelock.svelte.ts');
 }
 
 beforeEach(() => {

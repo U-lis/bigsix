@@ -16,17 +16,17 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { boot } from '$lib/ui/boot';
-  import { appState } from '$lib/ui/state.svelte';
-  import { inProgress } from '$lib/ui/session.svelte';
-  import { todayClock } from '$lib/ui/today.svelte';
-  import { sw } from '$lib/ui/sw.svelte';
-  import { theme, THEME_LABEL } from '$lib/ui/theme.svelte';
-  import { wakeLock } from '$lib/ui/wakelock.svelte';
-  import { install } from '$lib/ui/install.svelte';
-  import { tabsFor } from '$lib/ui/nav';
-  import About from '$lib/ui/About.svelte';
-  import Toast from '$lib/ui/Toast.svelte';
+  import { boot } from '$lib/ui/state/boot';
+  import { appState } from '$lib/ui/state/state.svelte';
+  import { inProgress } from '$lib/ui/session/session.svelte';
+  import { todayClock } from '$lib/ui/state/today.svelte';
+  import { sw } from '$lib/ui/shell/sw.svelte';
+  import { theme, THEME_LABEL } from '$lib/ui/shell/theme.svelte';
+  import { wakeLock } from '$lib/ui/shell/wakelock.svelte';
+  import { install } from '$lib/ui/shell/install.svelte';
+  import { tabsFor } from '$lib/ui/shell/nav';
+  import About from '$lib/ui/shell/About.svelte';
+  import Toast from '$lib/ui/shell/Toast.svelte';
 
   let { children } = $props();
   let booted = $state(false);

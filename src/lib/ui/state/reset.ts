@@ -4,8 +4,8 @@
  * About 모달의 「전체 데이터 초기화」와 손상 배너의 「초기 상태로 시작」 두
  * 진입점이 이 헬퍼를 공유한다. 라우팅은 호출부가 담당한다.
  */
-import { appState } from './state.svelte.ts';
-import { inProgress } from './session.svelte.ts';
+import { appState } from './state.svelte';
+import { inProgress } from '$lib/ui/session/session.svelte';
 
 export function performReset(): void {
   appState.resetToInitial();

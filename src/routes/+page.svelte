@@ -12,16 +12,16 @@
     acceptProposal, declineProposal, getProgram,
     type PlannedExercise,
   } from '$lib/domain';
-  import { appState } from '$lib/ui/state.svelte';
-  import { inProgress, isStaleStartedAt } from '$lib/ui/session.svelte';
-  import { todayClock } from '$lib/ui/today.svelte';
+  import { appState } from '$lib/ui/state/state.svelte';
+  import { inProgress, isStaleStartedAt } from '$lib/ui/session/session.svelte';
+  import { todayClock } from '$lib/ui/state/today.svelte';
   import { loadCatalog } from '$lib/data/catalog';
-  import { deriveTodayScreen, type TodayScreenState } from '$lib/ui/todayScreen';
+  import { deriveTodayScreen, type TodayScreenState } from '$lib/ui/today/todayScreen';
   import ExerciseCard from '$lib/ui/session/ExerciseCard.svelte';
   import ProposalBanner from '$lib/ui/session/ProposalBanner.svelte';
   import FreeExerciseForm from '$lib/ui/session/FreeExerciseForm.svelte';
   import { progressionName, formatKoDate, weekdayKoOf } from '$lib/ui/session/labels';
-  import Confirm from '$lib/ui/Confirm.svelte';
+  import Confirm from '$lib/ui/common/Confirm.svelte';
   import { planHeader } from '$lib/ui/session/labels';
 
   const catalog = loadCatalog();

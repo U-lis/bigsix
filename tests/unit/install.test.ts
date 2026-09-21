@@ -5,9 +5,9 @@
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 
-async function freshMod(): Promise<typeof import('../../src/lib/ui/install.svelte.ts')> {
+async function freshMod(): Promise<typeof import('../../src/lib/ui/shell/install.svelte.ts')> {
   vi.resetModules();
-  return await import('../../src/lib/ui/install.svelte.ts');
+  return await import('../../src/lib/ui/shell/install.svelte.ts');
 }
 
 function fireBeforeInstallPrompt(promptImpl: () => Promise<unknown>): Event {

@@ -6,7 +6,7 @@
  * 산출하며 (FR-4.2 / EC-6) UTC 기준을 쓰지 않는다.
  */
 
-import type { IsoDate } from '../domain/types.ts';
+import type { IsoDate } from '$lib/domain/types';
 
 /**
  * `Date` 하나에서 로컬 달력 기준의 `YYYY-MM-DD` 를 만든다.

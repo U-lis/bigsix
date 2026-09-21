@@ -18,7 +18,7 @@ import {
   writeAppState,
   writeInProgress,
   type InProgressSession,
-} from '../../src/lib/ui/storage.ts';
+} from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 import type { AppState } from '../../src/lib/domain/types.ts';
 

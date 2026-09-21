@@ -6,14 +6,14 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { inProgress, isStaleStartedAt, maxSetRpe } from '../../src/lib/ui/session.svelte.ts';
+import { inProgress, isStaleStartedAt, maxSetRpe } from '../../src/lib/ui/session/session.svelte.ts';
 import {
   IN_PROGRESS_KEY,
   readInProgress,
   writeInProgress,
   type InProgressSession,
   type SetEntry,
-} from '../../src/lib/ui/storage.ts';
+} from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 import type { AppState, PlannedExercise } from '../../src/lib/domain/types.ts';
 import { catalog, stateAt, ALL_UNLOCKED_STEPS } from './helpers.ts';

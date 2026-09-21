@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { alert as notifyAlert } from '../../src/lib/ui/notify.ts';
+import { alert as notifyAlert } from '../../src/lib/ui/session/notify.ts';
 
 // happy-dom 은 AudioContext 를 기본 제공하지 않는다. 최소 스텁을 씌운다.
 class MockAudioContext {

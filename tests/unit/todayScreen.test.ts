@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { initialState, selectProgram } from '../../src/lib/domain/index.ts';
-import { deriveTodayScreen } from '../../src/lib/ui/todayScreen.ts';
+import { deriveTodayScreen } from '../../src/lib/ui/today/todayScreen.ts';
 import { catalog, stateAt } from './helpers.ts';
 
 const MON = '2026-09-07';

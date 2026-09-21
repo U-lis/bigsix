@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { nextResetState, isResetReady } from '../../src/lib/ui/reset.ts';
+import { nextResetState, isResetReady } from '../../src/lib/ui/state/reset.ts';
 
 describe('reset 2단계 확인 상태 머신 — FR-19.4 / EC-47', () => {
   it('초기 상태는 "idle"', () => {

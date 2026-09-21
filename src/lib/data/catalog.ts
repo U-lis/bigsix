@@ -1,5 +1,5 @@
-import { fromJSON } from '../domain/catalog.ts';
-import type { Catalog } from '../domain/types.ts';
+import { fromJSON } from '$lib/domain';
+import type { Catalog } from '$lib/domain/types';
 import raw from './progressions.json';
 
 /**

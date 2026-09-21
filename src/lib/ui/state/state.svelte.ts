@@ -9,9 +9,9 @@
  * (FR-1.7 / EC-1~5).
  */
 
-import { initialState } from '../domain/index.ts';
-import type { AppState } from '../domain/types.ts';
-import { writeAppState } from './storage.ts';
+import { initialState } from '$lib/domain';
+import type { AppState } from '$lib/domain/types';
+import { writeAppState } from './storage';
 
 export type SaveStatus = 'ok' | 'write-blocked';
 export type StorageStatus = 'ok' | 'empty' | 'corrupt' | 'future-version' | 'read-blocked';
