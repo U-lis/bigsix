@@ -1,0 +1,68 @@
+# 배포된 사이트 상시 점검.
+#
+# CI 는 커밋할 때만 돈다. 그런데 실제로 이 프로젝트를 물었던 것은 커밋과 무관하게
+# 조용히 썩은 것이었다 — 인증서가 2026-02 부터 6개월간 만료 상태였고, acme.sh 는
+# 정상 갱신하고 있었으며 `acme.sh --list` 도 멀쩡해 보였다. nginx 로 복사하는
+# 단계만 실패하고 있었고 cron 출력은 /dev/null 이라 아무도 몰랐다.
+#
+# 홈서버에 ssh 로는 못 닿지만(tailnet, 인바운드 0) 공개 HTTPS 는 닿는다.
+# 그래서 밖에서 보이는 증상만으로 판단한다. 이 워크플로가 실패하면 GitHub 가
+# 알림을 보낸다 — 찾아가지 않아도 알게 하는 것이 목적이다.
+name: 사이트 점검
+
+on:
+  schedule:
+    # 매일 00:10 UTC (한국 09:10)
+    - cron: '10 0 * * *'
+  workflow_dispatch:
+
+env:
+  SITE: https://bigsix.siot-ieung.duckdns.org
+  # 인증서가 이 일수 아래로 남으면 실패시킨다. Let's Encrypt 는 90일짜리이고
+  # acme.sh 는 만료 30일 전부터 갱신하므로, 14일이면 "갱신이 안 되고 있다" 는 뜻이다.
+  MIN_CERT_DAYS: 14
+
+jobs:
+  check:
+    name: 인증서·응답·프리캐시
+    runs-on: ubuntu-latest
+    steps:
+      - name: 인증서 만료일
+        run: |
+          host=$(printf '%s' "$SITE" | sed 's|https://||')
+          end=$(echo | openssl s_client -connect "$host:443" -servername "$host" 2>/dev/null \
+            | openssl x509 -noout -enddate | cut -d= -f2)
+          echo "만료: $end"
+          left=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
+          echo "남은 일수: $left"
+          if [ "$left" -lt "$MIN_CERT_DAYS" ]; then
+            echo "::error::인증서가 ${left}일 남았다. acme.sh 가 발급은 해도 nginx 로 복사하지 못하는 상태일 수 있다 — deploy/README.md 의 '인증서가 만료됐을 때' 참고."
+            exit 1
+          fi
+
+      - name: 기본 응답
+        run: |
+          fail=0
+          for p in / /manifest.webmanifest /sw.js; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "$SITE$p")
+            printf '%-24s %s\n' "$p" "$code"
+            [ "$code" = 200 ] || fail=1
+          done
+          [ "$fail" = 0 ] || { echo "::error::기본 경로가 200 이 아니다"; exit 1; }
+
+      # 서비스워커가 프리캐시하겠다고 적어둔 파일이 전부 실제로 서빙되는지 본다.
+      # 하나라도 404 면 워크박스가 설치를 통째로 롤백해서(bad-precaching-response)
+      # 오프라인이 죽는다. 화면은 멀쩡해 보이므로 눈으로는 못 잡는다.
+      - name: 프리캐시 전수
+        run: |
+          missing=$(curl -sS "$SITE/sw.js" | grep -oE 'url:"[^"]+"' | sed 's/url:"//;s/"$//' | while read -r u; do
+            case "$u" in /*) full="$SITE$u" ;; *) full="$SITE/$u" ;; esac
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "$full")
+            [ "$code" = 200 ] || echo "$code $u"
+          done)
+          if [ -n "$missing" ]; then
+            echo "$missing"
+            echo "::error::프리캐시 목록에 404 가 있다. 오프라인 동작이 죽는다."
+            exit 1
+          fi
+          echo "전부 200"

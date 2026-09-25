@@ -1,0 +1,52 @@
+# PR 과 main push 마다 도는 검사.
+#
+# 홈서버는 tailnet 안에 있어 GitHub 러너가 닿지 못한다. 여기서는 배포를 하지
+# 않는다 — 코드와 배포 스크립트의 "동작" 만 본다. 실제 배포와 그 검증은
+# deploy/deploy.sh 가 로컬에서 담당한다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 브랜치에 연달아 밀면 앞의 실행을 취소한다. 러너 시간을 아끼고,
+# 결과가 뒤늦게 뒤집혀 혼란을 주는 것도 막는다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: 타입·단위
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 타입 검사
+        run: pnpm run check
+
+      - name: 단위 테스트
+        run: pnpm test
+
+  deploy-scripts:
+    name: 배포 스크립트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: shellcheck
+        run: shellcheck -x deploy/*.sh tests/deploy/*.sh
+
+      # 가짜 저장소로 git 동작을 검증한다. 홈서버도 ssh 도 쓰지 않는다.
+      - name: 셸 테스트
+        run: bash tests/deploy/run.sh
