@@ -1,0 +1,16 @@
+# bigsix push scheduler — timer 가 매 분 부르는 oneshot.
+#
+# ADR-32: 앱을 켜지 않아도 알림이 오려면 tick 이 반복 실행돼야 한다. Node 프로세스를
+# 계속 띄우는 대신 systemd timer 로 매 분 새로 실행하고, tick 이 끝나면 프로세스가
+# 종료된다. 실패로 끝나도 다음 tick 때 재시도되고, 시간 겹침도 없다.
+[Unit]
+Description=bigsix push scheduler tick
+
+[Service]
+Type=oneshot
+User=ulismoon
+WorkingDirectory=/home/ulismoon/apps/bigsix
+ExecStart=/home/ulismoon/.nvm/versions/node/v24/bin/node --experimental-strip-types server/src/scheduler.ts
+Environment=BIGSIX_DATA_DIR=/home/ulismoon/apps/bigsix/server/data
+Environment=BIGSIX_VAPID_PRIVATE_KEY_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
+Environment=BIGSIX_VAPID_SUBJECT=mailto:familygameguild@gmail.com

@@ -1,0 +1,24 @@
+# bigsix push API — 127.0.0.1:8791 에서 대기하는 Node 프로세스.
+# nginx 가 /api/push/ 로 프록시한다 (deploy/nginx/bigsix.conf 의 location).
+#
+# 설치는 deploy/README.md 「최초 1회 설정」 절에 있다. Node 실행 파일 경로는
+# nvm 이 관리하는 심볼릭이라 서버에 따라 다를 수 있고, install 시 아래 ExecStart 를
+# `readlink -f $(nvm which 24)` 결과로 확정해야 한다.
+[Unit]
+Description=bigsix push API
+After=network.target
+
+[Service]
+Type=simple
+User=ulismoon
+WorkingDirectory=/home/ulismoon/apps/bigsix
+ExecStart=/home/ulismoon/.nvm/versions/node/v24/bin/node --experimental-strip-types server/src/index.ts
+Restart=on-failure
+RestartSec=3s
+Environment=BIGSIX_PORT=8791
+Environment=BIGSIX_DATA_DIR=/home/ulismoon/apps/bigsix/server/data
+Environment=BIGSIX_VAPID_PRIVATE_KEY_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
+Environment=BIGSIX_VAPID_SUBJECT=mailto:familygameguild@gmail.com
+
+[Install]
+WantedBy=multi-user.target
