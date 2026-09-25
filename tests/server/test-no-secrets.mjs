@@ -31,20 +31,33 @@ const files = raw
 
 assertTrue('저장소 파일 목록을 가져왔다', files.length > 0);
 
-const SECRET_PATTERNS = [
-	/-----BEGIN /,
-	/PRIVATE KEY/,
-	// vapid 비밀키를 사람이 흔히 저장할 만한 이름
-	/BASE64_PRIVATE/,
-	/VAPID_PRIVATE_KEY/,
-	/vapid[._-]?private/i
-];
+// 키 「이름」 이 아니라 키 「값」 을 잡는다.
+//
+// 처음엔 `VAPID_PRIVATE_KEY` · `vapid.private` 같은 이름을 패턴으로 뒀는데,
+// 서버가 비밀키 「파일 경로」 를 정상적으로 참조하기 시작하자마자 (BIGSIX_VAPID_PRIVATE_KEY_PATH)
+// 전부 걸려 스위트가 항상 빨갛게 됐다. 늘 실패하는 검사는 곧 꺼지고, 그때 진짜 유출이 지나간다.
+// 그래서 이름은 허용하고 값만 본다.
+const PEM_PATTERNS = [/-----BEGIN /, /PRIVATE KEY/];
 
-const ALLOWED_MENTIONS = new Set([
-	// 이 스위트 자신 · PLAN · GLOBAL · SPEC · TEST 문서는 「비밀키」 라는 단어를 다룰 수 있다.
-	// 아래에서 SECRET_PATTERNS 매칭 시 파일별로 판단한다.
-]);
-void ALLOWED_MENTIONS;
+// VAPID 비밀키는 base64url 43자. 40자 이상 문자열 리터럴이 private·secret 을
+// 말하는 줄에 있으면 의심한다. 공개키(87자)는 의도적으로 커밋하므로 뺀다.
+const KEY_LITERAL = /['"`][A-Za-z0-9_-]{40,}['"`]/;
+const SECRETISH = /(private|secret)/i;
+const NOT_SECRET = /(public|path|url|endpoint|hash|integrity|sha\d)/i;
+
+export function scanForSecrets(content) {
+	const hits = [];
+	for (const p of PEM_PATTERNS) {
+		if (p.test(content)) hits.push(String(p));
+	}
+	for (const line of content.split('\n')) {
+		if (KEY_LITERAL.test(line) && SECRETISH.test(line) && !NOT_SECRET.test(line)) {
+			hits.push('key-literal');
+			break;
+		}
+	}
+	return hits;
+}
 
 // 검사 대상에서 제외할 경로 (문서화 목적으로 이름이 나와도 되는 자리).
 function isExcluded(rel) {
@@ -74,11 +87,30 @@ for (const rel of files) {
 	} catch {
 		continue; // 바이너리 등
 	}
-	for (const pattern of SECRET_PATTERNS) {
-		if (pattern.test(content)) {
-			violations.push({ rel, pattern: String(pattern) });
-		}
+	for (const hit of scanForSecrets(content)) {
+		violations.push({ rel, pattern: hit });
 	}
+}
+
+// --- 스캐너 자체 검증: 느슨해져서 아무것도 못 잡는 상태가 아닌지 ---
+{
+	const fakeKey = 'x'.repeat(43);
+	assertTrue(
+		'PEM 블록을 잡는다',
+		scanForSecrets('-----BEGIN EC PRIVATE KEY-----').length > 0
+	);
+	assertTrue(
+		'비밀키 값처럼 보이는 리터럴을 잡는다',
+		scanForSecrets(`const vapidPrivate = '${fakeKey}';`).length > 0
+	);
+	assertTrue(
+		'키 파일 경로 이름만 있는 줄은 잡지 않는다 (오탐 방지)',
+		scanForSecrets("env.BIGSIX_VAPID_PRIVATE_KEY_PATH ?? join(dataDir, 'vapid.private')").length === 0
+	);
+	assertTrue(
+		'공개키는 커밋 대상이므로 잡지 않는다',
+		scanForSecrets(`export const VAPID_PUBLIC_KEY = '${'y'.repeat(87)}';`).length === 0
+	);
 }
 
 if (violations.length === 0) {
