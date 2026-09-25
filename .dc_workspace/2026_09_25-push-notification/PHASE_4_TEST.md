@@ -26,7 +26,7 @@
 - [ ] `grep -n "Type=oneshot" deploy/systemd/bigsix-scheduler.service`.
 - [ ] `grep -n "User=ulismoon" deploy/systemd/bigsix-api.service`.
 - [ ] `grep -n "Restart=on-failure" deploy/systemd/bigsix-api.service`.
-- [ ] `grep -n "BIGSIX_VAPID_PRIVATE_PATH" deploy/systemd/*.service` — 두 서비스 모두 환경변수 설정.
+- [ ] `grep -n "BIGSIX_VAPID_PRIVATE_KEY_PATH" deploy/systemd/*.service` — 두 서비스 모두 환경변수 설정.
 
 ## FR-39.3 — remote.sh 서버 install
 

@@ -62,7 +62,7 @@ Restart=on-failure
 RestartSec=3s
 Environment=BIGSIX_PORT=8791
 Environment=BIGSIX_DATA_DIR=/home/ulismoon/apps/bigsix/server/data
-Environment=BIGSIX_VAPID_PRIVATE_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
+Environment=BIGSIX_VAPID_PRIVATE_KEY_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
 Environment=BIGSIX_VAPID_SUBJECT=mailto:familygameguild@gmail.com
 
 [Install]
@@ -83,7 +83,7 @@ User=ulismoon
 WorkingDirectory=/home/ulismoon/apps/bigsix
 ExecStart=/home/ulismoon/.nvm/versions/node/v24/bin/node --experimental-strip-types server/src/scheduler.ts
 Environment=BIGSIX_DATA_DIR=/home/ulismoon/apps/bigsix/server/data
-Environment=BIGSIX_VAPID_PRIVATE_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
+Environment=BIGSIX_VAPID_PRIVATE_KEY_PATH=/home/ulismoon/apps/bigsix/server/data/vapid.private
 Environment=BIGSIX_VAPID_SUBJECT=mailto:familygameguild@gmail.com
 ```
 

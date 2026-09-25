@@ -2,19 +2,21 @@
 
 `https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 앱과 홈서버 위 Node 프로세스(푸시 API)가 함께 돈다.
 
-## 이번 작업(0.2.0 UI 개발)의 임시 배포
+## 작업 중 브랜치의 임시 배포
 
-0.2.0 은 아직 릴리스가 아니다. `feature/ui` 브랜치를 서버에 올려 확인한다.
+릴리스 전에 브랜치를 그대로 서버에 올려 확인할 수 있다.
 `release.sh` 는 **부르지 않는다** — 태그도 버전 커밋도 만들지 않는다.
 
 ```bash
-git push origin feature/ui
-./deploy/deploy.sh feature/ui
+git push origin <브랜치>
+./deploy/deploy.sh <브랜치>
 ```
 
 `deploy.sh` 는 임의의 ref 를 받으므로 브랜치를 그대로 올릴 수 있고, 배포 후 검증
-(커밋 SHA 대조 · 기본 경로 200 · 프리캐시 전수 대조)은 릴리스와 똑같이 돈다.
-PR 이 병합되고 릴리스할 준비가 되면 그때 `./deploy/release.sh 0.2.0` 을 쓴다.
+(커밋 SHA 대조 · 기본 경로 200 · 프리캐시 전수 대조 · 푸시 API 응답)은 릴리스와
+똑같이 돈다. 병합하고 릴리스할 준비가 되면 그때 `./deploy/release.sh <버전>` 을 쓴다.
+
+0.2.0 은 2026-09-25 에 릴리스됐다 (`v0.2.0`). 그때 쓰던 `feature/ui` 브랜치는 병합 후 지웠다.
 
 ## 평소
 
