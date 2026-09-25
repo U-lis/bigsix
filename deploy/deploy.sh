@@ -68,25 +68,39 @@ done
 # 서비스워커가 프리캐시하겠다고 적어둔 파일이 전부 실제로 서빙되는지 본다.
 # 하나라도 404 면 SW 설치가 실패해서 오프라인이 통째로 죽는다.
 echo "==> 프리캐시 목록 대조"
-missing=$(
+# 프리캐시 목록 표기는 workbox 전략에 따라 다르다.
+# generateSW 는 `url:"..."`, injectManifest 는 `"url":"..."` 로 낸다. 둘 다 받는다.
+urls=$(
 	curl -sS "$URL/sw.js" | node -e '
 		let s = "";
 		process.stdin.on("data", (d) => (s += d));
 		process.stdin.on("end", () => {
-			const urls = [...s.matchAll(/url:"([^"]+)"/g)].map((m) => m[1]);
+			const urls = [...s.matchAll(/"?url"?:"([^"]+)"/g)].map((m) => m[1]);
 			process.stdout.write(urls.join("\n"));
 		});
-	' | while read -r u; do
-		case "$u" in /*) full="$URL$u" ;; *) full="$URL/$u" ;; esac
-		code=$(curl -sS -o /dev/null -w '%{http_code}' "$full")
-		[ "$code" = "200" ] || echo "    $code $u"
-	done
+	'
 )
-if [ -n "$missing" ]; then
-	echo "$missing"
+# 한 건도 못 읽었으면 통과가 아니라 실패다. 정규식이 sw.js 형식과 어긋나면
+# 빈 목록이 조용히 "전부 200" 으로 보이는데, 그때가 바로 이 검사가 필요한 때다.
+# 2026-09-25 injectManifest 전환에서 실제로 겪었다.
+if [ -z "$urls" ]; then
+	echo "    프리캐시 목록을 한 건도 읽지 못했다 — sw.js 형식이 바뀌었을 수 있다"
 	fail=1
 else
-	echo "    전부 200"
+	echo "    목록 $(printf '%s\n' "$urls" | wc -l | tr -d ' ') 건"
+	missing=$(
+		printf '%s\n' "$urls" | while read -r u; do
+			case "$u" in /*) full="$URL$u" ;; *) full="$URL/$u" ;; esac
+			code=$(curl -sS -o /dev/null -w '%{http_code}' "$full")
+			[ "$code" = "200" ] || echo "    $code $u"
+		done
+	)
+	if [ -n "$missing" ]; then
+		echo "$missing"
+		fail=1
+	else
+		echo "    전부 200"
+	fi
 fi
 
 [ "$fail" = 0 ] || { echo "실패"; exit 1; }
