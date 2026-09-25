@@ -3,7 +3,7 @@
 이 파일의 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 를 따르고,
 버전 표기는 [유의적 버전](https://semver.org/lang/ko/)을 따른다.
 
-## [Unreleased]
+## [0.2.0] - 2026-09-25
 
 ### Added
 
@@ -141,4 +141,5 @@
 - 테스트 474개 통과. 커버리지 line 100% / branch 94.95% / funcs 100%.
 - 외부 의존성 0. Node 24 내장 타입 스트리핑과 내장 테스트 러너만 쓴다.
 
+[0.2.0]: https://github.com/U-lis/bigsix/releases/tag/v0.2.0
 [0.1.0]: https://github.com/U-lis/bigsix/releases/tag/v0.1.0
