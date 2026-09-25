@@ -5,6 +5,7 @@
 //   요일 · 종목표 · 단계 · 수행 여부를 받는 필드는 스키마에 없다.
 // - 응답 body 는 오류 사유 문자열이거나 비어 있음. 정상 응답은 status 만.
 
+import { checkEndpoint } from './endpoint-allowlist.ts';
 import {
 	loadStore,
 	removeSubscription,
@@ -52,6 +53,12 @@ export function validateSubscribeBody(
 
 	if (typeof o.endpoint !== 'string' || o.endpoint === '') {
 		return { ok: false, reason: 'endpoint-missing' };
+	}
+	// endpoint 는 알려진 푸시 서비스 도메인 · https 스킴만 허용 (SSRF 방어).
+	// 발송 시점(push.ts)에서도 같은 상수로 재검증한다.
+	const endpointCheck = checkEndpoint(o.endpoint);
+	if (!endpointCheck.ok) {
+		return { ok: false, reason: endpointCheck.reason ?? 'endpoint-invalid' };
 	}
 	if (typeof o.keys !== 'object' || o.keys === null) {
 		return { ok: false, reason: 'keys-missing' };
