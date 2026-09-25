@@ -66,7 +66,7 @@
 
 ## 품질 게이트
 
-- [ ] `pnpm check` 오류 0, 경고 0.
+- [ ] `pnpm check` 오류 0, 경고 0. (NFR-33)
 - [ ] `pnpm test` 통과. 앱 tests **797 이상** 유지 (main `dc84f1e` 기준선 797 / 38 files).
 - [ ] `bash tests/server/run.sh` 통과 (Phase 2 이후 스위트 회귀 없음).
 

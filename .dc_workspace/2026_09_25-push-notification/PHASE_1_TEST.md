@@ -29,7 +29,7 @@
 
 ## FR-31.4 — 빌드와 검사
 
-- [ ] `pnpm check` — 오류 0, 경고 0.
+- [ ] `pnpm check` — 오류 0, 경고 0. (NFR-33)
 - [ ] `pnpm test` — 전부 통과. 기준선 797 → 797 + N (신규 5~7건).
 - [ ] `pnpm build` — 성공. `build/sw.js` 존재.
 - [ ] `test -f build/sw.js` 통과.

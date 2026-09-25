@@ -59,7 +59,7 @@ SPEC4 「Overview」 그대로 잇는다.
 이 저장소의 **첫 서버 런타임**이다. 언어·프레임워크·의존성 표면적을 뭘로 잡을 것인가.
 
 **Decision**
-- 런타임: **Node.js 24** (홈서버가 이미 `nvm 24` 로 앱 빌드에 쓰고 있어 재설치 불필요, `deploy/README.md:47` 「Node | nvm 24 (~/.nvm)」).
+- 런타임: **Node.js 24** (홈서버가 이미 `nvm 24` 로 앱 빌드에 쓰고 있어 재설치 불필요, `deploy/README.md:119` 「Node | nvm 24 (`~/.nvm`), pnpm 은 corepack」).
 - 프레임워크: **없음.** 표준 `node:http` 모듈로 라우팅 2개(`POST /api/push/subscribe`, `DELETE /api/push/subscribe`) 만 구현. Express/Fastify/Hono 는 의존성 부풀리기.
 - 의존성: `web-push` (VAPID 발송) 하나. 타입은 `@types/web-push` (dev).
 - 서버 코드는 TypeScript 로 쓰되 **컴파일 없이 `node --experimental-strip-types` 로 실행** — 도메인 계층이 plain Node 로 도는 것과 같은 방식 (ADR-27 예외). Node 24 는 이 옵션을 지원한다.

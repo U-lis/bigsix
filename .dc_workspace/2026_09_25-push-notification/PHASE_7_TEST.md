@@ -36,7 +36,7 @@
 
 ## 통합
 
-- [ ] `pnpm check` 오류 0, 경고 0.
+- [ ] `pnpm check` 오류 0, 경고 0. (NFR-33)
 - [ ] `pnpm test` 통과. 코드 변경 없어 테스트 수 그대로 (Phase 6 대비).
 - [ ] `bash tests/server/run.sh` · `bash tests/deploy/run.sh` 통과 그대로.
 - [ ] `git log --oneline main..HEAD` — Phase 1~7 커밋들이 시간순으로 정렬. 각 커밋 메시지가 (a·b·c 등의 세부 분할과 별개로) 릴리스 노트 작성에 쓰일 수 있는 수준.

@@ -61,7 +61,7 @@
 
 - [ ] `bash tests/deploy/run.sh` — 기존 3 스위트 + 신규 2 스위트 = 5 스위트 통과.
 - [ ] `bash tests/server/run.sh` — 통과 그대로 (변화 없어야 함).
-- [ ] `pnpm check` 0/0.
+- [ ] `pnpm check` 0/0. (NFR-33)
 - [ ] `pnpm test` 797 그대로.
 
 ## 홈서버 실물 검증 (사용자 확인 후 실행)
@@ -81,6 +81,11 @@
 - [ ] `ssh homeserver 'cd apps/bigsix && node server/scripts/vapid-init.mjs' > /tmp/vapid.pub`
 - [ ] `/tmp/vapid.pub` 에 공개키 문자열 (한 줄, base64url).
 - [ ] Phase 5 커밋 시점에 이 공개키를 `src/lib/data/vapid.ts` 에 반영.
+
+## 비기능 (NFR-32)
+
+- [ ] NFR-32: `vapid-init.mjs` 가 만든 비밀키가 저장소 추적 대상에 들어가지 않는다 (`git status` 확인).
+- [ ] NFR-32: 비밀키 파일 권한이 0600 이다.
 
 ---
 

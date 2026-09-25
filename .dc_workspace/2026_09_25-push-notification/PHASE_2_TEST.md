@@ -62,9 +62,15 @@
 ## 통합 검사
 
 - [ ] `bash tests/server/run.sh` 전부 통과 (subscribe · store · no-secrets 3 스위트).
-- [ ] `pnpm check` 오류 0, 경고 0.
+- [ ] `pnpm check` 오류 0, 경고 0. (NFR-33)
 - [ ] `pnpm test` 통과, 앱 tests 수 797 그대로 (서버 tests 는 별도 러너).
 - [ ] `git status` 에 `server/data/subscriptions.json` 이 뜨지 않음 (gitignore 확인).
+
+## 비기능 (NFR-31 · NFR-32)
+
+- [ ] NFR-31: `subscribe` 가 받는 Body 는 `{ programId, notifyAt, tz }` 와 브라우저 구독 정보뿐이다. 요일 집합·종목표·단계·수행 여부를 받는 필드가 스키마에 **없다**.
+- [ ] NFR-31: 저장된 `subscriptions.json` 에 운동 기록·AppState 조각이 들어가지 않는다.
+- [ ] NFR-32: `.gitignore` 가 `server/data/*` 를 무시한다. 비밀키 패턴 검사 스위트가 통과한다.
 
 ---
 

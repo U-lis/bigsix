@@ -58,7 +58,7 @@
 ## 통합 검사
 
 - [ ] `bash tests/server/run.sh` 전 스위트 통과.
-- [ ] `pnpm check` 오류 0, 경고 0.
+- [ ] `pnpm check` 오류 0, 경고 0. (NFR-33)
 - [ ] `pnpm test` 통과, 앱 tests 수 797 그대로.
 - [ ] 서버 tests 수 (Phase 2 대비): +2 스위트 (progressions · scheduler) +1 스위트 (push-wrapper) = 3 스위트 추가.
 
