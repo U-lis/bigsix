@@ -5,3 +5,8 @@ build/
 *.log
 .svelte-kit/
 .pnpm-store/
+
+# 서버 (Phase 2, ADR-29~31)
+server/data/*
+!server/data/.gitkeep
+server/node_modules/
