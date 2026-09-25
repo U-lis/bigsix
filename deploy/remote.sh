@@ -2,11 +2,13 @@
 #
 # 서버에서 도는 부분. deploy.sh 가 ssh 로 흘려보낸다.
 #
-#   REF=... REPO=... DOCROOT=... bash -s        전체 (동기화 + 빌드 + 반영)
-#   REF=... REPO=... bash -s sync               동기화까지만
+#   REF=... REPO=... DOCROOT=... bash -s                  전체 (동기화 + 빌드 + 반영 + 서버 재시작)
+#   REF=... REPO=... bash -s sync                         동기화까지만
+#   REF=... REPO=... bash -s server-install               동기화 + 서버 dep 설치
 #
-# sync 모드가 있는 이유는 CI 때문이다. 여기 담긴 git 동작은 서버 없이도 검증할 수
-# 있어야 한다 — 가짜 저장소를 만들어 이 모드로 돌리면 홈서버도 ssh 도 필요 없다.
+# sync · server-install 모드가 있는 이유는 CI 때문이다. 여기 담긴 git · npm 동작은
+# 서버 없이도 검증할 수 있어야 한다 — 가짜 저장소를 만들어 이 모드로 돌리면
+# 홈서버도 ssh 도 필요 없다. tests/deploy/ 스위트가 그 방식으로 검증한다.
 set -euo pipefail
 
 MODE="${1:-full}"
@@ -30,8 +32,26 @@ sync_repo() {
 	echo "    $(git rev-parse --short HEAD) $(git log -1 --format=%s)"
 }
 
+# 서버 코드 (server/) 의 의존성 설치. workspace 밖에 있으므로 pnpm 이 아니라
+# 자체 lockfile 로 도는 npm 을 쓴다. server/package.json 이 없으면 조용히 넘어간다.
+# 서버 코드가 아직 없는 옛 커밋으로 배포할 때를 위한 방어다.
+server_install() {
+	if [ ! -f "$REPO/server/package.json" ]; then
+		echo "    server/package.json 없음 — 건너뛴다"
+		return 0
+	fi
+	echo "==> 서버 의존성"
+	cd "$REPO/server"
+	npm ci --omit=dev --silent
+}
+
 if [ "$MODE" = 'sync' ]; then
 	sync_repo
+	exit 0
+fi
+if [ "$MODE" = 'server-install' ]; then
+	sync_repo
+	server_install
 	exit 0
 fi
 
@@ -60,5 +80,14 @@ pnpm run build >/dev/null
 echo "==> docroot 반영"
 rsync -a --exclude='*.html' --exclude='sw.js' "$REPO/build/" "$DOCROOT/"
 rsync -a --delete "$REPO/build/" "$DOCROOT/"
+
+# 서버 코드가 함께 배포되므로 dep 설치 + systemd 재시작이 붙는다. sudo 는
+# /etc/sudoers.d/bigsix-restart 로 열려 있어야 한다 (README 「최초 1회 설정」).
+# scheduler.service 는 timer 가 부르는 oneshot 이라 직접 restart 하지 않는다 —
+# timer 를 restart 하면 다음 tick 부터 새 코드로 돈다.
+server_install
+echo "==> systemd 재시작"
+sudo systemctl restart bigsix-api.service
+sudo systemctl restart bigsix-scheduler.timer
 
 echo "==> 배포된 커밋: $(git rev-parse HEAD)"

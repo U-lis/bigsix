@@ -1,6 +1,6 @@
 # 홈서버 배포
 
-`https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 파일뿐이라 서버 런타임은 없다.
+`https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 앱과 홈서버 위 Node 프로세스(푸시 API)가 함께 돈다.
 
 ## 이번 작업(0.2.0 UI 개발)의 임시 배포
 
@@ -101,6 +101,82 @@ docroot 로 옮긴다. 배포가 끝나면 스크립트가 스스로 확인한�
 마지막 항목이 핵심이다. 하나라도 404 면 워크박스가 설치를 통째로 롤백해서
 (`bad-precaching-response`) 오프라인 동작이 죽는다. 화면은 멀쩡해 보이므로 눈으로는 못 잡는다.
 
+## 서버 런타임 (0.3.0 이후)
+
+푸시 API 와 스케줄러가 홈서버 위에 systemd 로 돈다. 앱이 꺼져 있어도 알림이
+오려면 매 분 tick 이 돌아야 하고, 브라우저를 통해서는 그렇게 안 된다.
+
+| 유닛 | 하는 일 | 확인 |
+|---|---|---|
+| `bigsix-api.service` | POST/DELETE `/api/push/subscribe` 응답 (127.0.0.1:8791) | `journalctl -u bigsix-api -f` |
+| `bigsix-scheduler.service` | 매 분 tick — 대상자에게 발송 · 오늘분 dedup · 만료 정리 | `journalctl -u bigsix-scheduler -f` |
+| `bigsix-scheduler.timer` | 위 서비스를 매 분 부른다 (`OnCalendar=*:0/1`) | `systemctl status bigsix-scheduler.timer` |
+
+`scheduler.service` 는 timer 가 부르는 oneshot 이라 프로세스가 계속 뜨지 않는다.
+직접 `restart` 하면 tick 이 한 번 즉시 돌 뿐이고, timer 를 restart 해야 다음
+tick 부터 새 코드로 돈다. `deploy.sh` 도 timer 만 restart 한다.
+
+재시작·중지:
+
+```bash
+sudo systemctl restart bigsix-api.service
+sudo systemctl restart bigsix-scheduler.timer
+sudo systemctl stop bigsix-api.service    # 위급 시
+```
+
+데이터:
+
+- `/home/ulismoon/apps/bigsix/server/data/subscriptions.json` — 구독 스토어.
+  사용자 소유(0644 이하), 백업 대상.
+- `/home/ulismoon/apps/bigsix/server/data/vapid.private` — VAPID 비밀키. 0600,
+  절대 저장소에 커밋하지 않는다 (`.gitignore` 로 막혀 있음).
+
+프론트 검증 (배포 후 자동으로 돌지만, 손으로 되짚을 때):
+
+```bash
+# 400 이 정답이다. body 가 이상하니 서버가 거절해야 한다. 200/500/502 면 문제.
+curl -sS -X POST https://bigsix.siot-ieung.duckdns.org/api/push/subscribe \
+    -H 'Content-Type: application/json' -d '{}' -w '\n%{http_code}\n'
+```
+
+**서버가 꺼지면 알림도 안 온다** (알려진 한계 H-13). systemd 는 `Restart=on-failure`
+로 자동 재시작하지만, 그 밖의 이유로 유닛이 꺼져 있으면 tick 자체가 안 돈다.
+`systemctl status bigsix-scheduler.timer` 가 `active (waiting)` 인지 가끔 본다.
+
+## VAPID 키
+
+푸시 서명에 쓰는 키 쌍이다 (ADR-33). 공개키는 앱이 구독 등록에 쓰고, 비밀키는
+서버가 발송 직전에 서명한다.
+
+- **저장 위치**: 비밀키는 `server/data/vapid.private` 에 파일로. 저장소에는 넣지
+  않는다 — `.gitignore` 가 `server/data/*` 를 잡고 있고, 새 커밋 때마다
+  `tests/server/test-no-secrets.mjs` 가 PEM · 비밀키 리터럴 유출을 검사한다.
+- **공개키**: 앱 소스의 `src/lib/data/vapid.ts` 에 상수로 박는다. 회전할 때마다
+  손으로 갈아 넣고 새 배포에 태워야 한다.
+
+최초 발급 (사용자 계정, sudo 필요 없음):
+
+```bash
+ssh homeserver 'cd ~/apps/bigsix && node server/scripts/vapid-init.mjs' > /tmp/vapid.pub
+cat /tmp/vapid.pub    # base64url 공개키 한 줄
+```
+
+- stdout 은 공개키 하나만, stderr 로 `비밀키 저장: .../vapid.private (0600)` 안내.
+- 이미 비밀키 파일이 있으면 `--rotate` 없이는 exit 2 로 실패한다 (덮어쓰기 방지).
+
+회전:
+
+```bash
+ssh homeserver 'cd ~/apps/bigsix && node server/scripts/vapid-init.mjs --rotate' > /tmp/vapid.pub
+```
+
+- 기존 파일이 `vapid.private.bak.<ISO>` 로 백업된다.
+- **회전하면 기존 구독은 다음 발송에서 410 gone 을 받고 정리된다.** 사용자는 앱에서
+  다시 구독을 켜야 한다. 이 사실을 릴리스 노트에 적을 것.
+
+공개키 반영은 앱 소스(`src/lib/data/vapid.ts`) 편집 → 커밋 → 배포. 서버는 새
+비밀키만 있으면 되고 재시작이 필요하다.
+
 ## 폰에서 설치
 
 Chrome/Safari 로 위 주소를 열고 "홈 화면에 추가". 업데이트는 자동이다 —
@@ -192,6 +268,9 @@ import json,sys; print(json.load(sys.stdin)["Self"].get("KeyExpiry","만료 없�
 ## 최초 1회 설정 (root 필요)
 
 **2026-09-04 에 완료했다.** 서버를 갈아엎을 때만 다시 한다.
+**0.3.0 (푸시) 도입으로 systemd 유닛 3개 + sudoers 1개가 추가된다** — 이 항목들은
+2026-09-25 이후에 처음 배포하는 서버에서 아래 「푸시 서버 초기 세팅」 을 한 번
+돌려야 한다.
 
 > **vhost 파일을 heredoc 으로 `ssh -t` 에 흘려보내지 말 것.**
 > TTY 라인 디시플린이 문자를 먹어 파일이 조각난다. 실제로 겪었고, 증상은
@@ -230,6 +309,78 @@ sudo nginx -t && sudo systemctl reload nginx
   --key-file      /etc/nginx/ssl/bigsix/key.pem \
   --reloadcmd     "sudo systemctl reload nginx"
 ```
+
+### 푸시 서버 초기 세팅 (0.3.0 이후)
+
+**아래는 순서를 지킨다.** systemd 유닛이 뜨기 전에 vapid-init 을 돌리면 서비스가
+비밀키 없이 부팅되고, sudoers 편집이 실수로 잘못되면 sudo 자체가 막힌다.
+`visudo -c` 검증을 반드시 한다.
+
+1. **저장소 클론과 nginx 설정 갱신.** 저장소가 이미 있으면 `git pull` 로 최신.
+   nginx conf 는 위 「최초 1회 설정」 블록으로 갱신 후 `sudo systemctl reload nginx`.
+2. **Node 실행 파일 경로 확인.** unit 안의 ExecStart 는 nvm 심볼릭 링크에 의존한다.
+   서버에서 `readlink -f "$(nvm which 24)"` 로 실제 경로를 뽑는다.
+   결과가 `/home/ulismoon/.nvm/versions/node/v24.x.x/bin/node` 라면, unit 파일의
+   `.../v24/bin/node` 를 그대로 두려면 nvm 에 `v24` 심볼릭이 있어야 한다 —
+   `nvm alias v24 24` 로 만들면 minor 버전이 올라가도 unit 이 안 깨진다.
+3. **sudoers — deploy.sh 가 systemd 를 재시작할 수 있게 열어준다.** `visudo` 로
+   편집하되 아래 파일에 두 줄만. `visudo -c` 로 문법 검사 후 저장.
+
+   ```bash
+   # /etc/sudoers.d/bigsix-restart 로 저장. deploy.sh 가 재배포 끝에 두 유닛만
+   # 재시작할 수 있게 한다. 그 밖의 systemctl 은 전과 같이 비번을 요구한다.
+   sudo tee /etc/sudoers.d/bigsix-restart >/dev/null <<'EOF'
+   ulismoon ALL=(root) NOPASSWD: /usr/bin/systemctl restart bigsix-api.service
+   ulismoon ALL=(root) NOPASSWD: /usr/bin/systemctl restart bigsix-scheduler.timer
+   EOF
+   sudo chmod 440 /etc/sudoers.d/bigsix-restart
+   sudo visudo -c   # OK 안 나오면 즉시 위 파일 지우고 다시 편집. 잘못하면 sudo 못 씀.
+   ```
+
+4. **systemd 유닛 설치.** 저장소의 unit 파일을 `/etc/systemd/system/` 으로 옮긴다.
+   `enable --now` 는 부팅 자동 시작 + 지금 즉시 실행이라 한 방에 부팅 여부를 본다.
+
+   ```bash
+   sudo install -o root -g root -m 644 \
+     ~/apps/bigsix/deploy/systemd/bigsix-api.service \
+     ~/apps/bigsix/deploy/systemd/bigsix-scheduler.service \
+     ~/apps/bigsix/deploy/systemd/bigsix-scheduler.timer \
+     /etc/systemd/system/
+   sudo systemctl daemon-reload
+   ```
+
+5. **VAPID 키 발급.** systemd 유닛이 뜨기 전에 비밀키가 있어야 한다 — 없이 시작하면
+   scheduler.service 가 발송 시점에 에러로 죽는다.
+
+   ```bash
+   # server dep 을 먼저 넣어야 한다 (web-push). deploy.sh 가 자동으로 하지만
+   # 첫 세팅 순간에는 아직 안 돌았을 수 있다.
+   ( cd ~/apps/bigsix/server && npm ci --omit=dev )
+
+   node ~/apps/bigsix/server/scripts/vapid-init.mjs > /tmp/vapid.pub
+   cat /tmp/vapid.pub   # 이 공개키를 src/lib/data/vapid.ts 에 반영 (개발 머신에서)
+   ls -l ~/apps/bigsix/server/data/vapid.private   # -rw------- 여야 한다
+   ```
+
+6. **유닛 시작.**
+
+   ```bash
+   sudo systemctl enable --now bigsix-api.service
+   sudo systemctl enable --now bigsix-scheduler.timer
+   sudo systemctl status bigsix-api.service       # active (running)
+   sudo systemctl status bigsix-scheduler.timer   # active (waiting)
+   journalctl -u bigsix-api -n 20 --no-pager      # `bigsix push api on 8791` 부팅 로그
+   ```
+
+7. **바깥에서 API 응답 확인.**
+
+   ```bash
+   curl -sS -X POST https://bigsix.siot-ieung.duckdns.org/api/push/subscribe \
+       -H 'Content-Type: application/json' -d '{}' -w '\n%{http_code}\n'
+   # 400 이 정답. body 가 이상하니 서버가 거절해야 한다.
+   ```
+
+이후 배포는 `./deploy/deploy.sh <ref>` 하나로 앱 + 서버 재시작이 함께 돈다.
 
 ## 인증서가 만료됐을 때
 

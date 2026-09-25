@@ -103,5 +103,16 @@ else
 	fi
 fi
 
+# API 서버가 살아 있는지 확인. 서버는 systemd 로 별도로 도는 Node 프로세스라
+# 앱 재배포와 함께 재시작되기 때문에, 여기서 못 잡으면 오프라인이나 다름없다.
+# 잘못된 body 를 POST 로 밀어넣으면 400 이 돌아오는 게 정상. 200 이면 서버가
+# 이상한 상태고, 502/504 면 nginx 가 upstream 을 못 잡은 것 — 프로세스가 죽었다.
+echo "==> API 응답 확인"
+api_status=$(curl -sS -o /dev/null -w '%{http_code}' \
+	-X POST "$URL/api/push/subscribe" \
+	-H 'Content-Type: application/json' -d '{}')
+printf '    %-32s %s\n' "/api/push/subscribe (POST invalid)" "$api_status"
+[ "$api_status" = "400" ] || fail=1
+
 [ "$fail" = 0 ] || { echo "실패"; exit 1; }
 echo "==> 완료: $URL"
