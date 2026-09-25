@@ -11,8 +11,8 @@
  * `sw.svelte.ts` 는 이 페이즈에서 손대지 않는다 — 빌드 출력 파일명이 `sw.js` 로
  * 유지되어 `sw.svelte.ts:54` 의 `/sw.js` 하드코딩과 어긋나지 않는다 (FR-31.3).
  *
- * 이벤트 핸들러의 순수 로직 (`buildNotification`, `pickTargetClient`) 은 SW 컨텍스트
- * 없이 검증 가능한 헬퍼로 분리한다. self 접근은 파일 하단 wire-up 에서만.
+ * 이벤트 핸들러의 순수 로직은 `src/lib/pwa/push-handlers.ts` 에 분리해 SW 컨텍스트
+ * 없이 유닛 테스트로 검증한다. self 접근은 이 파일 하단 wire-up 에서만 한다.
  */
 
 /// <reference lib="webworker" />
@@ -22,6 +22,8 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
+
+import { buildNotification, pickTargetClient, type PushPayload } from '$lib/pwa/push-handlers';
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
@@ -50,30 +52,6 @@ self.addEventListener('activate', (event) => {
 // FR-38.1 · push 이벤트
 // -----------------------------------------------------------------------------
 
-/** 서버가 `payload.json()` 으로 실어 보내는 페이로드 (Phase 2 서버와 계약). */
-export interface PushPayload {
-  title: string;
-  body: string;
-  icon?: string;
-}
-
-/**
- * 순수 헬퍼 — 페이로드에서 `showNotification` 인자를 만든다.
- * icon 이 비어 있으면 앱 아이콘(`/icon-192.png`) 을 기본값으로 쓴다.
- */
-export function buildNotification(payload: PushPayload): {
-  title: string;
-  options: NotificationOptions;
-} {
-  return {
-    title: payload.title,
-    options: {
-      body: payload.body,
-      icon: payload.icon ?? '/icon-192.png',
-    },
-  };
-}
-
 self.addEventListener('push', (event) => {
   const raw = event.data?.json() as PushPayload | undefined;
   if (raw === undefined) return;
@@ -84,17 +62,6 @@ self.addEventListener('push', (event) => {
 // -----------------------------------------------------------------------------
 // FR-35 · FR-38.2 · notificationclick
 // -----------------------------------------------------------------------------
-
-/**
- * 순수 헬퍼 — 열려 있는 창 중 앱 origin 을 가진 클라이언트를 고른다.
- * 없으면 `null` 을 돌려 호출자가 새 창을 연다.
- */
-export function pickTargetClient(
-  clients: readonly WindowClient[],
-  origin: string,
-): WindowClient | null {
-  return clients.find((c) => new URL(c.url).origin === origin) ?? null;
-}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
