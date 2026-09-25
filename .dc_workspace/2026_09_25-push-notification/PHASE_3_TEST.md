@@ -68,6 +68,13 @@
 - [ ] EC-83: 휴식일(해당 요일 schedule 배열이 빔)에는 발송하지 않는다 (FR-37.2).
 - [ ] EC-85: 삭제·재설치로 endpoint 가 바뀌면 옛 endpoint 는 410 을 받아 정리되고 새 구독으로 발송이 이어진다.
 
+## endpoint 발송 대상 제한 (Phase 2 검증 인계)
+
+- [ ] 알려진 푸시 서비스 도메인(FCM · Mozilla · Apple)의 endpoint 는 통과한다.
+- [ ] 임의 도메인(`https://example.com/...`)의 endpoint 는 거절한다 — 등록 시점과 발송 시점 양쪽.
+- [ ] `http://` 스킴, `localhost`·사설 IP 를 가리키는 endpoint 는 거절한다.
+- [ ] 허용 도메인 목록 상수 자체를 검사한다 (오타·빈 목록 방지).
+
 ---
 
 ## 검증 메모

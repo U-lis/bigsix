@@ -239,3 +239,19 @@ export async function sendPush(
 ## 임시 배포
 
 이 페이즈에 포함하지 않는다.
+
+
+## Phase 2 검증에서 넘어온 항목 — endpoint 발송 대상 제한
+
+Phase 2 는 `endpoint` 를 문자열로 받아 저장만 했다. **이 페이즈에서 처음으로 그 주소에 실제로 POST 한다.**
+임의 URL 을 받아 서버가 대신 요청을 보내는 구조라 SSRF 성격의 위험이 생긴다.
+
+- 구독 등록 시점(`handlers.ts` 의 `validateSubscribeBody`)과 발송 시점 양쪽에서 `endpoint` 의 호스트를
+  **알려진 푸시 서비스 도메인으로 제한**한다. 최소한 `fcm.googleapis.com`,
+  `updates.push.services.mozilla.com`, `*.push.apple.com` 을 허용하고 나머지는 거절한다.
+- `https` 가 아닌 스킴, 사설 IP·localhost 를 가리키는 endpoint 는 거절한다.
+- 허용 목록은 상수 한 곳에 두고 그 상수 자체를 테스트한다 (새 브라우저 푸시 서비스가 생기면 여기만 고친다).
+
+근거: 서버는 `127.0.0.1` 바인딩이라 외부에서 직접 때릴 수는 없지만, nginx 가 `/api/push/` 를
+공개 경로로 프록시하므로(Phase 4) 결국 인터넷에서 도달 가능한 입력이 된다.
+

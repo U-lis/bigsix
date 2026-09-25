@@ -288,3 +288,13 @@ printf '    %-24s %s\n' "/api/push/subscribe (POST invalid)" "$api_status"
 ## 임시 배포
 
 **이 페이즈에 포함한다 (Phase 4 완료 시점).** 사용자 확인 후 `./deploy/deploy.sh feature/push-notification` 실행. 배포 후 위 완료 기준의 홈서버 검증을 수행하고 결과를 TEST 문서 검증 메모에 기록.
+
+
+## Phase 2 검증에서 넘어온 항목 — 요청 body 크기 제한
+
+서버의 `readBody` 에는 크기 제한이 없다. 공개 경로가 되는 이 페이즈에서 앞단으로 막는다.
+
+- `deploy/nginx/bigsix.conf` 의 `/api/push/` location 에 `client_max_body_size` 를 작게 건다
+  (구독 body 는 1KB 남짓이므로 `8k` 면 충분하다).
+- 제한을 넘는 요청이 413 으로 끊기는지 확인한다.
+

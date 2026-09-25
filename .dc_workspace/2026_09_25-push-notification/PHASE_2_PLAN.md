@@ -299,3 +299,33 @@ export function readProgramIds(): Set<string> {
 ## 임시 배포
 
 이 페이즈에 포함하지 않는다.
+
+---
+
+## 실측 이탈 사항 (타당성 검증 완료)
+
+커밋 24470f9 · 1709e34 · 2e0f249 구현에서 PLAN 초안과 다른 점 7건. 모두 타당.
+
+1. **`index.ts` 모듈화** — PLAN 초안은 `createServer` + `server.listen` 를 최상위에 직접 두는 스크립트였다. 실제 구현은 `buildContext()`, `createBigsixServer()`, `route()` 를 export 하고 `isEntry()` 가드로 직접 실행 여부를 판단한다. `tests/server/helpers.mjs` 의 `bootServer()` 가 이 export 를 직접 사용한다. 설계상 올바른 분리이며 테스트 편의를 위한 임시 우회가 아니다.
+
+2. **`helpers.mjs` 에서 동적 import** — `bootServer` 내부에서 `await import('../../server/src/index.ts')` 를 동적으로 로드한다. `helpers.mjs` 는 저장소 유닛 테스트(`test-subscriptions-store.mjs`)도 공유하므로, 정적 import 시 서버 모듈이 불필요하게 로드된다. 동적 import 로 로드 범위를 `bootServer` 를 실제로 호출하는 테스트로 한정한 것은 정당하다.
+
+3. **`HandlerResponse` 로 이름 변경** — PLAN 은 `Response` 타입을 쓰지만 브라우저 전역 `Response` 와 충돌하므로 `HandlerResponse` 로 명명했다. 기능 동일.
+
+4. **`route()` 를 독립 export 로 추출** — PLAN 은 `createServer` 콜백 내부에 라우팅 로직을 인라인으로 뒀다. 실제 구현은 `route()` 를 별도 export 하여 테스트에서 직접 호출할 수 있게 했다.
+
+5. **`keys` 서브 필드도 화이트리스트 검사** — PLAN 의 `validateSubscribeBody` 초안은 `keys.p256dh` / `keys.auth` 존재 여부만 확인했다. 실제 구현은 `keys` 객체에도 `Object.keys` 루프를 돌려 `p256dh`/`auth` 외 필드를 400 으로 거부한다. NFR-31 강화.
+
+6. **`saveStore` tmp 이름에 랜덤 suffix 추가** — PLAN 의 예시는 `${path}.tmp.${process.pid}.${Date.now()}` 였다. 실제 구현은 여기에 `.${Math.random().toString(36).slice(2,8)}` 를 추가한다. 동일 프로세스·동일 밀리초 충돌 방어.
+
+7. **`progressions.ts` 에 `path` 파라미터와 `_resetProgressionsCache` 추가** — PLAN 의 stub 은 `readProgramIds(): Set<string>` 하나였다. 실제 구현은 `readProgramIds(path?: string)` 로 경로 주입을 허용하고 `_resetProgressionsCache()` 로 테스트 간 캐시 초기화를 지원한다.
+
+## 완료 기준 실측 결과
+
+- `pnpm check` 0 errors 0 warnings ✓
+- `pnpm test` 805 passed (797 기준선 + Phase 1 에서 추가된 8건 = 805. 서버 추가로 감소 없음) ✓
+- `bash tests/server/run.sh` 85 통과 0 실패 (no-secrets 5 · subscribe 59 · store 21) ✓
+- `bash tests/deploy/run.sh` 통과 ✓
+- `.gitignore` 가 `server/data/subscriptions.json` · `vapid.private` 를 무시함 (`git check-ignore` 확인) ✓
+- `git ls-files server/data` → `server/data/.gitkeep` 만 ✓
+- 커밋 3개: 24470f9 · 1709e34 · 2e0f249 ✓

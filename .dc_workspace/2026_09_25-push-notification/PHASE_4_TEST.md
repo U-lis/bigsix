@@ -87,6 +87,11 @@
 - [ ] NFR-32: `vapid-init.mjs` 가 만든 비밀키가 저장소 추적 대상에 들어가지 않는다 (`git status` 확인).
 - [ ] NFR-32: 비밀키 파일 권한이 0600 이다.
 
+## 요청 body 크기 제한 (Phase 2 검증 인계)
+
+- [ ] `/api/push/` location 에 `client_max_body_size` 가 설정돼 있다.
+- [ ] 제한을 넘는 body 를 보내면 413 으로 끊긴다 (서버까지 도달하지 않는다).
+
 ---
 
 ## 검증 메모
