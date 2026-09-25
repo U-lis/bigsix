@@ -55,8 +55,11 @@ Firefox · Safari 전부 동작한다 (iOS 16.4+ 포함). 이 저장소의 **첫
 핸들러를 넣을 수 없다. `injectManifest` 모드로 전환한다.
 
 - [ ] FR-31.1: `vite.config.ts` 의 `SvelteKitPWA` 설정을 `strategies: 'injectManifest'` 로 바꾼다.
-      `workbox:` 키를 `injectManifest:` 로 교체한다. `globPatterns`, `ignoreURLParametersMatching`,
-      `navigateFallback` 세 값은 그대로 유지한다 (`vite.config.ts:50-55` 현재 값).
+      `workbox:` 키를 `injectManifest:` 로 교체한다. 요구는 **세 값의 동작을 보존하는 것**이지
+      옵션 키를 그대로 두는 것이 아니다 — `injectManifest` 의 build-time 옵션은 `globPatterns`
+      뿐이고, `ignoreURLParametersMatching` 과 `navigateFallback` 은 빌드 설정으로 받지 않는다.
+      앞의 둘은 서비스워커 코드에서 workbox API 인자로 옮겨 **같은 행위**를 내야 한다 (FR-31.2).
+      등가성은 프리캐시 전수 대조로 확인한다 (FR-31.4). 현재 값은 `vite.config.ts:50-55`.
 - [ ] FR-31.2: 커스텀 서비스워커 파일을 새로 만든다. 파일 경로는 설계에서 정한다(OQ-25).
       이 파일은 다음 두 역할을 한다.
       (a) **기존 역할 보존** — `precacheAndRoute`, `cleanupOutdatedCaches`, `navigateFallback` 을
@@ -105,9 +108,12 @@ Firefox · Safari 전부 동작한다 (iOS 16.4+ 포함). 이 저장소의 **첫
       **기존 구독을 먼저 해지한 뒤 새 구독을 등록한다** — 서버에 같은 기기의 구독이 중복되지 않도록.
       (a) **프로그램 선택** — `routes/programs/+page.svelte:27` 의 `selectProgram` 호출 후.
           `programId` 가 바뀌면 서버의 종목 계산 결과가 달라지므로 재등록이 필요하다.
-      (b) **전환 제안 승인** — `routes/+page.svelte:62` 의 `acceptProposal` 호출 후.
+      (b) **프로그램 수동 전환** — `routes/programs/+page.svelte:39` 의 `switchProgram` 호출 후.
+          이미 진행 중인 상태에서 다른 루틴으로 갈아타는 경로다. (a) 와 별개의 자리이고
+          같은 파일 안에 있으므로 빠뜨리기 쉽다.
+      (c) **전환 제안 승인** — `routes/+page.svelte:62` 의 `acceptProposal` 호출 후.
           `acceptProposal` 은 `switchProgram` 을 부르므로 `programId` 가 바뀐다.
-      (c) **알림 시각 변경** — About 모달의 시각 선택기에서 `change` 이벤트가 발생할 때 즉시 `bigsix.push` 에 저장하고 재등록을 수행한다.
+      (d) **알림 시각 변경** — About 모달의 시각 선택기에서 `change` 이벤트가 발생할 때 즉시 `bigsix.push` 에 저장하고 재등록을 수행한다.
           모달을 닫기만 하면 저장되지 않는다 (EC-84). 별도 저장 버튼은 두지 않는다.
 - [ ] FR-33.4: 재등록 실패(EC-80) 시 알림이 꺼진 상태로 되돌아가고 실패 사실을 About 모달에 표시한다.
       서버에 이미 보낸 이전 구독은 남아 있을 수 있다 — **다음 410/404 응답 때 서버가 정리한다** (FR-37.4).
@@ -223,7 +229,7 @@ Firefox · Safari 전부 동작한다 (iOS 16.4+ 포함). 이 저장소의 **첫
       운동 기록·AppState 는 기기에 남는다.
 - [ ] NFR-32: VAPID 비밀키는 저장소에 커밋하지 않는다. `.gitignore` 또는 서버 전용 파일로 관리한다.
 - [ ] NFR-33: `pnpm check` 오류·경고 0, `pnpm test` 전부 통과를 각 커밋에서 유지.
-      기준선: SPEC3 기준 657개 (이번에 추가되는 알림 관련 테스트 포함).
+      기준선: main 브랜치 `dc84f1e` 실측 **797 tests / 38 files** (이번에 추가되는 알림 관련 테스트 포함).
 - [ ] NFR-34 (도메인 순수성 유지): `src/lib/domain/**` 은 이번 작업에서 수정하지 않는다.
       알림 로직은 `src/lib/ui/` 아래 새 파일(설계에서 경로 정함)에 둔다.
 
@@ -271,7 +277,8 @@ cube-study CONVENTIONS 준용 (CLAUDE.md 「화면을 만들거나 고칠 때」
 | About 모달 | `src/lib/ui/shell/About.svelte` | FR-32 섹션 추가 위치 |
 | layout About 열기 | `src/routes/+layout.svelte:64` | 알림 설정 진입점. 별도 버튼 추가 불필요 |
 | 프로그램 선택 | `src/routes/programs/+page.svelte:27` | FR-33.3(a) 재등록 트리거 |
-| 제안 승인 | `src/routes/+page.svelte:62` | FR-33.3(b) 재등록 트리거 |
+| 프로그램 수동 전환 | `src/routes/programs/+page.svelte:39` | FR-33.3(b) 재등록 트리거 |
+| 제안 승인 | `src/routes/+page.svelte:62` | FR-33.3(c) 재등록 트리거 |
 | 프로그램 스케줄 | `src/lib/data/progressions.json:1703,1738,1782,1829,1920` | FR-34.2 서버 사본 근거 |
 | nginx 설정 | `deploy/nginx/bigsix.conf` | FR-39.2 프록시 location 추가 |
 | 배포 스크립트 | `deploy/deploy.sh`, `deploy/remote.sh` | FR-39.3~39.4 |
@@ -342,12 +349,12 @@ iOS 판정은 UA 파싱에 의존하므로 완벽하지 않다. **안전하게**
 
 | # | 질문 | 메모 | 상태 |
 |---|---|---|---|
-| OQ-20 | 서버 런타임 언어/프레임워크 | Node.js(`web-push` npm), Deno, Python(FastAPI), Go 중 선택. `web-push` 라이브러리 생태계 성숙도와 기존 서버(Node nvm 24)의 런타임 재사용을 고려하면 Node.js 가 자연스럽다. | 설계에서 결정 |
-| OQ-21 | 구독 저장 형식 | SQLite (better-sqlite3) vs JSON 파일. 구독 수가 단일 사용자(기기 1~3개) 규모면 JSON 파일로 충분하다. 스케줄러의 중복 방지 기록도 같은 저장소를 공유한다. | 설계에서 결정 |
-| OQ-22 | 스케줄러 중복 방지 구현 | `(endpoint, date)` 발송 기록을 저장소에 남기는 방법과 보존 기간(예: 7일 후 자동 삭제). systemd timer 재실행 간격(1분)에서 타임존 경계(자정 직후) 처리. | 설계에서 결정 |
-| OQ-23 | VAPID 키 배포 방법 | 비밀키는 서버 로컬 파일 또는 환경 변수. `deploy/remote.sh` 에서 최초 1회 생성 후 서버에 남기는 방식이 단순하다. 공개키는 `vite.config.ts` 에 상수로 박는다(저장소 커밋 가능). 키 교체 절차도 문서화 필요. | 설계에서 결정 |
-| OQ-24 | iOS 미설치 안내와 install.svelte.ts 연동 | `src/lib/ui/shell/install.svelte.ts` 가 이미 설치 상태를 추적한다. 알림 섹션에서 이 상태를 읽어 "홈 화면에 추가하세요" 안내에 연결할 수 있다. | 설계에서 결정 |
-| OQ-25 | 커스텀 서비스워커 파일 경로 | `src/service-worker.ts` (vite-pwa/sveltekit 기본) vs `src/sw.ts` 등. SvelteKit + vite-pwa 의 `injectManifest` 에서 권장하는 위치와 `srcDir`·`filename` 설정값. | 설계에서 결정 |
+| OQ-20 | 서버 런타임 언어/프레임워크 | Node.js(`web-push` npm), Deno, Python(FastAPI), Go 중 선택. `web-push` 라이브러리 생태계 성숙도와 기존 서버(Node nvm 24)의 런타임 재사용을 고려하면 Node.js 가 자연스럽다. | **확정 — GLOBAL ADR-29** |
+| OQ-21 | 구독 저장 형식 | SQLite (better-sqlite3) vs JSON 파일. 구독 수가 단일 사용자(기기 1~3개) 규모면 JSON 파일로 충분하다. 스케줄러의 중복 방지 기록도 같은 저장소를 공유한다. | **확정 — GLOBAL ADR-31** |
+| OQ-22 | 스케줄러 중복 방지 구현 | `(endpoint, date)` 발송 기록을 저장소에 남기는 방법과 보존 기간(예: 7일 후 자동 삭제). systemd timer 재실행 간격(1분)에서 타임존 경계(자정 직후) 처리. | **확정 — GLOBAL ADR-32** |
+| OQ-23 | VAPID 키 배포 방법 | 비밀키는 서버 로컬 파일 또는 환경 변수. `deploy/remote.sh` 에서 최초 1회 생성 후 서버에 남기는 방식이 단순하다. 공개키는 `vite.config.ts` 에 상수로 박는다(저장소 커밋 가능). 키 교체 절차도 문서화 필요. | **확정 — GLOBAL ADR-33** |
+| OQ-24 | iOS 미설치 안내와 install.svelte.ts 연동 | `src/lib/ui/shell/install.svelte.ts` 가 이미 설치 상태를 추적한다. 알림 섹션에서 이 상태를 읽어 "홈 화면에 추가하세요" 안내에 연결할 수 있다. | **확정 — GLOBAL ADR-34** |
+| OQ-25 | 커스텀 서비스워커 파일 경로 | `src/service-worker.ts` (vite-pwa/sveltekit 기본) vs `src/sw.ts` 등. SvelteKit + vite-pwa 의 `injectManifest` 에서 권장하는 위치와 `srcDir`·`filename` 설정값. | **확정 — GLOBAL ADR-35** |
 
 ---
 
