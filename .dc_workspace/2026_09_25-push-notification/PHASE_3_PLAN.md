@@ -240,6 +240,42 @@ export async function sendPush(
 
 이 페이즈에 포함하지 않는다.
 
+## Completion Checklist
+
+### 커밋 (a) — progressions 로더 확장
+- [x] `server/src/progressions.ts`: `programName`, `progressionsForDay`, `buildPayload`, `WEEKDAYS` 추가 — 확인: `progressions.ts:81,91,112,23`
+- [x] `tests/server/test-progressions.mjs` 65건 통과 (5개 프로그램 × 요일 · 휴식일 · payload · 단계번호 없음 매트릭스)
+
+### 커밋 (b) — 스케줄러 tick
+- [x] `server/src/scheduler.ts` 신규: `localizeToTz`, `pruneSentLog`, `runTick`, `readVapid`, CLI 진입점 — `scheduler.ts:70,105,128,206,243`
+- [x] `server/src/config.ts`: `vapidPublicKey`, `vapidSubject`, `vapidPrivateKeyPath` 3필드 추가 — `config.ts:18~21`
+- [x] `tests/server/test-scheduler.mjs` 60건 통과 (localizeToTz · pruning · tick 매칭·dedup·gone·auth·network·pruning-tick)
+- [x] ADR-32 자정 경계 테스트: UTC 2026-11-30T15:30Z → Seoul 2026-12-01 00:30 화 — `test-scheduler.mjs:76-85`
+- [x] dedup 키: `${endpoint}|${local.date}` (로컬 tz 날짜) — `scheduler.ts:158`
+- [x] tz 다른 두 구독 서로 간섭 없음 — `test-scheduler.mjs:256-288`
+- [x] pruning 8일 보존 (cutoff = now - 8, 경계 포함 유지) — `scheduler.ts:111`
+
+### 커밋 (c) — push 래퍼
+- [x] `server/src/push.ts` 신규: `sendPush`, `PushResult`, `Vapid` — `push.ts:38`
+- [x] `server/src/endpoint-allowlist.ts` 신규: `ALLOWED_ENDPOINT_HOSTS`, `checkEndpoint` — `endpoint-allowlist.ts:20,32`
+- [x] `tests/server/test-push-wrapper.mjs` 29건 통과
+- [x] `tests/server/test-endpoint-allowlist.mjs` 53건 통과
+
+### 커밋 (d) — 비밀키 스캐너 이름→값 기반 전환 (afa290f)
+- [x] `scanForSecrets` 값 기반: PEM 블록 + 40+자 base64url 리터럴 × secretish 라인 — `test-no-secrets.mjs:40-60`
+- [x] 자체 검증 4건 통과 (PEM · 비밀키 리터럴 · 경로 오탐 방지 · 공개키 제외)
+
+### EC 항목
+- [x] EC-78/EC-85: 410/404 → gone → `removeSubscription` 즉시 — `scheduler.ts:180-182`
+- [x] EC-83: 휴식일(`buildPayload` → null) 발송 없음 — `scheduler.ts:152-156`
+- [x] SSRF: `handlers.ts`(등록 시)·`push.ts`(발송 시) 양쪽에서 `checkEndpoint` 호출 이중 방벽
+
+### 품질 지표 (실측)
+- [x] `pnpm check`: 500 files, 0 errors, 0 warnings
+- [x] `pnpm test`: 805/805 passed (앱 tests 797 + 서버 관련 8)
+- [x] `bash tests/server/run.sh`: 315건 통과 (6 스위트)
+- [x] `bash tests/deploy/run.sh`: 5건 통과
+
 
 ## Phase 2 검증에서 넘어온 항목 — endpoint 발송 대상 제한
 
