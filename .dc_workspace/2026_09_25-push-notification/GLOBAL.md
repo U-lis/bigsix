@@ -477,7 +477,7 @@ SPEC NFR-34 준수. `src/lib/domain/**` · `src/lib/ui/state/storage.ts` (AppSta
 
 | # | 이름 | Status | 요지 | SPEC 참조 |
 |---|---|---|---|---|
-| 1 | injectManifest 전환 + 커스텀 SW | Not Started | `vite.config.ts` 를 `injectManifest` 로 · `src/pwa-sw.ts` 신규 · precache/navigate/skipWaiting/clientsClaim 이관 · push/notificationclick 핸들러. 완료 기준에 프리캐시 전수 대조 포함 | FR-31, FR-38, NFR-30, RISK-1 |
+| 1 | injectManifest 전환 + 커스텀 SW | Complete | `vite.config.ts` 를 `injectManifest` 로 · `src/pwa-sw.ts` 신규 · precache/navigate/skipWaiting/clientsClaim 이관 · push/notificationclick 핸들러. 완료 기준에 프리캐시 전수 대조 포함 | FR-31, FR-38, NFR-30, RISK-1 |
 | 2 | 서버 뼈대 + subscribe/unsubscribe API | Not Started | `server/` 신설. `node:http` 로 두 엔드포인트. `subscriptions.json` 저장소. `tests/server/` 신설 | FR-36, ADR-29~31 |
 | 3 | 스케줄러 + VAPID 발송 | Not Started | `web-push` · `Intl.DateTimeFormat` 매칭 · dedup · 만료 정리. progressions.json 로더. CLI 진입점 | FR-37, ADR-32 |
 | 4 | 배포 통합 + VAPID 부트스트랩 | Not Started | nginx location · systemd unit 3개 · `remote.sh`·`deploy.sh` 갱신 · `vapid-init.mjs` · `deploy/README.md` 갱신. `tests/deploy/` 서버-install 케이스 | FR-39, ADR-33 |

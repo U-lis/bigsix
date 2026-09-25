@@ -137,13 +137,31 @@ self.addEventListener('notificationclick', (event) => {
 
 ## 완료 기준
 
-- 커밋 a~c 전부에서 `pnpm check` 오류/경고 0.
-- `pnpm test` 통과. 테스트 수 797 → 797+N.
-- `pnpm build` 성공, `build/sw.js` 존재.
-- `build/sw.js` 를 브라우저에서 로드했을 때 (`pnpm preview`) DevTools Application → Service Workers 에 "activated" 상태로 뜨고, 콘솔에 오류 없음.
-- 프리캐시 매니페스트 목록 (`grep -oE 'url:"[^"]+"' build/sw.js`) 이 이전 `generateSW` 산출물과 동일 파일 집합 (파일 개수 · 확장자 분포 일치).
-- SW 유닛 테스트 5건 통과.
-- FR-31.3: 등록 흐름 미변경 — `sw.svelte.ts` 는 이 페이즈에서 손대지 않는다.
+- [x] 커밋 a~c 전부에서 `pnpm check` 오류/경고 0. (실측 0/0/0)
+- [x] `pnpm test` 통과. 테스트 수 797 → 805 (+8건).
+- [x] `pnpm build` 성공, `build/sw.js` 존재. (39 precache entries)
+- [ ] `build/sw.js` 를 브라우저에서 로드했을 때 (`pnpm preview`) DevTools Application → Service Workers 에 "activated" 상태로 뜨고, 콘솔에 오류 없음. **[배포 후 확인]**
+- [x] 프리캐시 매니페스트 목록: `build/sw.js` 에 39건, js/css/json/svg/png 포함. `build/` 실파일 전수 존재 확인 (precache-parity 테스트).
+- [x] SW 유닛 테스트 8건 통과 (buildNotification 2건, pickTargetClient 4건, precache-parity 2건).
+- [x] FR-31.3: 등록 흐름 미변경 — `sw.svelte.ts` 는 이 페이즈에서 손대지 않는다.
+
+## 실측 이탈 사항 (타당성 검증 완료)
+
+코더가 PLAN 초안과 다르게 구현한 4건:
+
+1. **`srcDir`/`filename` 위치**: `injectManifest:` 하위가 아닌 top-level 에 `filename: 'sw.js'` 배치.
+   `@vite-pwa/sveltekit@1.1.0` 은 `kit.files.serviceWorker` 로 지정된 파일을 SvelteKit 이 컴파일한
+   `.svelte-kit/output/client/service-worker.js` 를 `swSrc` 로 사용한다 (`injectManifest.srcDir`/`filename` 무시).
+   SW 소스 경로는 `svelte.config.js kit.files.serviceWorker: 'src/pwa-sw'` 로 지정. 빌드 39건이 실증. ✓
+
+2. **`filename: 'sw.js'` 명시**: injectManifest 기본값이 `service-worker.js` 임을 dist 코드에서 확인
+   (`filename = "service-worker"`). 명시 없으면 `sw.svelte.ts:54` 의 `/sw.js` 하드코딩 어긋남. ✓
+
+3. **`kit.serviceWorker.register: false` 추가**: SvelteKit 자동 등록 경로는 `/service-worker.js` 이다.
+   `sw.svelte.ts` 가 이미 `/sw.js` 로 수동 등록하므로 이중 등록 방지에 필요함. ✓
+
+4. **순수 헬퍼를 `src/lib/pwa/push-handlers.ts` 로 분리**: R-2 (`$lib/pwa/push-handlers`, 무확장자) 준수.
+   `lib/pwa/` 는 structure.test.ts 의 검사 대상 층 밖이므로 규약 위반 없음. 805 테스트 전부 통과. ✓
 
 ## 위험
 
