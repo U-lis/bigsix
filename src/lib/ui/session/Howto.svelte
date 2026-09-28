@@ -14,6 +14,9 @@
    * 이 컴포넌트의 `perSide` 데이터를 근거로 호출부가 알아서 처리한다.
    *
    * 마지막 줄에 출처를 한 번 밝힌다 (FR-30.6).
+   *
+   * 시범 영상은 새 탭으로 여는 링크다 — 플레이어를 박지 않는다 (`videos.ts`).
+   * 비공식 채널이므로 링크 문구에 채널 이름을 함께 적는다.
    */
 
   import type { Catalog, ProgressionId } from '$lib/domain/types';
@@ -49,9 +52,18 @@
               <li>{line}</li>
             {/each}
           </ul>
+          {#if it.video}
+            <a
+              class="video"
+              href={it.video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-howto-video={it.step}
+            >영상 보기 · YouTube {it.video.channel} (비공식)</a>
+          {/if}
         </section>
       {/each}
-      <p class="source">동작 설명은 책 원문이 아니라 자체 요약</p>
+      <p class="source">동작 설명은 책 원문이 아니라 자체 요약. 영상은 공식이 아닌 개인 채널</p>
     </div>
   </details>
 {/if}
@@ -114,6 +126,14 @@
     color: var(--fg);
   }
   .entry li { line-height: 1.55; font-size: 0.9rem; }
+  .video {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: 0.15rem;
+    color: var(--accent);
+    font-size: 0.85rem;
+  }
   .source {
     margin: 0.35rem 0 0;
     color: var(--muted);
