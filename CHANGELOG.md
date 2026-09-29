@@ -3,6 +3,15 @@
 이 파일의 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 를 따르고,
 버전 표기는 [유의적 버전](https://semver.org/lang/ko/)을 따른다.
 
+## [Unreleased]
+
+### Added
+
+- **단계별 시범 영상 링크**: 오늘 화면 「동작 설명」 안, 각 단계 설명 아래에 YouTube 시범 영상 링크가 붙는다.
+  60단계 전부. 플레이어를 박지 않고 새 탭으로 연다 (`src/lib/ui/session/videos.ts`).
+  공식 영상이 YouTube 에 없어 비공식 채널을 쓴다 — 5종은 Convicted Condition, 핸드스탠드 푸시업은 Sollapps.
+  링크 문구에 채널 이름과 「비공식」을 함께 적는다. 훅 `data-howto-video`(값: 단계 번호).
+
 ## [0.2.0] - 2026-09-25
 
 ### Added

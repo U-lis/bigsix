@@ -36,7 +36,8 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   **앱 껍데기·오늘 화면**: `data-install`, `data-wake-lock`, `data-theme-toggle`,
   `data-about-open`, `data-about-close`, `data-check-update`, `data-update-message`,
   `data-reset`, `data-info`, `data-toast`.
-  **동작 설명 (Phase 2.5)**: `data-howto`, `data-howto-toggle`, `data-howto-step`(값: 단계 번호).
+  **동작 설명 (Phase 2.5)**: `data-howto`, `data-howto-toggle`, `data-howto-step`(값: 단계 번호),
+  `data-howto-video`(값: 단계 번호, 시범 영상 외부 링크 — `ui/session/videos.ts`).
   **하단 네비**: `data-nav`, `data-nav-tab`.
   **기록 탭 (Phase 4~7)**:
   `data-history-view`(값: `'day'|'progression'`, HistoryView 루트),

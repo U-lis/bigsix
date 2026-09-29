@@ -14,6 +14,7 @@
 
 import { getStep } from '$lib/domain';
 import type { Catalog, ProgressionId, Step, Unit } from '$lib/domain/types';
+import { videoFor, type Video } from './videos';
 
 export interface Howto {
   /** 이 설명이 해당하는 단계 번호. */
@@ -27,6 +28,8 @@ export interface Howto {
   page: number;
   /** 설명 본문. `Step.summary` 를 그대로 흘려보낸다. */
   lines: string[];
+  /** 시범 영상 외부 링크 (`videos.ts`). 없으면 링크를 그리지 않는다. */
+  video: Video | undefined;
 }
 
 /**
@@ -42,15 +45,15 @@ export function howtoFor(
 ): Howto[] {
   const out: Howto[] = [];
   const primary = getStep(catalog, progressionId, performedStep);
-  pushIfNonEmpty(out, primary);
+  pushIfNonEmpty(out, progressionId, primary);
   if (primary.pairWith !== undefined) {
     const paired = getStep(catalog, progressionId, primary.pairWith);
-    pushIfNonEmpty(out, paired);
+    pushIfNonEmpty(out, progressionId, paired);
   }
   return out;
 }
 
-function pushIfNonEmpty(out: Howto[], step: Step): void {
+function pushIfNonEmpty(out: Howto[], progressionId: ProgressionId, step: Step): void {
   if (step.summary.length === 0) return; // EC-71
   out.push({
     step: step.n,
@@ -60,5 +63,6 @@ function pushIfNonEmpty(out: Howto[], step: Step): void {
     perSide: step.perSide === true,
     page: step.page,
     lines: step.summary,
+    video: videoFor(progressionId, step.n),
   });
 }

@@ -137,6 +137,9 @@ if (today.kind === 'plan' && today.proposal) {
 
 `docs/MOVEMENTS.md` 의 동작 설명은 **책 원문이 아니라 직접 작성한 요약**이다.
 
+앱의 단계별 시범 영상은 **공식 영상이 아니다.** 공식 영상은 Dragon Door 유료 DVD·VOD 뿐이라
+YouTube 의 비공식 채널(Convicted Condition · Sollapps)로 외부 링크만 건다. 목록은 `src/lib/ui/session/videos.ts`.
+
 훈련 내용 자체를 익히려면 책을 사라. 이 레포는 기준 수치와 진행 로직만 다룬다.
 
 ## 도메인 사용 예

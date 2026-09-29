@@ -12,6 +12,7 @@ import { howtoFor } from '../../src/lib/ui/session/howto.ts';
 import type { Catalog, ProgressionId } from '../../src/lib/domain/types.ts';
 import { getStep } from '../../src/lib/domain/catalog.ts';
 import { catalog } from './helpers.ts';
+import { VIDEO_IDS, videoFor } from '../../src/lib/ui/session/videos.ts';
 
 const BIG_SIX: ProgressionId[] = ['pushup', 'squat', 'pullup', 'legraise', 'bridge', 'hspu'];
 
@@ -104,5 +105,35 @@ describe('howtoFor (FR-30)', () => {
         assert.ok(items.length >= 1, `${id} ${n}단계 설명`);
       }
     }
+  });
+});
+
+describe('videoFor (시범 영상 링크)', () => {
+  it('60단계 전부에 YouTube 링크와 채널 이름이 있다', () => {
+    for (const id of BIG_SIX) {
+      for (let n = 1; n <= 10; n += 1) {
+        const v = videoFor(id, n);
+        assert.ok(v, `${id} ${n}단계 영상`);
+        assert.match(v.url, /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/);
+        assert.ok(v.channel.length > 0);
+      }
+    }
+  });
+
+  it('영상 ID 60개가 서로 겹치지 않는다 — 단계를 잘못 옮겨 적은 흔적 방지', () => {
+    const all = BIG_SIX.flatMap((id) => VIDEO_IDS[id]);
+    assert.equal(all.length, 60);
+    assert.equal(new Set(all).size, 60);
+  });
+
+  it('범위를 벗어난 단계는 undefined', () => {
+    assert.equal(videoFor('pushup', 0), undefined);
+    assert.equal(videoFor('pushup', 11), undefined);
+  });
+
+  it('howtoFor 결과에 해당 단계 영상이 실린다 — pairWith 동반 단계도 제 영상', () => {
+    const [primary, paired] = howtoFor(catalog, 'hspu', 2);
+    assert.deepEqual(primary.video, videoFor('hspu', 2));
+    assert.deepEqual(paired.video, videoFor('hspu', 1));
   });
 });
