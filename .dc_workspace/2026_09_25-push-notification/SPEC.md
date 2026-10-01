@@ -333,7 +333,7 @@ cube-study CONVENTIONS 준용 (CLAUDE.md 「화면을 만들거나 고칠 때」
 
 | # | 질문 | 메모 |
 |---|---|---|
-| OQ-20 | `$env/static/public` 을 `src/pwa-sw.ts` 에서 쓸 수 있는가 | 안 되면 vite `define` 으로 빌드 시점 상수를 심는다. 설계에서 확인 |
+| OQ-20 | `$env/static/public` 을 `src/pwa-sw.ts` 에서 쓸 수 있는가 | **해소** — `$env/static/public` 을 SW 에서 import 해 빌드 성공, 산출 sw.js 에 URL 인라인 확인 |
 | OQ-21 | `importScripts` 실패를 감싸는 방법이 브라우저 셋(Chrome · Firefox · Safari)에서 같은가 | 설계에서 실측. 안 되면 FR-32.2 의 「설치 실패 금지」 를 다른 수단으로 |
 | OQ-22 | 30분 창이 적절한가 | 길면 늦은 알림, 짧으면 재시도 기회가 준다. 일단 30분 |
 
@@ -357,8 +357,10 @@ SPEC 작성 중 읽으면서 걸린 것. 구현 중 실제로 문제가 됐는�
 |---|---|---|---|---|
 | IR-1 | 문서 위치 (0.1.0) | 연동 기준 문서가 `feature/gateway` 에만 있고 main 에는 없었다 | **해소** — 0.1.0 · 0.1.1 이 main 에 병합됨 (`82c4b24` · `39b0137`) | — |
 | IR-2 | §환경 「한 Origin 은 한 앱에만 등록된다」 | 한 앱이 Origin 을 여러 개 가질 수 있는지(5173 · 4173 동시)가 문장에서 안 읽힌다 | 미정 — 일단 5173 만 등록 (EC-86) | 「한 앱은 Origin 을 여럿 가질 수 있다 / 없다」 를 명시 |
-| IR-3 | §2 「`enable` 은 사용자 제스처(클릭) 안에서 부른다」 | 권한이 이미 `granted` 일 때 meta 갱신용 `enable(새 meta)` 를 제스처 밖에서 불러도 되는지 없다. FR-33.6 자동 동기화가 여기에 기댄다 | 미정 — 구현 때 실측 | 「권한이 이미 있으면 제스처 밖 호출 가능」 여부를 명시하거나 meta 갱신 전용 함수 제공 |
+| IR-3 | §2 「`enable` 은 사용자 제스처(클릭) 안에서 부른다」 | 권한이 이미 `granted` 일 때 meta 갱신용 `enable(새 meta)` 를 제스처 밖에서 불러도 되는지 없다. FR-33.6 자동 동기화가 여기에 기댄다 | **해소(코드)** — relay client.js 는 `Notification.permission === 'default'` 일 때만 `requestPermission` 을 부른다. 이미 `granted` 이면 제스처 밖 호출 가능. 실기기 재확인 Phase 5/7 | §2 에 「권한이 이미 `granted` 이면 제스처 밖에서 `enable` 호출 가능」 명시 |
 | IR-4 | §3 `importScripts` 한 줄 | 릴레이에 닿지 않을 때 앱 SW 설치가 실패하는지, 감싸야 하는지 언급이 없다 | 미정 — OQ-21 | 실패 시 동작과 권장 패턴(try/catch 여부) 명시 |
-| IR-5 | §6 발송 예시 `dedupKey` | 「같은 dedupKey 로 이미 보냄」 의 범위(구독별인지 앱 전체인지)와 보존 기간이 안 적혀 있다 | 미정 — 구독별 · 8일 이상으로 가정 | 범위와 보존 기간 명시 |
-| IR-6 | §5 「`/…` 상대 경로는 앱 출처 기준」 | 누가 해석하는지(릴레이 `sw.js` 가 SW 출처로 해석?) 가 없다. `icon: "/icon-192.png"` 이 여기에 기댄다 | 미정 — 구현 때 실측 | 해석 주체 명시 |
+| IR-5 | §6 발송 예시 `dedupKey` | 「같은 dedupKey 로 이미 보냄」 의 범위(구독별인지 앱 전체인지)와 보존 기간이 안 적혀 있다 | **해소(코드)** — dedup PK 는 `(subscription_id, dedup_key)` (구독별), 8일 보존 (`src/store/migrations.rs:40`, `src/store/mod.rs:161`) | §6 에 dedup 범위(구독별)와 보존 기간(8일) 명시 |
+| IR-6 | §5 「`/…` 상대 경로는 앱 출처 기준」 · §5 아이콘 URL 해석 주체 | 누가 해석하는지(릴레이 `sw.js` 가 SW 출처로 해석?) 가 없다. `icon: "/icon-192.png"` 이 여기에 기댄다. 또한 상대 경로가 어느 출처를 기준으로 해석되는지 기기 종류마다 다를 수 있다 | **우회** — cron 이 icon 을 절대 URL(`https://bigsix.siot-ieung.duckdns.org/icon-192.png`)로 보냄. 실기기 확인 Phase 7 | 해석 주체 명시; 절대 URL 권장 여부 |
 | IR-7 | §1 키 파일 경로 `~/apps/push-relay/prod/data/keys/<앱>.env` + 「systemd `EnvironmentFile=` 등」 | 예시 경로를 그대로 `EnvironmentFile=` 에 옮기면 systemd 가 `~` 를 풀지 않아 파일을 못 찾는다. 또 키 파일이 600 이라 **앱 cron 이 릴레이와 같은 사용자로 돌아야 읽힌다**는 조건이 문서에 없다 (릴레이 유닛 `deploy/systemd/push-relay@.service:10` `User=ulismoon` 에서 확인). 0.1.1 판의 「`app-key.sh` 실행 위치 · `~` 해석」 문제는 0.1.2 에서 수동 경로 인자가 사라져 해소 | FR-36.3 에서 `%h` · `User=ulismoon` 으로 우회 | `EnvironmentFile=%h/…` 예시와 「같은 사용자로 읽는다」 한 줄 |
+| IR-8 | §1 systemd `EnvironmentFile=` 예시 | 문서가 `EnvironmentFile=` 에 템플릿 유닛 `%h` · `%i` 지시자를 쓰는 예시를 제공하지 않는다. 인스턴스(`prod`/`dev`)가 릴레이 환경 디렉터리 이름과 같아 하나의 템플릿으로 양쪽을 커버할 수 있지만, 이 가능성이 문서에 없어 설계에서 직접 추론했다 | `EnvironmentFile=%h/apps/push-relay/%i/data/keys/bigsix.env` 로 우회 (ADR-39) | §1 에 `%h` · `%i` 를 쓴 `EnvironmentFile=` 예시 1줄 추가 |
+| IR-9 | §환경 「개발 포트를 고정한다」 | dev 포트 고정을 권장하지만 Vite `strictPort` 옵션을 언급하지 않는다. 설정 없이 다른 앱이 5173 을 먼저 점유하면 Vite 가 다른 포트로 자동 전환해 `origin-not-allowed` 가 발생한다 | `vite.config.ts` 에 `server: { port: 5173, strictPort: true }` 로 우회 (ADR-31, FR-32.4) | §환경에 「Vite 사용자는 `strictPort: true` 를 권장한다」 한 줄 |
