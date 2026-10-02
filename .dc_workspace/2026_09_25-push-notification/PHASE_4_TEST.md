@@ -18,8 +18,13 @@ Phase 4 3단계에서 추출한 함수를 테스트한다 — DOM 없음, 릴레
 - **동작**: `canEnable('off', true)` 가 `true` 이고 `canEnable('off', false)` 가 `false` 이다 | **계층**: 단위
 - **동작**: `canEnable('on', true)` 가 `false` 이다 | **계층**: 단위
 - **동작**: `canDisable('on')` 이 `true` 이고 `canDisable('off')` 가 `false` 이다 | **계층**: 단위
-- **동작**: `timeInputEnabled('denied')` 가 `false` 이고 `timeInputEnabled('off')` 가 `true` 이다 | **계층**: 단위
+- **동작**: `timeInputEnabled('denied')` 가 `false` 이다 | **계층**: 단위
+- **동작**: `timeInputEnabled('unsupported')` 가 `false` 이다 | **계층**: 단위
+- **동작**: `timeInputEnabled('off')` 가 `true` 이다 | **계층**: 단위
 - **동작**: `errorToLabel` 이 `PushErrorCode` 에 정의된 8종 코드 각각에 대해 비어 있지 않은 고유한 문자열을 반환한다 | **계층**: 단위
+- **동작**: `isDevRelay('https://push-dev.siot-ieung.duckdns.org')` 가 `true` 이다 | **계층**: 단위
+- **동작**: `isDevRelay('https://push.siot-ieung.duckdns.org')` 가 `false` 이다 | **계층**: 단위
+- **동작**: `isDevRelay('')` 가 `false` 이다 | **계층**: 단위
 
 ### 초기화 연동 (단위, `tests/unit/push/reset.test.ts`)
 

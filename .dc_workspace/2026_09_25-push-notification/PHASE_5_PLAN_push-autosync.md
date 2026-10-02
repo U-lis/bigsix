@@ -29,8 +29,8 @@ async function pushAutoSync(): Promise<void>
    - `tz` — `Intl.DateTimeFormat().resolvedOptions().timeZone`
    - `notifyAt` — `pushRecord.notifyAt`
 5. `meta === null` 이면 반환한다.
-6. `const newMeta = JSON.stringify(meta)`.
-7. `newMeta === pushRecord.sentMeta` 이면 반환한다(변경 없음).
+6. `const newMeta = JSON.stringify(meta)`. — `meta` 는 `test` 필드를 포함하지 않는 base meta 다 (FR-33.11 · FR-34.3).
+7. `newMeta === pushRecord.sentMeta` 이면 반환한다(변경 없음). `sentMeta` 도 `test` 없는 base meta 의 직렬화다.
 8. `await PushRelay.enable(meta)` 를 호출한다.
 9. 성공 시: `pushRecord.sentMeta = newMeta` 로 갱신하고 `writePushRecord(pushRecord)` 를 호출한다.
 10. 2~9단계 전체를 `try/catch` 로 감싸 모든 예외를 조용히 넘긴다(FR-33.6: 동기화 실패는 무음 처리).

@@ -64,11 +64,24 @@ root 권한(또는 sudo)으로 한 번 실행하는 멱등 스크립트. 수행 
 기존 배포 후 검증 블록 뒤에 다음을 추가한다.
 
 ```sh
-echo "bigsix-push@prod.timer 활성 여부 확인..."
-systemctl is-active bigsix-push@prod.timer || echo "경고: bigsix-push@prod.timer 가 활성 상태가 아닙니다"
+DEPLOY_MODE="${DEPLOY_MODE:-prod}"
+echo "bigsix-push@${DEPLOY_MODE}.timer 활성 여부 확인..."
+systemctl is-active "bigsix-push@${DEPLOY_MODE}.timer" \
+  || echo "경고: bigsix-push@${DEPLOY_MODE}.timer 가 활성 상태가 아닙니다"
 ```
 
-### 5. `deploy/README.md` 수정
+`DEPLOY_MODE` 환경변수: 기본값 `prod`. dev 릴레이를 쓰는 dev 빌드 배포 시 `DEPLOY_MODE=dev deploy/deploy.sh` 로 호출한다. 타이머 유닛이 없으면 경고만 출력하고 실패 처리하지 않는다.
+
+### 5. `vite.config.ts` — dev 릴레이 빌드 지원
+
+Vite 의 `--mode` 옵션을 이용한다.
+
+- `pnpm build` (기본) → `.env.production` → `PUBLIC_PUSH_RELAY_URL` = prod 릴레이 URL
+- `pnpm build --mode dev` → `.env.development` 가 아닌 `--mode dev` 전용 env 파일을 원하는 경우, `.env.dev` 를 새로 추가해 dev 릴레이 URL 을 지정한다. 기존 `.env.development` 를 그대로 써도 동작하면 별도 파일 불필요.
+
+구현자가 Vite mode 와 env 파일 해석 규칙을 확인 후 가장 단순한 방식을 선택한다. 선택 결과는 `deploy/README.md` 에 한 줄 기록한다.
+
+### 6. `deploy/README.md` 수정
 
 - 서버 런타임 관련 첫 문장을 「정적 파일뿐이라 서버 런타임은 없다」에서 「정적 앱 + 1분 cron 하나(`cron/push.ts`).」로 변경한다.
 - 「키 교체 절차」 절을 추가한다(FR-36.3a):
@@ -84,14 +97,22 @@ systemctl is-active bigsix-push@prod.timer || echo "경고: bigsix-push@prod.tim
 
 ## 완료 체크리스트
 
+### 운영자 선행 확인 (P-1~P-3)
+
+- [ ] P-1: push-relay 서비스가 홈서버에서 실행 중이다 (`systemctl is-active push-relay`)
+- [ ] P-2: `bigsix.env` 키 파일이 `%h/apps/push-relay/{instance}/data/keys/bigsix.env` 에 있고 600 권한이다
+- [ ] P-3: `pnpm build`(또는 `pnpm build --mode dev`)가 오류 없이 완료된다
+
+### 구현 항목
+
 - [ ] `deploy/systemd/bigsix-push@.service` 생성
 - [ ] `deploy/systemd/bigsix-push@.timer` 생성
 - [ ] `deploy/push-install.sh` 생성 (`chmod +x`)
-- [ ] `deploy/deploy.sh` 에 `bigsix-push@prod.timer` 활성 검증 추가
-- [ ] `deploy/README.md` 수정 — 런타임 설명, 키 교체 절차
+- [ ] `deploy/deploy.sh` 에 `DEPLOY_MODE` 기반 타이머 활성 검증 추가
+- [ ] `deploy/README.md` 수정 — 런타임 설명, 키 교체 절차, dev 빌드 방법 한 줄
 - [ ] NFR-32 테스트 통과 (PHASE_7_TEST.md 참조)
 - [ ] `pnpm test` 통과
-- [ ] 수동 end-to-end (dev): 켜기 → 가까운 시각 → cron 수동 실행 → 기기에 알림 확인 → 탭 시 `/` 열림
+- [ ] 수동 end-to-end (dev): 켜기 → 가까운 시각 → cron 수동 실행(`--instance dev`) → 기기에 알림 확인 → 탭 시 `/` 열림
 - [ ] IR-3 · IR-6 실기기 결론으로 갱신
 
 ## 참고

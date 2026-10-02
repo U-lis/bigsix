@@ -31,11 +31,13 @@
 - `/settings` 페이지 — 알림 켜기/끄기 및 시각 설정
 - 홈서버 cron 작업(`cron/push.ts`) — 알림 발송
 - systemd 템플릿 유닛 `bigsix-push@.service` / `@.timer`
+- dev 빌드 전용 테스트 발송 버튼(`지금 푸시 보내기`, `data-push-test`) — dev 릴레이 빌드에서만 표시
 
 **변경**
 - 상단 바: `/settings` 로 이동하는 「설정」 링크 추가
 - `deploy/README.md`: 런타임 설명(정적 앱 + 1분 cron)과 키 교체 절차 추가
 - `vite.config.ts`: 개발 서버 포트 5173 고정(`strictPort: true`)
+- `deploy/deploy.sh`: `DEPLOY_MODE=dev` 로 dev 타이머 인스턴스를 지정해 배포 가능
 
 ### 3. `CLAUDE.md` 갱신
 
@@ -48,7 +50,8 @@
 `data-settings-open`(상단 바 설정 링크),
 `data-push-state`(값: `'loading|unsupported|denied|off|on'`),
 `data-push-enable`, `data-push-disable`, `data-push-time`,
-`data-push-error`(값: 오류 code), `data-push-need-program`.
+`data-push-error`(값: 오류 code), `data-push-need-program`,
+`data-push-test`(dev 빌드 전용 테스트 발송 버튼).
 ```
 
 **b) `src/lib/ui/` 하위 폴더 목록** — 「코드」 절의 폴더 목록 문장에 `push` (알림 켜기·끄기·자동 동기화)를 추가한다.

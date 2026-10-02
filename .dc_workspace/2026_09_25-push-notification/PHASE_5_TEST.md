@@ -13,7 +13,8 @@
 `loadRelay`, `PushRelay.state`, `PushRelay.enable`, `buildMeta`, `writePushRecord` 를 목(mock)으로 교체한다.
 
 - **동작**: `state() === 'on'` 이고 직렬화된 meta 가 `sentMeta` 와 다르면 `PushRelay.enable` 을 정확히 1회 호출하고 storage 의 `sentMeta` 를 갱신한다 | **계층**: 단위
-- **동작**: `state() === 'on'` 이고 직렬화된 meta 가 `sentMeta` 와 같으면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위
+- **동작**: `state() === 'on'` 이고 직렬화된 meta(base, `test` 제외)가 `sentMeta` 와 같으면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위
+- **동작**: 직전 테스트 발송으로 `sentMeta` 는 바뀌지 않았고 base meta 는 동일한 상태에서 `pushAutoSync` 를 호출하면 `enable` 을 호출하지 않는다 (test 필드가 비교에서 제외됨) | **계층**: 단위
 - **동작**: `state()` 가 `'off'` · `'denied'` · `'unsupported'` 이면 `PushRelay.enable` 을 호출하지 않는다 (`it.each` 하나로 처리) | **계층**: 단위
 - **동작**: `buildMeta` 가 null 을 반환하면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위
 - **동작**: `PushRelay.enable` 이 throw 해도 `pushAutoSync` 밖으로 예외가 전파되지 않는다 | **계층**: 단위

@@ -49,6 +49,7 @@ interface ValidMeta {
   notifyAt: string;   // "HH:MM"
   program: string;
   days: Record<string, string[]>;
+  test?: string;      // 선택 필드. ISO 초 단위 UTC ("2026-10-03T10:05:00Z"). dev 인스턴스만 읽는다
 }
 ```
 
@@ -60,6 +61,7 @@ interface ValidMeta {
   2. 현지 시각이 `[notifyAt, notifyAt + 30분)` 안에 있다.
   3. 창이 현지 자정을 넘지 않는다 — SPEC EC-80 참조.
 - `filterSubscriptions(items: SubscriptionItem[], nowUtc: Date): DecideResult[]` — 각 항목에 `validateMeta` · `shouldSend` 를 적용한다. 검증 실패 항목은 건너뛴다(진입점이 로그에 남김). 보낼 것들만 반환한다.
+- `shouldTestSend(meta: ValidMeta, nowUtc: Date): boolean` — 두 조건이 모두 참일 때 true 를 반환한다: (1) `meta.test` 가 유효한 ISO 문자열이다(`new Date(meta.test).toString() !== 'Invalid Date'`), (2) `nowUtc - new Date(meta.test) <= 10분`. dev 인스턴스 전용 — prod 는 호출하지 않는다.
 
 ### 3. `cron/message.ts` 생성
 
@@ -81,13 +83,18 @@ interface CronMessage {
 
 다음을 export 한다.
 
-- `buildMessage(result: DecideResult, appBaseUrl: string): CronMessage` — 메시지를 조립한다.
-  - `title`: `'빅6'`
+- `buildMessage(result: DecideResult, appBaseUrl: string, nowUtc: Date): CronMessage` — 정규 알림 메시지를 조립한다.
+  - `title`: `'BigSix'`
   - `body`: `'${meta.program} · ${days[weekday].join(', ')}'` (오늘 현지 요일 키 사용)
   - `url`: `'/'`
   - `tag`: `'bigsix-workday'`
   - `icon`: `${appBaseUrl}/icon-192.png` (절대 URL — IR-6 의 상대 경로 출처 모호성 우회, Phase 7 실기기 확인)
   - `dedupKey`: `meta.tz` 기준 오늘 날짜 `YYYY-MM-DD`
+- `buildTestMessage(result: DecideResult, appBaseUrl: string, nowUtc: Date): CronMessage` — 테스트 알림 메시지를 조립한다. dev 인스턴스 전용.
+  - `title`: `'BigSix'`
+  - `body`: `'테스트 · HH:MM · ${regularBody}'`. `HH:MM` 은 `meta.test` 를 `meta.tz` 현지 시각으로 변환한 `HH:MM` 값 (`Intl.DateTimeFormat` 사용, SPEC FR-35.8). `regularBody` 는 현지 요일이 `meta.days` 에 있으면 `buildMessage` 의 body 와 같고, 없으면(휴식일) `'${meta.program} · 오늘 휴식일'` 을 쓴다.
+  - `url`, `tag`, `icon`: `buildMessage` 와 같음
+  - `dedupKey`: `'test-' + YYYYMMDDHHMMSS` — `meta.test` 의 UTC 시각을 `YYYYMMDDHHmmss` 형식으로 변환 (초 단위). 같은 초에 누른 경우 1건만 발송된다.
 - `buildRequestId(nowUtc: Date): string` — `bigsix-<UTC YYYY-MM-DDTHH:MM>-<crypto.randomBytes(2).toString('hex')>` 를 반환한다.
 - `estimatedMessageBytes(msg: CronMessage): number` — `JSON.stringify(msg).length` (3072 바이트 상한 확인용).
 
@@ -95,18 +102,22 @@ interface CronMessage {
 
 진입점 — I/O 와 흐름 제어만 담당한다.
 
+CLI 인자: `--instance <prod|dev>`. 없거나 인식 불가 시 `'prod'` 로 취급한다.
+
 단계:
 
-1. `const { relayApi, relayKey } = readEnv()`.
-2. `const nowUtc = new Date()`.
-3. `const requestId = buildRequestId(nowUtc)`. stdout 에 기록한다.
-4. `next` 가 null 이 될 때까지 `GET ${relayApi}/v1/subscriptions` 를 `?after=<next>` 로 이어 받아 모든 항목을 수집한다. 헤더: `Authorization: Bearer ${relayKey}`.
-5. `validateMeta` 가 null 을 반환한 항목마다 건너뜀 사유를 stdout 에 기록한다.
-6. `const toSend = filterSubscriptions(items, nowUtc)`.
-7. `toSend` 가 0건이면 send 를 호출하지 않고 종료한다.
-8. `messages = toSend.map(r => buildMessage(r, APP_BASE_URL))`. `APP_BASE_URL` = `'https://bigsix.siot-ieung.duckdns.org'` (홈서버 운영 인스턴스용 상수).
-9. `POST ${relayApi}/v1/send` 에 `{ requestId, messages }` 를 전송한다.
-10. `status !== 'sent'` 인 결과를 모두 stdout 에 기록한다.
+1. `const instance = parseInstance(process.argv)`. (`'prod' | 'dev'` 를 반환하는 순수 함수)
+2. `const { relayApi, relayKey } = readEnv()`.
+3. `const nowUtc = new Date()`.
+4. `const requestId = buildRequestId(nowUtc)`. stdout 에 기록한다.
+5. `next` 가 null 이 될 때까지 `GET ${relayApi}/v1/subscriptions` 를 `?after=<next>` 로 이어 받아 모든 항목을 수집한다. 헤더: `Authorization: Bearer ${relayKey}`.
+6. `validateMeta` 가 null 을 반환한 항목마다 건너뜀 사유를 stdout 에 기록한다.
+7. **정규 발송**: `const toSend = filterSubscriptions(items, nowUtc)`. `toSend` 가 0건이면 정규 send 를 건너뛴다.
+8. 정규 메시지 발송: `messages = toSend.map(r => buildMessage(r, APP_BASE_URL, nowUtc))`. `APP_BASE_URL` = `'https://bigsix.siot-ieung.duckdns.org'` (운영 인스턴스용 상수).
+9. **테스트 발송 (dev 전용)**: `instance === 'dev'` 일 때, 수집된 모든 항목 중 `shouldTestSend(meta, nowUtc)` 가 true 인 것들에 대해 `buildTestMessage(r, APP_BASE_URL, nowUtc)` 로 메시지를 조립해 `messages` 에 추가한다. `instance === 'prod'` 이면 이 단계를 건너뛴다(`meta.test` 를 읽지 않는다).
+10. `messages` 가 0건이면 send 를 호출하지 않고 종료한다.
+11. `POST ${relayApi}/v1/send` 에 `{ requestId, messages }` 를 전송한다.
+12. `status !== 'sent'` 인 결과를 모두 stdout 에 기록한다.
 
 Node 24 네이티브 TS 실행: `node --experimental-strip-types cron/push.ts` 로 실행한다. 해당 Node 버전에서 플래그가 필요 없으면 생략하고 이 페이즈에서 확인 결과를 문서화한다.
 
@@ -114,10 +125,11 @@ Node 24 네이티브 TS 실행: `node --experimental-strip-types cron/push.ts` �
 
 ## 완료 체크리스트
 
-- [ ] `cron/env.ts` 생성
-- [ ] `cron/decide.ts` 생성 — `validateMeta`, `shouldSend`, `filterSubscriptions`
-- [ ] `cron/message.ts` 생성 — `buildMessage`, `buildRequestId`, `estimatedMessageBytes`
-- [ ] `cron/push.ts` 생성 — 페이지네이션, 0건 시 send 미호출
+- [ ] `cron/env.ts` 생성 — 변수 누락 시 설명 있는 오류 throw
+- [ ] `cron/decide.ts` 생성 — `validateMeta`, `shouldSend`, `filterSubscriptions`, `shouldTestSend`
+- [ ] `cron/message.ts` 생성 — `buildMessage`, `buildTestMessage`, `buildRequestId`, `estimatedMessageBytes`
+- [ ] `cron/push.ts` 생성 — `--instance` 파싱, 페이지네이션, 정규+테스트 발송, 0건 시 send 미호출
+- [ ] prod 인스턴스가 `meta.test` 를 읽지 않음을 확인
 - [ ] Node 24 TS 실행 플래그 확인·문서화
 - [ ] `pnpm test` 통과
 

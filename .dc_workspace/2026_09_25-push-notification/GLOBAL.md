@@ -70,7 +70,7 @@ try { importScripts(PUBLIC_PUSH_RELAY_URL + '/sw.js') } catch {}
 ```ts
 queueMicrotask(() => pushAutoSync())
 ```
-`pushAutoSync` (`src/lib/ui/push/autoSync.ts`)는 `bigsix.push.sentMeta` 가 null 이면 바로 반환한다 — 한 번도 켠 적 없는 사용자는 릴레이 클라이언트를 로드하지 않는다. 실행 조건: `state() === 'on'` 이고 `buildMeta(...)` 가 non-null 이며 직렬화가 `sentMeta` 와 다를 때 `enable(새 meta)` 호출. 모든 예외는 조용히 넘긴다. 근거: relay `client.js` 는 `Notification.permission === 'default'` 일 때만 `requestPermission` 을 부르므로, 이미 `granted` 이면 제스처 밖 `enable` 호출이 안전하다.
+`pushAutoSync` (`src/lib/ui/push/autoSync.ts`)는 `bigsix.push.sentMeta` 가 null 이면 바로 반환한다 — 한 번도 켠 적 없는 사용자는 릴레이 클라이언트를 로드하지 않는다. 실행 조건: `state() === 'on'` 이고 `buildMeta(...)` 가 non-null 이며 직렬화가 `sentMeta` 와 다를 때 `enable(새 meta)` 호출. 직렬화는 `test` 를 뺀 meta 기준 (FR-33.11). 모든 예외는 조용히 넘긴다. 근거: relay `client.js` 는 `Notification.permission === 'default'` 일 때만 `requestPermission` 을 부르므로, 이미 `granted` 이면 제스처 밖 `enable` 호출이 안전하다.
 
 ### ADR-36: 전체 초기화 연동
 
@@ -83,6 +83,7 @@ queueMicrotask(() => pushAutoSync())
 ### ADR-38: `dedupKey` 와 `requestId`
 
 - `dedupKey` = 구독의 현지 날짜 `YYYY-MM-DD` (릴레이 dedup PK 는 `(subscription_id, dedup_key)`, 8일 보존 — push-relay `src/store/migrations.rs:40`, `src/store/mod.rs:161`)
+- 테스트 발송: `dedupKey = 'test-YYYYMMDDHHMMSS'` (UTC, `meta.test` 기준, FR-35.8)
 - `requestId` = `bigsix-<UTC YYYY-MM-DDTHH:MM>-<4자리 이상 hex>` — 발송 전에 로그에 남긴다
 
 ### ADR-39: systemd 템플릿 유닛 (`deploy/systemd/`)
@@ -134,13 +135,13 @@ localStorage 키: `bigsix.push` 에 `PushRecord` 를 저장한다.
 interface CronMessage {
   to: string;           // 구독 id
   notification: {
-    title: string;
+    title: string;      // 항상 "BigSix"
     body: string;
     url: string;
     tag: string;
     icon: string;       // 절대 URL (IR-6 참조)
   };
-  dedupKey: string;     // 구독 현지 타임존 기준 "YYYY-MM-DD"
+  dedupKey: string;     // 정규: 구독 현지 타임존 기준 "YYYY-MM-DD" / 테스트: "test-YYYYMMDDHHMMSS"
 }
 ```
 

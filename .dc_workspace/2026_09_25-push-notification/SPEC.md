@@ -51,6 +51,7 @@ bigsix 는 「언제 · 무엇을」 만 정한다.
 | H-6 | 알림 받을 시각 | 하나. 분 단위. 기본값 `19:00` |
 | H-7 | 릴레이 | push-relay 게이트웨이. 개발 빌드는 dev(`push-dev.`), 운영 빌드는 prod(`push.`) |
 | H-8 | 연동 문서 피드백 | 작업 중 `integration.md` 의 오류 · 부정확 · 애매한 표현 때문에 생긴 문제를 기록해 최종 보고에 별도 절로 낸다 (FR-38) |
+| H-9 | 테스트 발송 | `/settings` 알림 섹션에 「지금 푸시 보내기」 버튼을 둔다. dev 릴레이 빌드에서만 표시·동작한다 (`PUBLIC_PUSH_RELAY_URL` 이 dev 주소일 때). 알림이 `on` 일 때만 활성. cron dev 인스턴스는 `meta.test` 가 10분 이내 과거이면 요일·시각 무관하게 테스트 알림 1건을 보낸다 (FR-33.11 · FR-35.8) |
 
 ---
 
@@ -120,6 +121,7 @@ bigsix 는 「언제 · 무엇을」 만 정한다.
 - [ ] FR-33.9: 로컬 저장은 별도 키 `bigsix.push` = `{ notifyAt, sentMeta }`. `bigsix.state` 에 넣지 않는다.
       켜짐 여부의 정본은 `PushRelay.state()` 다 — 로컬에는 시각과 마지막으로 보낸 meta 만 둔다.
 - [ ] FR-33.10: 전체 초기화(`ui/state/reset.ts`) 는 알림이 켜져 있으면 `disable()` 하고 `bigsix.push` 를 지운다.
+- [ ] FR-33.11: **테스트 발송 버튼** — `PUBLIC_PUSH_RELAY_URL` 이 dev 주소(`https://push-dev.siot-ieung.duckdns.org`)일 때만 렌더링한다. 판정은 순수 함수로 뺀다. 알림이 `on` 일 때만 활성. 클릭 시 현재 meta 에 `test: "<UTC ISO 초 단위>"` 를 추가해 `enable(meta)` 를 재호출한다. `sentMeta` 비교(FR-34.3)에서는 `test` 필드를 뺀 meta 를 직렬화해 비교 — 자동 동기화가 test 발송 때문에 불필요하게 트리거되지 않는다.
 
 ### FR-34: meta (앱 → 릴레이 → cron)
 
@@ -137,6 +139,7 @@ meta 는 릴레이가 해석하지 않고 cron 이 구독 목록으로 돌려받
         "days": { "월": ["푸시업", "레그 레이즈"], "수": ["풀업", "스쿼트"], "금": ["핸드스탠드 푸시업", "브리지"] }
       }
       ```
+      선택 필드: `"test": "<UTC ISO 초 단위>"` — 테스트 발송 버튼(FR-33.11)이 붙이는 타임스탬프. cron 이 dev 인스턴스일 때만 읽는다. prod cron 은 무시한다. `test` 포함 meta 도 1024 바이트 상한 안에 들어온다(~30 B 추가).
       - `days` 키는 도메인 `Weekday` 값(`월`~`일`). 종목이 없는 요일은 키를 넣지 않는다
       - 종목 목록은 도메인 `planDay(state, catalog, programId, weekday).exercises` 를 그대로 쓴다 —
         잠긴 종목과 빅6 밖 라벨(악력 · 종아리 · 목)은 빠진다. 문자열은 가공하지 않는다 (NFR-2)
@@ -144,7 +147,7 @@ meta 는 릴레이가 해석하지 않고 cron 이 구독 목록으로 돌려받
 - [ ] FR-34.2: meta 를 만드는 순수 함수를 `src/lib/ui/push/` 에 둔다. 입력은 AppState · catalog · tz ·
       notifyAt, 출력은 meta 객체. 유닛 테스트로 다섯 프로그램 모두 1024 바이트 안인지 확인한다
       (요일표 라벨 그대로 둔 실측 최대 408 바이트 — 독방 감금).
-- [ ] FR-34.3: 「달라졌다」 판정(FR-33.6)은 직렬화 문자열 비교로 한다.
+- [ ] FR-34.3: 「달라졌다」 판정(FR-33.6)은 직렬화 문자열 비교로 한다. 단, `test` 필드는 비교에서 제외한다 (FR-33.11).
 
 ### FR-35: 홈서버 발송 cron
 
@@ -162,11 +165,12 @@ meta 는 릴레이가 해석하지 않고 cron 이 구독 목록으로 돌려받
       ```json
       {
         "to": "<구독 id>",
-        "notification": { "title": "빅6", "body": "모범수 · 푸시업, 레그 레이즈", "url": "/", "tag": "bigsix-workday", "icon": "/icon-192.png" },
+        "notification": { "title": "BigSix", "body": "모범수 · 푸시업, 레그 레이즈", "url": "/", "tag": "bigsix-workday", "icon": "<절대 URL>/icon-192.png" },
         "dedupKey": "<현지 날짜 YYYY-MM-DD>"
       }
       ```
       `dedupKey` 가 현지 날짜이므로 창 안에서 매 분 다시 보내도 하루 한 번만 간다 (`suppressed`).
+- [ ] FR-35.8: **dev 테스트 발송** — `--instance dev` 로 실행된 cron 에서만 동작. `meta.test` 가 있고 현재 UTC 기준 10분 이내 과거이면 요일·`notifyAt` 판정을 건너뛰고 테스트 알림을 1건 발송한다. `dedupKey = "test-" + YYYYMMDDHHMMSS` (UTC, `meta.test` 값에서). 정규 발송과 같은 실행에서 같은 구독에 둘 다 해당하면 둘 다 보낸다 (dedupKey 가 다르다). 테스트 알림 본문: `body` = `「테스트 · <현지 시각 HH:MM> · <정규 본문>」`. 오늘이 휴식일(현지 요일이 `meta.days` 에 없음)이면 정규 본문 자리에 `<program> · 오늘 휴식일` 을 쓴다. prod cron 은 `test` 필드를 무시한다.
 - [ ] FR-35.4: 결과 처리 (연동 문서 §7)
       - `requestId` 는 보내기 전에 만들어 로그에 남긴다 (`bigsix-<UTC 분>-<난수>`)
       - `sent` 가 아닌 결과는 전부 로그에 남긴다 (stdout → journald)
@@ -260,7 +264,7 @@ cube-study CONVENTIONS 준용 (CLAUDE.md 「화면을 만들거나 고칠 때」
       알림이 꺼져 있어도 시각 입력은 쓸 수 있다 (FR-33.5).
 - [ ] UI-16: `data-*` 훅 — `data-settings-open`(상단 바), `data-push-state`(값: `loading|unsupported|denied|off|on`),
       `data-push-enable`, `data-push-disable`, `data-push-time`, `data-push-error`(값: 오류 code),
-      `data-push-need-program`. CLAUDE.md 훅 목록에 더한다.
+      `data-push-need-program`, `data-push-test`(테스트 발송 버튼, dev 빌드에서만). CLAUDE.md 훅 목록에 더한다.
 
 ---
 
@@ -277,7 +281,7 @@ cube-study CONVENTIONS 준용 (CLAUDE.md 「화면을 만들거나 고칠 때」
 | 현재 구간 | `src/lib/domain/program.ts:156` `currentStint` | meta.program |
 | 프로그램 스케줄 | `src/lib/data/progressions.json:1703,1738,1782,1829,1920` | 다섯 프로그램 요일표. 일요일은 전부 비어 있다 |
 | 전체 초기화 | `src/lib/ui/state/reset.ts` | FR-33.10 |
-| 배포 | `deploy/deploy.sh:19` (`REPO=~/apps/bigsix`) · `deploy/remote.sh` | FR-36 |
+| 배포 | `deploy/deploy.sh:19` (`REPO="${DEPLOY_REPO:-$HOME/apps/bigsix}"`) · `deploy/remote.sh` | FR-36 |
 | deploy README | `deploy/README.md:3` | FR-36.6 |
 
 ### 프로그램별 meta 크기 (요일표 라벨 그대로, tz `America/Argentina/Buenos_Aires` 로 둔 실측)
@@ -356,7 +360,7 @@ SPEC 작성 중 읽으면서 걸린 것. 구현 중 실제로 문제가 됐는�
 | # | 위치 | 무엇 | 영향 · 우회 | 수정 제안 |
 |---|---|---|---|---|
 | IR-1 | 문서 위치 (0.1.0) | 연동 기준 문서가 `feature/gateway` 에만 있고 main 에는 없었다 | **해소** — 0.1.0 · 0.1.1 이 main 에 병합됨 (`82c4b24` · `39b0137`) | — |
-| IR-2 | §환경 「한 Origin 은 한 앱에만 등록된다」 | 한 앱이 Origin 을 여러 개 가질 수 있는지(5173 · 4173 동시)가 문장에서 안 읽힌다 | 미정 — 일단 5173 만 등록 (EC-86) | 「한 앱은 Origin 을 여럿 가질 수 있다 / 없다」 를 명시 |
+| IR-2 | §환경 「한 Origin 은 한 앱에만 등록된다」 | 한 앱이 Origin 을 여러 개 가질 수 있는지(5173 · 4173 동시)가 문장에서 안 읽힌다. 또한 「한 Origin 은 한 앱에만」 이 환경(prod·dev) 안의 규칙인지 환경을 가로지르는 규칙인지 문서에 없다. 릴레이 env 파일에서 prod·dev 데이터 디렉터리가 분리되어 있어(`deploy/env/dev.env:7` · `prod.env:11`) 환경별 독립 규칙으로 추정 — 같은 https Origin(`https://bigsix.siot-ieung.duckdns.org`)을 dev 환경에도 등록해 dev 릴레이 빌드 임시배포본 시험에 사용한다 | 미정 — 5173 만 등록 후 임시배포 단계에서 추가 (EC-86, B.3) | 「한 앱은 Origin 을 여럿 가질 수 있다 / 없다」 와 「환경 독립 여부」 를 명시 |
 | IR-3 | §2 「`enable` 은 사용자 제스처(클릭) 안에서 부른다」 | 권한이 이미 `granted` 일 때 meta 갱신용 `enable(새 meta)` 를 제스처 밖에서 불러도 되는지 없다. FR-33.6 자동 동기화가 여기에 기댄다 | **해소(코드)** — relay client.js 는 `Notification.permission === 'default'` 일 때만 `requestPermission` 을 부른다. 이미 `granted` 이면 제스처 밖 호출 가능. 실기기 재확인 Phase 5/7 | §2 에 「권한이 이미 `granted` 이면 제스처 밖에서 `enable` 호출 가능」 명시 |
 | IR-4 | §3 `importScripts` 한 줄 | 릴레이에 닿지 않을 때 앱 SW 설치가 실패하는지, 감싸야 하는지 언급이 없다 | 미정 — OQ-21 | 실패 시 동작과 권장 패턴(try/catch 여부) 명시 |
 | IR-5 | §6 발송 예시 `dedupKey` | 「같은 dedupKey 로 이미 보냄」 의 범위(구독별인지 앱 전체인지)와 보존 기간이 안 적혀 있다 | **해소(코드)** — dedup PK 는 `(subscription_id, dedup_key)` (구독별), 8일 보존 (`src/store/migrations.rs:40`, `src/store/mod.rs:161`) | §6 에 dedup 범위(구독별)와 보존 기간(8일) 명시 |

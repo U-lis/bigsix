@@ -38,6 +38,7 @@ export const prerender = true;
 - `canEnable(state: PushState, hasProgramSelected: boolean): boolean` — `state === 'off'` 이고 `hasProgramSelected` 가 true 일 때만 true.
 - `canDisable(state: PushState): boolean` — `state === 'on'` 일 때 true.
 - `timeInputEnabled(state: PushState): boolean` — `unsupported` · `denied` 를 제외한 모든 상태에서 true (FR-33.5: 알림이 꺼져 있어도 시각 입력은 쓸 수 있다).
+- `isDevRelay(relayUrl: string): boolean` — `relayUrl` 이 `https://push-dev.siot-ieung.duckdns.org` 와 정확히 같으면 true. 테스트 발송 버튼 표시 여부 판정(FR-33.11). 인자는 `PUBLIC_PUSH_RELAY_URL` 을 직접 넘긴다.
 
 ### 4. `src/routes/settings/+page.svelte` 생성
 
@@ -54,7 +55,7 @@ CLAUDE.md 제약:
 - 섹션 제목: `알림`.
 - 알림 섹션 루트에 `data-push-state` 속성(현재 `PushState` 값). 릴레이 스크립트 로드 중에는 `확인 중` 를 표시한다.
 - 켜기 버튼: 라벨 `알림 켜기`, `data-push-enable`, `!canEnable(...)` 이면 disabled. 비활성 시 투명도 + 커서 + `disabled` 속성(UI-15).
-- 끄기 버튼: 라벨 `알림 끄기`, `data-push-disable`, `state === 'on'` 일 때만 표시.
+- 끄기 버튼: 라벨 `알림 끄기`, `data-push-disable`, `state !== 'on'` 일 때 CSS 로 숨긴다 — `{#if}` 로 DOM 에서 빼지 않는다 (CLAUDE.md 접기 규약, 하이드레이션·포커스 보호).
 - 시각 입력: `<input type="time">`, `data-push-time`, `step="60"` (분 단위, FR-33.5). `timeInputEnabled(state)` 에 따라 활성화.
 - 오류 표시: `data-push-error` 속성에 오류 코드 값.
 - 프로그램 미선택 안내: `data-push-need-program`, 프로그램 미선택 시 표시.
@@ -65,7 +66,9 @@ CLAUDE.md 제약:
 
 시각 입력 `change` 이벤트: 새 값을 `pushRecord.notifyAt` 에 쓰고 `writePushRecord` 로 저장. `state === 'on'` 이면 `await PushRelay.enable(newMeta)` 도 호출(FR-33.5).
 
-`enable` 성공 후: `pushRecord.sentMeta = JSON.stringify(meta)` 로 갱신하고 저장한다.
+`enable` 성공 후: `pushRecord.sentMeta = JSON.stringify(baseMeta)` 로 갱신하고 저장한다. 여기서 `baseMeta` 는 `test` 필드를 포함하지 않은 meta 다 — 자동 동기화(FR-34.3)가 `test` 때문에 불필요하게 트리거되지 않는다.
+
+테스트 발송 버튼: `isDevRelay(PUBLIC_PUSH_RELAY_URL)` 가 true 이고 `state === 'on'` 일 때만 CSS 로 보인다 — `{#if}` 로 DOM 에서 빼지 않는다 (CLAUDE.md 접기 규약). 라벨 `지금 푸시 보내기`, `data-push-test`. 클릭 시 base meta 에 `test: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')` (초 단위 UTC ISO)를 추가한 meta 로 `await PushRelay.enable(testMeta)` 를 호출한다. 이 enable 호출 후 `sentMeta` 는 갱신하지 않는다.
 
 `catalog` 는 `$lib/data/catalog` `loadCatalog()` 로 로드한다. `tz` 는 `Intl.DateTimeFormat().resolvedOptions().timeZone` 으로 읽는다.
 
@@ -94,8 +97,9 @@ performReset();
 
 - [ ] `src/routes/settings/+page.ts` — `prerender = true`
 - [ ] `src/lib/ui/push/relay.ts` — `loadRelay()` · `teardownPush()` 구현
-- [ ] 화면 로직 순수 함수 추출·export
-- [ ] `src/routes/settings/+page.svelte` — 모든 `data-*` 속성 포함
+- [ ] 화면 로직 순수 함수 추출·export (`isDevRelay` 포함)
+- [ ] `src/routes/settings/+page.svelte` — 모든 `data-*` 속성 포함 (`data-push-test` 포함)
+- [ ] 켜기/끄기/테스트 버튼 show/hide 를 CSS 로 처리 — `{#if}` DOM 제거 없음
 - [ ] 상단 바 「설정」 링크 추가 (`data-settings-open`)
 - [ ] `reset.ts` 에 `bigsix.push` 삭제 추가
 - [ ] `About.svelte` 에 `teardownPush()` 선행 호출 추가
