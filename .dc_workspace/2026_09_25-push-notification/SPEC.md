@@ -195,10 +195,12 @@ meta 는 릴레이가 해석하지 않고 cron 이 구독 목록으로 돌려받
       PUSH_RELAY_API=http://127.0.0.1:8793   # dev 는 8803
       PUSH_RELAY_KEY=prk_…
       ```
-      유닛은 이 경로를 바로 읽는다: `EnvironmentFile=%h/apps/push-relay/%i/data/keys/bigsix.env`.
+      유닛은 이 경로를 바로 읽는다: `EnvironmentFile=/home/ulismoon/apps/push-relay/%i/data/keys/bigsix.env`.
       인스턴스 이름(`prod` · `dev`)이 릴레이 환경 디렉터리 이름과 같아 템플릿 하나로 맞는다.
       연동 문서가 권하는 `~/.config/bigsix/` 심볼릭 링크는 두지 않는다 — bigsix 에 미리 정한 경로가 없어
-      링크가 수동 단계만 하나 늘린다. `~` 는 systemd 가 풀지 않으므로 `%h` 를 쓴다.
+      링크가 수동 단계만 하나 늘린다. `~` · `%h` 는 system 유닛에서 systemd 가 풀지 않으므로(system 유닛의
+      `%h` 는 `User=` 설정과 무관하게 `/root` 로 풀린다 — man systemd.unit 「not influenced by the User=
+      setting」), `deploy/push-install.sh` 가 설치 시 `getent passwd` 로 뽑은 절대 경로를 유닛 파일에 박는다.
       유닛은 릴레이와 같은 사용자(`User=ulismoon`)로 돈다 — 키 파일이 600 이다.
       키 파일이 없으면(키 폐기 · 앱 삭제로 릴레이가 지움) 그 인스턴스는 실행마다 실패를 로그에 남기고 끝난다 (발송 없음).
 - [ ] FR-36.3a: **키 교체** — 운영자가 관리 UI 「새 키 발급」 을 누르면 같은 경로의 파일이 새 키로 바뀐다.
@@ -365,8 +367,8 @@ SPEC 작성 중 읽으면서 걸린 것. 구현 중 실제로 문제가 됐는�
 | IR-4 | §3 `importScripts` 한 줄 | 릴레이에 닿지 않을 때 앱 SW 설치가 실패하는지, 감싸야 하는지 언급이 없다 | **구현(Phase 3)** — ADR-32 대로 `try { importScripts(...) } catch {}` 적용, 빌드 산출물에 운영 URL 인라인·호출 1회·try/catch 유지 확인 (`tests/unit/push/sw-importscripts.test.ts`). Chrome · Firefox · Safari 실기기 확인은 OQ-21 로 Phase 7 preview 단계까지 미정 | 실패 시 동작과 권장 패턴(try/catch 여부) 명시 |
 | IR-5 | §6 발송 예시 `dedupKey` | 「같은 dedupKey 로 이미 보냄」 의 범위(구독별인지 앱 전체인지)와 보존 기간이 안 적혀 있다 | **해소(코드)** — dedup PK 는 `(subscription_id, dedup_key)` (구독별), 8일 보존 (`src/store/migrations.rs:40`, `src/store/mod.rs:161`) | §6 에 dedup 범위(구독별)와 보존 기간(8일) 명시 |
 | IR-6 | §5 「`/…` 상대 경로는 앱 출처 기준」 · §5 아이콘 URL 해석 주체 | 누가 해석하는지(릴레이 `sw.js` 가 SW 출처로 해석?) 가 없다. `icon: "/icon-192.png"` 이 여기에 기댄다. 또한 상대 경로가 어느 출처를 기준으로 해석되는지 기기 종류마다 다를 수 있다 | **우회** — cron 이 icon 을 절대 URL(`https://bigsix.siot-ieung.duckdns.org/icon-192.png`)로 보냄. 실기기 확인 Phase 7 | 해석 주체 명시; 절대 URL 권장 여부 |
-| IR-7 | §1 키 파일 경로 `~/apps/push-relay/prod/data/keys/<앱>.env` + 「systemd `EnvironmentFile=` 등」 | 예시 경로를 그대로 `EnvironmentFile=` 에 옮기면 systemd 가 `~` 를 풀지 않아 파일을 못 찾는다. 또 키 파일이 600 이라 **앱 cron 이 릴레이와 같은 사용자로 돌아야 읽힌다**는 조건이 문서에 없다 (릴레이 유닛 `deploy/systemd/push-relay@.service:10` `User=ulismoon` 에서 확인). 0.1.1 판의 「`app-key.sh` 실행 위치 · `~` 해석」 문제는 0.1.2 에서 수동 경로 인자가 사라져 해소 | FR-36.3 에서 `%h` · `User=ulismoon` 으로 우회 | `EnvironmentFile=%h/…` 예시와 「같은 사용자로 읽는다」 한 줄 |
-| IR-8 | §1 systemd `EnvironmentFile=` 예시 | 문서가 `EnvironmentFile=` 에 템플릿 유닛 `%h` · `%i` 지시자를 쓰는 예시를 제공하지 않는다. 인스턴스(`prod`/`dev`)가 릴레이 환경 디렉터리 이름과 같아 하나의 템플릿으로 양쪽을 커버할 수 있지만, 이 가능성이 문서에 없어 설계에서 직접 추론했다 | `EnvironmentFile=%h/apps/push-relay/%i/data/keys/bigsix.env` 로 우회 (ADR-39) | §1 에 `%h` · `%i` 를 쓴 `EnvironmentFile=` 예시 1줄 추가 |
+| IR-7 | §1 키 파일 경로 `~/apps/push-relay/prod/data/keys/<앱>.env` + 「systemd `EnvironmentFile=` 등」 | 예시 경로를 그대로 `EnvironmentFile=` 에 옮기면 systemd 가 `~` 를 풀지 않아 파일을 못 찾는다. 또 키 파일이 600 이라 **앱 cron 이 릴레이와 같은 사용자로 돌아야 읽힌다**는 조건이 문서에 없다 (릴레이 유닛 `deploy/systemd/push-relay@.service:10` `User=ulismoon` 에서 확인). 0.1.1 판의 「`app-key.sh` 실행 위치 · `~` 해석」 문제는 0.1.2 에서 수동 경로 인자가 사라져 해소 | FR-36.3 에서 절대 경로(설치 스크립트가 `getent passwd` 로 치환) · `User=ulismoon` 으로 우회 | `EnvironmentFile` 에 `getent` 로 구한 절대 경로를 쓴다는 예시와 「같은 사용자로 읽는다」 한 줄. `%h` 는 system 유닛에서 `/root` 로 풀리므로 `User=` 와 무관하게 쓸 수 없다 |
+| IR-8 | §1 systemd `EnvironmentFile=` 예시 | 문서가 `EnvironmentFile=` 에 인스턴스 지시자 `%i` 와 절대 경로를 쓰는 예시를 제공하지 않는다. 인스턴스(`prod`/`dev`)가 릴레이 환경 디렉터리 이름과 같아 하나의 템플릿으로 양쪽을 커버할 수 있지만, 이 가능성이 문서에 없어 설계에서 직접 추론했다. 또한 `%h` 를 쓰려는 시도가 자연스럽지만 system 유닛에서 `%h` 는 `/root` 로 풀려 (`User=` 설정 무시 — man systemd.unit 「not influenced by the User= setting」) 실제로 쓸 수 없다 | `EnvironmentFile=/home/ulismoon/apps/push-relay/%i/data/keys/bigsix.env` (절대 경로, `push-install.sh` 가 치환) 로 우회 (ADR-39) | §1 에 `%i` 와 절대 경로를 쓴 `EnvironmentFile=` 예시 1줄 추가. `%h` 는 쓸 수 없다는 주의 한 줄 |
 | IR-9 | §환경 「개발 포트를 고정한다」 | dev 포트 고정을 권장하지만 Vite `strictPort` 옵션을 언급하지 않는다. 설정 없이 다른 앱이 5173 을 먼저 점유하면 Vite 가 다른 포트로 자동 전환해 `origin-not-allowed` 가 발생한다 | `vite.config.ts` 에 `server: { port: 5173, strictPort: true }` 로 우회 (ADR-31, FR-32.4) | §환경에 「Vite 사용자는 `strictPort: true` 를 권장한다」 한 줄 |
 | IR-10 | §6 「건수 상한은 없다 (body 1 MiB)」 배치 임계값 | 메시지 건수가 늘어 body 가 1 MiB 에 근접할 때 배치를 나눠야 하는지, 나눈다면 `requestId` 를 어떻게 부여해야 하는지 지침이 없다. 현재 bigsix 구독자 규모에서는 문제가 없지만 미래 확장 시 명세 공백이 된다 | 현 구현에서 단일 요청으로 전송 — 구독자 규모가 1 MiB 에 근접하면 별도 배치 분할 로직이 필요 | §6 에 body 임계값(예: 900 KiB) 초과 시 배치 분할 권장 절차 추가 |
 | IR-11 | §6 예시 `requestId`(`…T19:00-0001`) 형식 vs §7 `crypto.randomUUID()` 권장 | §6 예시는 「분 + 순번」 형식(`bigsix-2026-10-01T19:00-0001`)이고 §7 은 `crypto.randomUUID()` 를 권장한다. Stateless oneshot cron 은 순번을 유지할 수 없어 둘 다 그대로 따를 수 없다. ADR-38 에서 「분 + 4자리 이상 임의 hex」 형식으로 조정 (`bigsix-<UTC YYYY-MM-DDTHH:MM>-<4자리 hex>`) | ADR-38 형식으로 우회 — 분 단위 추적 가능성과 충돌 확률의 균형 | §6·§7 에 「stateless oneshot 에서는 `<앱>-<분>-<random>` 패턴을 권장한다」 한 줄 |

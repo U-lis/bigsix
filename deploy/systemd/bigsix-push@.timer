@@ -1,0 +1,15 @@
+# bigsix 푸시 발송 타이머 — 매 분. 서비스 유닛 설명 참고.
+[Unit]
+Description=bigsix push notification timer (%i)
+After=network-online.target
+
+[Timer]
+# 부팅 후 1분 뒤 첫 실행, 그 뒤 매 분. AccuracySec 를 좁혀 분 경계와 거의 맞춘다.
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+# oneshot 이 겹치는 분을 메우려 하지 않도록 끈다. 분을 놓치면 그냥 다음 분에서 재개한다.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

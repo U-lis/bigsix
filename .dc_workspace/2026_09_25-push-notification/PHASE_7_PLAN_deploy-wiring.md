@@ -100,27 +100,31 @@ Vite 의 `--mode` 옵션을 이용한다.
 ### 운영자 선행 확인 (P-1~P-3)
 
 - [ ] P-1: push-relay 서비스가 홈서버에서 실행 중이다 (`systemctl is-active push-relay`)
-- [ ] P-2: `bigsix.env` 키 파일이 `%h/apps/push-relay/{instance}/data/keys/bigsix.env` 에 있고 600 권한이다
-- [ ] P-3: `pnpm build`(또는 `pnpm build --mode dev`)가 오류 없이 완료된다
+- [ ] P-2: `bigsix.env` 키 파일이 `~/apps/push-relay/{instance}/data/keys/bigsix.env` 에 있고 600 권한이다
+- [x] P-3: `pnpm build`(또는 `pnpm build --mode dev`)가 오류 없이 완료된다 — 검증됨
 
 ### 구현 항목
 
-- [ ] `deploy/systemd/bigsix-push@.service` 생성
-- [ ] `deploy/systemd/bigsix-push@.timer` 생성
-- [ ] `deploy/push-install.sh` 생성 (`chmod +x`)
-- [ ] `deploy/deploy.sh` 에 `DEPLOY_MODE` 기반 타이머 활성 검증 추가
-- [ ] `deploy/README.md` 수정 — 런타임 설명, 키 교체 절차, dev 빌드 방법 한 줄
-- [ ] NFR-32 테스트 통과 (PHASE_7_TEST.md 참조)
-- [ ] `pnpm test` 통과
+- [x] `deploy/systemd/bigsix-push@.service` 생성 — `__HOME__`/`__NODE__` 플레이스홀더, `push-install.sh` 가 치환
+- [x] `deploy/systemd/bigsix-push@.timer` 생성 — 매 분, `Persistent=false`
+- [x] `deploy/push-install.sh` 생성 (`chmod +x`) — 멱등·root 전용·`getent` 홈 탐색·Node 24 nvm 탐색
+- [x] `deploy/deploy.sh` 에 `DEPLOY_MODE` 기반 타이머 활성 검증 추가 — 타이머 부재 시 WARNING 만, 실패 처리 없음
+- [x] `deploy/README.md` 수정 — 런타임 설명, 키 교체 절차, dev 빌드 방법 한 줄
+- [x] NFR-32 테스트 통과 (PHASE_7_TEST.md 참조) — `tests/unit/security/no-key.test.ts` 통과
+- [x] `pnpm test` 통과 — 907 tests, 51 files
 - [ ] 수동 end-to-end (dev): 켜기 → 가까운 시각 → cron 수동 실행(`--instance dev`) → 기기에 알림 확인 → 탭 시 `/` 열림
 - [ ] IR-3 · IR-6 실기기 결론으로 갱신
 
 ## 참고
 
-- `%h` 는 systemd 홈 디렉터리 지시자 — `~` 가 아니다. `%i` 는 인스턴스 이름.
+- `%h` 는 system 유닛에서 `User=` 설정과 무관하게 `/root` 로 풀린다 — `EnvironmentFile` 에 쓸 수 없다.
+  `deploy/push-install.sh` 가 `getent passwd` 로 사용자 홈의 절대 경로를 뽑아 유닛 파일에 직접 박는다.
+  `%i` 는 인스턴스 이름(`prod`/`dev`) — 이 지시자는 템플릿 유닛에서 정상 동작한다.
 - `User=ulismoon` 이 릴레이와 같은 사용자 → 600 권한 키 파일 읽기 가능.
 - dev 타이머(`bigsix-push@dev.timer`)는 개발 기간에만 수동으로 활성화한다.
-- Phase 6 결과에 따라 Node 24 `--experimental-strip-types` 플래그 필요 여부를 `ExecStart` 에 반영한다.
+- `--experimental-strip-types`: Node 24.15 에서 확인 — 플래그 유무 모두 경고 없이 `.ts` 를 실행한다.
+  플래그는 Node 23.6+ 부터 불필요하지만 현재 경고를 내지 않으므로 유닛에 유지한다. 향후 경고가
+  발생하면 플래그를 제거해도 Node 24.x 에서 동작한다.
 - IR-6 (icon): `buildMessage` 가 이미 절대 URL 을 사용한다. Phase 7 실기기에서 아이콘이 표시되는지 확인하고 IR-6 에 기록한다.
 
 ## 페이즈 종료 전 IR 로그 갱신

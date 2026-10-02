@@ -5,6 +5,7 @@
 #   ./deploy/deploy.sh                      현재 브랜치를 배포
 #   ./deploy/deploy.sh main                 특정 ref 를 배포
 #   DEPLOY_HOST=other ./deploy/deploy.sh    다른 서버로
+#   DEPLOY_MODE=dev ./deploy/deploy.sh <ref>   dev 릴레이 URL 로 빌드 + dev 타이머 검증
 #
 # 접속은 Tailscale 을 탄다. 집이든 밖이든 같은 명령이고, 공유기에 열어둔 포트는 없다.
 #
@@ -19,6 +20,14 @@ HOST="${DEPLOY_HOST:-homeserver}"
 REPO="${DEPLOY_REPO:-$HOME/apps/bigsix}"   # 서버상의 경로
 DOCROOT="${DEPLOY_DOCROOT:-/var/www/bigsix}"
 URL="${DEPLOY_URL:-https://bigsix.siot-ieung.duckdns.org}"
+# prod → `.env.production` → prod 릴레이 URL. dev → `.env.development` → dev 릴레이 URL.
+# `remote.sh` 가 이 값을 `vite build --mode <...>` 에 넘긴다. 배포 후 검증은
+# `bigsix-push@${DEPLOY_MODE}.timer` 가 활성 상태인지 본다 (FR-36.5).
+DEPLOY_MODE="${DEPLOY_MODE:-prod}"
+case "$DEPLOY_MODE" in
+	prod|dev) ;;
+	*) echo "DEPLOY_MODE 는 prod | dev 뿐이다: '$DEPLOY_MODE'" >&2; exit 1 ;;
+esac
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=deploy/lib.sh
@@ -45,7 +54,7 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" true 2>/dev/null; then
 	exit 1
 fi
 
-ssh "$HOST" REF="$REF" REPO="$REPO" DOCROOT="$DOCROOT" 'bash -s' < "$HERE/remote.sh"
+ssh "$HOST" REF="$REF" REPO="$REPO" DOCROOT="$DOCROOT" DEPLOY_MODE="$DEPLOY_MODE" 'bash -s' < "$HERE/remote.sh"
 
 echo "==> 원격이 배포한 커밋 대조"
 # $REPO 는 여기서 펼쳐져야 한다 — 서버 경로를 로컬이 정한다.
@@ -102,6 +111,24 @@ else
 		echo "    전부 200"
 	fi
 fi
+
+# bigsix-push 타이머 활성 여부 (FR-36.5). 유닛이 아직 설치 전이면 WARNING 만 내고
+# 전체 배포는 실패 처리하지 않는다 — 최초 1회 push-install.sh 가 설치할 때까지
+# deploy.sh 가 그 때문에 막히면 안 된다.
+echo "==> bigsix-push@${DEPLOY_MODE}.timer 활성 여부 확인"
+# shellcheck disable=SC2029
+timer_state=$(ssh "$HOST" "systemctl is-active 'bigsix-push@${DEPLOY_MODE}.timer' 2>/dev/null || true")
+case "$timer_state" in
+	active)
+		echo "    활성"
+		;;
+	inactive|activating|deactivating|failed)
+		echo "    경고: bigsix-push@${DEPLOY_MODE}.timer 상태 '$timer_state' — 유닛은 있으나 돌지 않는다"
+		;;
+	*)
+		echo "    경고: bigsix-push@${DEPLOY_MODE}.timer 가 설치되지 않았다 (deploy/push-install.sh 로 1회 설치 필요)"
+		;;
+esac
 
 [ "$fail" = 0 ] || { echo "실패"; exit 1; }
 echo "==> 완료: $URL"

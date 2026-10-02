@@ -12,6 +12,15 @@ set -euo pipefail
 MODE="${1:-full}"
 : "${REF:?REF 가 필요하다}"
 : "${REPO:?REPO 가 필요하다}"
+# `deploy.sh` 가 넘겨준다. prod → `.env.production` + prod 릴레이 URL,
+# dev → `.env.development` + dev 릴레이 URL. vite `--mode` 로 어느 `.env.*` 를 읽을지 정한다.
+# vite 의 모드명은 `production`/`development` 라 그대로 맞춰 넘긴다.
+DEPLOY_MODE="${DEPLOY_MODE:-prod}"
+case "$DEPLOY_MODE" in
+	prod) VITE_MODE="production" ;;
+	dev)  VITE_MODE="development" ;;
+	*) echo "DEPLOY_MODE 는 prod | dev 뿐이다: '$DEPLOY_MODE'" >&2; exit 1 ;;
+esac
 
 sync_repo() {
 	cd "$REPO"
@@ -51,8 +60,9 @@ sync_repo
 echo "==> 의존성"
 pnpm install --frozen-lockfile --reporter=silent
 
-echo "==> 빌드"
-pnpm run build >/dev/null
+echo "==> 빌드 (mode=$VITE_MODE)"
+# `pnpm run build` 는 내부에서 `vite build` 를 돈다. `--` 뒤 인자가 vite 에 그대로 간다.
+pnpm run build -- --mode "$VITE_MODE" >/dev/null
 
 # 해시 붙은 자산을 먼저 올리고 HTML·서비스워커를 마지막에 올린다. 반대로 하면
 # 새 HTML 이 아직 없는 청크를 가리키는 순간이 생기고, 그 사이에 들어온 클라이언트는

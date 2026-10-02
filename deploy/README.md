@@ -1,6 +1,7 @@
 # 홈서버 배포
 
-`https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 파일뿐이라 서버 런타임은 없다.
+`https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 앱 + 1분 cron 하나 (`cron/push.ts`,
+systemd 템플릿 유닛 `bigsix-push@.service` · `bigsix-push@.timer`). SvelteKit 서버 기능은 없다.
 
 ## 작업 중 브랜치의 임시 배포
 
@@ -17,6 +18,78 @@ git push origin <브랜치>
 병합하고 릴리스할 준비가 되면 그때 `./deploy/release.sh <버전>` 을 쓴다.
 
 0.2.0 은 2026-09-25 에 릴리스됐다 (`v0.2.0`). 그때 쓰던 `feature/ui` 브랜치는 병합 후 지웠다.
+
+## dev 릴레이로 배포하기
+
+`DEPLOY_MODE=dev` 를 넘기면 `vite build --mode development` 가 돌아 `.env.development` 를 읽는다.
+`PUBLIC_PUSH_RELAY_URL` 이 dev 릴레이(`https://push-dev.siot-ieung.duckdns.org`)로 박히고, 배포 후
+검증은 `bigsix-push@dev.timer` 가 활성 상태인지 본다.
+
+```bash
+DEPLOY_MODE=dev ./deploy/deploy.sh <브랜치>
+```
+
+이것 말고는 전부 같은 경로를 쓴다 — docroot 가 하나라 dev 모드 배포는 그 자리를 **덮어쓴다**.
+실기기 end-to-end 확인 후 바로 prod 배포로 돌려놓는 것이 전제다.
+
+## 푸시 cron
+
+`cron/push.ts` 가 서버 체크아웃(`~/apps/bigsix`)에서 그대로 돈다. 재시작할 프로세스가 없으므로
+`deploy.sh` 가 체크아웃을 갱신하면 다음 실행부터 새 코드다.
+
+| 유닛 | 역할 |
+|---|---|
+| `bigsix-push@prod.service` | oneshot. `node --experimental-strip-types cron/push.ts --instance prod` |
+| `bigsix-push@prod.timer` | 매 분. 상시 켜둔다 |
+| `bigsix-push@dev.{service,timer}` | dev 릴레이 발송용. 개발 중에만 수동 활성화 |
+
+### 키 파일 — 릴레이가 소유한다
+
+유닛의 `EnvironmentFile` 은 `~/apps/push-relay/{prod|dev}/data/keys/bigsix.env` 를 바로 읽는다.
+파일은 **push-relay 가 만들고 쓴다** — bigsix 쪽은 읽기만 한다 (권한 600, 소유 ulismoon,
+push-relay 0.1.2 「새 키 발급」 API).
+
+내용은 두 줄이다 (저장소에는 올리지 않는다 — NFR-32).
+
+```
+PUSH_RELAY_API=http://127.0.0.1:8793    # dev 는 8803
+PUSH_RELAY_KEY=prk_…
+```
+
+파일이 없거나 접근 불가면 유닛은 실행마다 로그에 사유를 남기고 끝난다 — 발송 없음.
+
+### 키 교체 (FR-36.3a)
+
+운영자가 push-relay 관리 UI 의 「새 키 발급」 을 누르면 같은 경로 파일이 새 키로 바뀐다.
+
+1. 관리 UI 앱 상세에서 「새 키 발급」 을 누른다
+2. 키 표에서 새 키의 「마지막 사용」 시각이 갱신되고 이전 키의 시각이 멈추는 것을 확인한다
+3. 이전 키를 폐기한다
+
+`bigsix-push@prod.service` 는 oneshot 이라 실행마다 `EnvironmentFile` 을 새로 읽으므로
+다음 실행(1분 안)부터 새 키가 쓰인다. bigsix 재시작 · 재배포 없음.
+
+### 최초 1회 설치 (sudo)
+
+유닛 설치만 root 가 필요하다. 서버 Node 24 절대 경로와 사용자 홈 경로를 설치 스크립트가 유닛
+파일에 박아 넣는다. 멱등이라 다시 돌려도 안전하다. **서버에서** 다음을 돌린다 — 평소 배포는
+`deploy.sh` 가 알아서 하고 이 과정은 서버를 갈아엎을 때만 다시 한다.
+
+```bash
+# 서버에 체크아웃 (처음에만)
+git clone git@github.com:U-lis/bigsix.git ~/apps/bigsix
+# 유닛 설치. prod 만 켠다
+sudo ~/apps/bigsix/deploy/push-install.sh
+# prod + dev 둘 다 켜려면
+sudo ~/apps/bigsix/deploy/push-install.sh prod dev
+```
+
+스크립트는 **키 파일 내용을 읽거나 출력하지 않는다**. 키 파일이 아직 없으면 경고만 내고
+타이머는 켠다 — push-relay 에서 bigsix 를 등록해 키가 생기는 순간부터 발송이 돈다.
+
+왜 유닛이 플레이스홀더로 커밋되는가: `User=` 가 있는 system 유닛에서 `%h` 는 서비스 매니저의
+홈 (`/root`) 으로 풀린다 (man systemd.unit, specifiers 표의 「not influenced by the User= setting」).
+그래서 사용자 홈(`/home/ulismoon`)과 Node 24 절대 경로를 설치 시점에 박아 넣는다.
 
 ## 평소
 
@@ -45,9 +118,11 @@ pnpm preview        # PWA·오프라인 확인 (http://localhost:4173)
 | | |
 |---|---|
 | `deploy.sh` | 로컬에서 도는 부분. ssh 연결 확인, 원격 실행, 배포 후 검증 |
-| `remote.sh` | 서버에서 도는 부분. deploy.sh 가 ssh 로 흘려보낸다 |
+| `remote.sh` | 서버에서 도는 부분. deploy.sh 가 ssh 로 흘려보낸다. `DEPLOY_MODE` 로 vite 모드 결정 |
 | `lib.sh` | 공유 함수 (`resolve_commit`) |
 | `release.sh` | 버전·태그·push·배포를 묶은 릴리스 |
+| `systemd/bigsix-push@.{service,timer}` | 푸시 cron 유닛 템플릿 (`__NODE__` · `__HOME__` 플레이스홀더) |
+| `push-install.sh` | 유닛 설치 (sudo, 1회). 플레이스홀더를 실제 경로로 치환해 `/etc/systemd/system` 에 놓는다 |
 
 `remote.sh` 를 파일로 뺀 이유는 테스트다. heredoc 안에 있으면 검증할 수 없다.
 `REF=... REPO=... bash deploy/remote.sh sync` 로 git 동기화만 돌릴 수 있고,

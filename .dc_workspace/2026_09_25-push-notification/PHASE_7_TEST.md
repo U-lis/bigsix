@@ -8,7 +8,7 @@
 
 ### NFR-32: 커밋된 파일에 키 없음 (단위, `tests/unit/security/no-key.test.ts`)
 
-- **동작**: git 이 추적하는 파일 중 `PUSH_RELAY_KEY=prk_` 패턴을 포함하는 파일이 없다 | **계층**: 단위 (`git ls-files` 출력 읽기, 각 파일 grep)
+- [x] **동작**: git 이 추적하는 파일 중 `PUSH_RELAY_KEY=prk_` 패턴을 포함하는 파일이 없다 | **계층**: 단위 (`git ls-files` 출력 읽기, 각 파일 grep) — `tests/unit/security/no-key.test.ts` PASS
 
 ### 수동 end-to-end (dev 환경)
 

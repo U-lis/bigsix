@@ -90,7 +90,7 @@ queueMicrotask(() => pushAutoSync())
 
 파일: `bigsix-push@.service` (oneshot) · `bigsix-push@.timer` (매 분). 핵심:
 
-- `EnvironmentFile=%h/apps/push-relay/%i/data/keys/bigsix.env` — `%h` 는 systemd 홈 디렉터리 지시자(`~` 아님), `%i` 는 인스턴스 이름(`prod` 또는 `dev`)
+- `EnvironmentFile=<절대경로>/apps/push-relay/%i/data/keys/bigsix.env` — 절대 경로는 `deploy/push-install.sh` 가 설치 시 `getent passwd` 로 구해 박는다. `%h` 는 system 유닛에서 `User=` 설정과 무관하게 `/root` 로 풀리므로(`man systemd.unit`, specifiers 표 「not influenced by the User= setting」) 쓸 수 없다. `%i` 는 인스턴스 이름(`prod` 또는 `dev`)
 - `User=ulismoon` — 릴레이 유닛과 같은 사용자여야 600 권한 키 파일을 읽을 수 있다
 - `ExecStart` 의 `node` 절대 경로는 `deploy/push-install.sh` 설치 시 확정
 - 인스턴스 이름이 릴레이 환경 디렉터리 이름과 같아 템플릿 하나로 `prod` · `dev` 를 모두 커버
@@ -201,5 +201,5 @@ interface CronMessage {
 | 4 | settings-screen | `/settings` 화면 · relay.ts · 상단 바 링크 · reset 연동 | Complete | 3 |
 | 5 | push-autosync | autoSync.ts · layout 연결 | Complete | 4 |
 | 6 | cron-sender | `cron/` 구현 | Complete | 2 (PushMeta 타입만) |
-| 7 | deploy-wiring | systemd 유닛 · push-install.sh · deploy.sh · deploy/README | — | 5, 6 |
+| 7 | deploy-wiring | systemd 유닛 · push-install.sh · deploy.sh · deploy/README | In Progress (배포·e2e 대기) | 5, 6 |
 | 8 | docs-and-ir-report | README · CHANGELOG · CLAUDE.md · IR 로그 마감 | — | 7 |
