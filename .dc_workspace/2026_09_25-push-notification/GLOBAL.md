@@ -196,7 +196,7 @@ interface CronMessage {
 | 페이즈 | 키워드 | 설명 | 상태 | 선행 조건 |
 |--------|--------|------|------|----------|
 | 1 | pwa-injectmanifest | SW injectManifest 전환 | 완료 | — |
-| 2 | push-foundation | 타입 · storage · push state · meta | — | 1 |
+| 2 | push-foundation | 타입 · storage · push state · meta | Complete | 1 |
 | 3 | sw-importscripts | `.env` 파일 · pwa-sw.ts · vite strictPort | — | 2 |
 | 4 | settings-screen | `/settings` 화면 · relay.ts · 상단 바 링크 · reset 연동 | — | 3 |
 | 5 | push-autosync | autoSync.ts · layout 연결 | — | 4 |

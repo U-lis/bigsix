@@ -78,13 +78,13 @@ function buildMeta(
 
 ## 완료 체크리스트
 
-- [ ] `src/lib/ui/push/types.ts` — 네 타입 모두 export
-- [ ] `src/lib/ui/push/storage.ts` — read/write/delete 가 throw 하지 않음
-- [ ] `src/lib/ui/push/push.svelte.ts` — 반응형 레코드가 storage 와 연결됨
-- [ ] `src/lib/ui/push/meta.ts` — `buildMeta` 가 부작용 없는 순수 함수
-- [ ] `tests/unit/structure.test.ts` 수정 — `LAYER_ROOTS` 길이 10, `UI_UNDER` 에 `push`
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 통과 (기준선 803 + 신규 테스트)
+- [x] `src/lib/ui/push/types.ts` — 네 타입 모두 export (PushState, PushErrorCode, PushMeta, PushRecord)
+- [x] `src/lib/ui/push/storage.ts` — read/write/delete 가 throw 하지 않음 (storage.ts:39-79)
+- [x] `src/lib/ui/push/push.svelte.ts` — 반응형 레코드가 storage 와 연결됨 (push.svelte.ts:14-53)
+- [x] `src/lib/ui/push/meta.ts` — `buildMeta` 가 부작용 없는 순수 함수 (meta.ts:26-46)
+- [x] `tests/unit/structure.test.ts` 수정 — `LAYER_ROOTS` 길이 10, `UI_UNDER` 에 `push` (structure.test.ts:39,44,124)
+- [x] `pnpm check` 오류 0 (0 errors, 0 warnings)
+- [x] `pnpm test` 통과 (821 passed — 기준선 803 + 신규 18)
 
 ## 참고
 
