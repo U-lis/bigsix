@@ -200,6 +200,6 @@ interface CronMessage {
 | 3 | sw-importscripts | `.env` 파일 · pwa-sw.ts · vite strictPort | Complete (OQ-21 수동 미결) | 2 |
 | 4 | settings-screen | `/settings` 화면 · relay.ts · 상단 바 링크 · reset 연동 | Complete | 3 |
 | 5 | push-autosync | autoSync.ts · layout 연결 | Complete | 4 |
-| 6 | cron-sender | `cron/` 구현 | — | 2 (PushMeta 타입만) |
+| 6 | cron-sender | `cron/` 구현 | Complete | 2 (PushMeta 타입만) |
 | 7 | deploy-wiring | systemd 유닛 · push-install.sh · deploy.sh · deploy/README | — | 5, 6 |
 | 8 | docs-and-ir-report | README · CHANGELOG · CLAUDE.md · IR 로그 마감 | — | 7 |

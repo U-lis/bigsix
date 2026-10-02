@@ -55,3 +55,17 @@
 
 - EC-79: 휴식일 — `meta.days` 에 오늘 요일 키가 없어 `shouldSend` 가 false 를 반환한다.
 - EC-80: 23:50 창 — 자정 잘림 동작이 위 테스트로 확인된다.
+
+## 검증 결과 (Phase 6 Complete)
+
+- [x] `decide.ts shouldSend` — 창 안/이전/이후/휴식일/EC-80 자정 잘림: PASS (`decide.test.ts`)
+- [x] `decide.ts validateMeta` — v불일치/알 수 없는 tz/HH:MM 불일치/필수 필드 누락: PASS
+- [x] `decide.ts filterSubscriptions` — 다중 타임존 독립 판정: PASS
+- [x] `decide.ts shouldTestSend` — 9분 전 true/11분 전 false/없음 false: PASS
+- [x] `env.ts readEnv` — PUSH_RELAY_API 누락/PUSH_RELAY_KEY 누락 오류: PASS
+- [x] `message.ts buildMessage` — title/body/url/tag/icon/dedupKey: PASS
+- [x] `message.ts buildTestMessage` — dedupKey/body UTC+9 변환/휴식일 body: PASS
+- [x] `message.ts estimatedMessageBytes` — 다섯 프로그램 3072 이하: PASS
+- [x] `message.ts buildRequestId` — 패턴 일치: PASS
+- [x] `push.ts` 페이지네이션/0건 send 미호출/prod meta.test 무시: PASS
+- **총 906 tests / 50 files — 0 failures**

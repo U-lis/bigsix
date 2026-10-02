@@ -125,13 +125,22 @@ Node 24 네이티브 TS 실행: `node --experimental-strip-types cron/push.ts` �
 
 ## 완료 체크리스트
 
-- [ ] `cron/env.ts` 생성 — 변수 누락 시 설명 있는 오류 throw
-- [ ] `cron/decide.ts` 생성 — `validateMeta`, `shouldSend`, `filterSubscriptions`, `shouldTestSend`
-- [ ] `cron/message.ts` 생성 — `buildMessage`, `buildTestMessage`, `buildRequestId`, `estimatedMessageBytes`
-- [ ] `cron/push.ts` 생성 — `--instance` 파싱, 페이지네이션, 정규+테스트 발송, 0건 시 send 미호출
-- [ ] prod 인스턴스가 `meta.test` 를 읽지 않음을 확인
-- [ ] Node 24 TS 실행 플래그 확인·문서화
-- [ ] `pnpm test` 통과
+- [x] `cron/env.ts` 생성 — 변수 누락 시 설명 있는 오류 throw: Verified in `cron/env.ts:15-30`
+- [x] `cron/decide.ts` 생성 — `validateMeta`, `shouldSend`, `filterSubscriptions`, `shouldTestSend`: Verified in `cron/decide.ts:52, 123, 139, 159`
+- [x] `cron/message.ts` 생성 — `buildMessage`, `buildTestMessage`, `buildRequestId`, `estimatedMessageBytes`: Verified in `cron/message.ts:86, 113, 149, 160`
+- [x] `cron/push.ts` 생성 — `--instance` 파싱, 페이지네이션, 정규+테스트 발송, 0건 시 send 미호출: Verified in `cron/push.ts:42, 81, 148-210`
+- [x] prod 인스턴스가 `meta.test` 를 읽지 않음을 확인: `cron/push.ts:175` — `instance === 'dev'` guard
+- [x] Node 24 TS 실행 플래그 확인·문서화: Node 24.15.0 — `--experimental-strip-types` is default in 24.3+, no flag needed. Confirmed: `node cron/push.ts --instance dev` runs natively. See `cron/push.ts:3`.
+- [x] `pnpm test` 통과: 906 tests passed (50 files)
+
+### 추가 확인 (Phase 6 검증 시)
+
+- [x] `cron/` 이 `src/` 를 import 하지 않음: grep으로 확인, 0건
+- [x] 신규 npm 의존성 없음: `package.json` diff 에 `cron/` 관련 의존성 없음
+- [x] no env 시 non-zero 종료 + 명확한 메시지: `PUSH_RELAY_API` 오류 메시지 출력 후 exit 1
+- [x] icon URL: prod·dev 모두 `https://bigsix.siot-ieung.duckdns.org/icon-192.png` (절대 URL) — dev-relay 빌드도 실제 도메인에 배포되므로 동일 상수 사용이 적절. 추후 유연성이 필요하면 `PUSH_APP_BASE_URL` 환경변수로 전환 (push.ts:124 주석 참조)
+- [x] 3072 바이트 상한 초과 메시지 스킵 (coder 추가): `cron/push.ts:185-193` — 요청 전체 400 방지. 코더 추가 사항이나 §6 기준상 적절함
+- [x] IR-10, IR-11 SPEC IR 로그에 기록 완료
 
 ## 참고
 
