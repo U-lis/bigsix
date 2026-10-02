@@ -12,13 +12,13 @@
 
 `loadRelay`, `PushRelay.state`, `PushRelay.enable`, `buildMeta`, `writePushRecord` 를 목(mock)으로 교체한다.
 
-- **동작**: `state() === 'on'` 이고 직렬화된 meta 가 `sentMeta` 와 다르면 `PushRelay.enable` 을 정확히 1회 호출하고 storage 의 `sentMeta` 를 갱신한다 | **계층**: 단위
-- **동작**: `state() === 'on'` 이고 직렬화된 meta(base, `test` 제외)가 `sentMeta` 와 같으면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위
-- **동작**: 직전 테스트 발송으로 `sentMeta` 는 바뀌지 않았고 base meta 는 동일한 상태에서 `pushAutoSync` 를 호출하면 `enable` 을 호출하지 않는다 (test 필드가 비교에서 제외됨) | **계층**: 단위
-- **동작**: `state()` 가 `'off'` · `'denied'` · `'unsupported'` 이면 `PushRelay.enable` 을 호출하지 않는다 (`it.each` 하나로 처리) | **계층**: 단위
-- **동작**: `buildMeta` 가 null 을 반환하면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위
-- **동작**: `PushRelay.enable` 이 throw 해도 `pushAutoSync` 밖으로 예외가 전파되지 않는다 | **계층**: 단위
-- **동작**: `pushRecord.sentMeta === null` 이면 `loadRelay` 를 호출하지 않는다 | **계층**: 단위
+- **동작**: `state() === 'on'` 이고 직렬화된 meta 가 `sentMeta` 와 다르면 `PushRelay.enable` 을 정확히 1회 호출하고 storage 의 `sentMeta` 를 갱신한다 | **계층**: 단위 | [x] PASS
+- **동작**: `state() === 'on'` 이고 직렬화된 meta(base, `test` 제외)가 `sentMeta` 와 같으면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위 | [x] PASS (FR-34.3 포함, 아래 동작과 병합됨)
+- **동작**: 직전 테스트 발송으로 `sentMeta` 는 바뀌지 않았고 base meta 는 동일한 상태에서 `pushAutoSync` 를 호출하면 `enable` 을 호출하지 않는다 (test 필드가 비교에서 제외됨) | **계층**: 단위 | [x] PASS (pruner criterion #2 로 위 동작에 병합, 주석으로 FR-34.3 명시)
+- **동작**: `state()` 가 `'off'` · `'denied'` · `'unsupported'` 이면 `PushRelay.enable` 을 호출하지 않는다 (`it.each` 하나로 처리) | **계층**: 단위 | [x] PASS
+- **동작**: `buildMeta` 가 null 을 반환하면 `PushRelay.enable` 을 호출하지 않는다 | **계층**: 단위 | [x] PASS
+- **동작**: `PushRelay.enable` 이 throw 해도 `pushAutoSync` 밖으로 예외가 전파되지 않는다 | **계층**: 단위 | [x] PASS
+- **동작**: `pushRecord.sentMeta === null` 이면 `loadRelay` 를 호출하지 않는다 | **계층**: 단위 | [x] PASS
 
 ## 이 페이즈에 실제로 해당하는 엣지 케이스
 

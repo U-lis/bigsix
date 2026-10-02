@@ -27,6 +27,7 @@
   import { tabsFor } from '$lib/ui/shell/nav';
   import About from '$lib/ui/shell/About.svelte';
   import Toast from '$lib/ui/shell/Toast.svelte';
+  import { pushAutoSync } from '$lib/ui/push/autoSync';
 
   let { children } = $props();
   let booted = $state(false);
@@ -59,6 +60,13 @@
     // 서비스 워커 등록 — dev 에서는 건너뜀 (sw.js 자체가 없어 404).
     if (document.readyState === 'complete') void sw.register();
     else window.addEventListener('load', () => void sw.register(), { once: true });
+
+    // 푸시 meta 자동 동기화 (FR-33.6 / ADR-35). queueMicrotask 로 미뤄 첫 페인트가
+    // 릴레이 스크립트 로드에 묶이지 않게 한다. sentMeta === null (한 번도 켠 적 없음)
+    // 이면 pushAutoSync 가 즉시 반환해 client.js 를 로드하지 않는다.
+    queueMicrotask(() => {
+      void pushAutoSync();
+    });
   });
 
   function openAbout() {

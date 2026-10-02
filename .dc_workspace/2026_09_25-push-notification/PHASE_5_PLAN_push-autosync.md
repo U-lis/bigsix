@@ -49,11 +49,11 @@ queueMicrotask(() => pushAutoSync());
 
 ## 완료 체크리스트
 
-- [ ] `src/lib/ui/push/autoSync.ts` 생성 — `pushAutoSync` 함수 구현
-- [ ] `+layout.svelte` 에서 `boot()` 뒤 `queueMicrotask(() => pushAutoSync())` 호출
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 통과
-- [ ] IR-3 를 실기기 테스트 결과(제스처 밖 `enable` 호출)로 갱신
+- [x] `src/lib/ui/push/autoSync.ts` 생성 — `pushAutoSync` 함수 구현: Verified in `src/lib/ui/push/autoSync.ts:33`
+- [x] `+layout.svelte` 에서 `boot()` 뒤 `queueMicrotask(() => pushAutoSync())` 호출: Verified in `src/routes/+layout.svelte:67`
+- [x] `pnpm check` 오류 0: 0 errors, 0 warnings (517 files)
+- [x] `pnpm test` 통과: 856 passed (46 files); autoSync suite 8/8 after pruning
+- [ ] IR-3 를 실기기 테스트 결과(제스처 밖 `enable` 호출)로 갱신: Deferred to Phase 7 (real-device only)
 
 ## 참고
 
