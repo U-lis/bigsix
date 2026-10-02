@@ -108,7 +108,10 @@ Vite 의 `--mode` 옵션을 이용한다.
 - [x] `deploy/systemd/bigsix-push@.service` 생성 — `__HOME__`/`__NODE__` 플레이스홀더, `push-install.sh` 가 치환
 - [x] `deploy/systemd/bigsix-push@.timer` 생성 — 매 분, `Persistent=false`
 - [x] `deploy/push-install.sh` 생성 (`chmod +x`) — 멱등·root 전용·`getent` 홈 탐색·Node 24 nvm 탐색
-- [x] `deploy/deploy.sh` 에 `DEPLOY_MODE` 기반 타이머 활성 검증 추가 — 타이머 부재 시 WARNING 만, 실패 처리 없음
+- [x] `deploy/deploy.sh` 에 `DEPLOY_MODE` 기반 타이머 활성 검증 추가 — 타이머 부재 시 WARNING 만, 실패 처리 없음.
+      타이머 「설치 안 됨」과 「설치됐으나 꺼짐」 구분: `systemctl cat` 으로 유닛 존재 여부를 먼저 확인 후 `is-active` 호출 (실배포에서 발견한 결함 수정).
+- [x] `deploy/remote.sh` 빌드 명령 수정 — `pnpm run build -- --mode …` → `pnpm run build --mode …`.
+      pnpm 10.33.4 에서 `--` 가 리터럴로 전달돼 vite 가 production 모드로 빌드되는 결함을 실배포에서 발견. 재발 방지로 빌드 직후 `build/sw.js` 에 `DEPLOY_MODE` 에 맞는 relay URL 이 들어 있는지 확인하는 안전망 추가 — 어긋나면 rsync 이전에 `exit 1`.
 - [x] `deploy/README.md` 수정 — 런타임 설명, 키 교체 절차, dev 빌드 방법 한 줄
 - [x] NFR-32 테스트 통과 (PHASE_7_TEST.md 참조) — `tests/unit/security/no-key.test.ts` 통과
 - [x] `pnpm test` 통과 — 907 tests, 51 files

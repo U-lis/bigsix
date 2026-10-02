@@ -115,20 +115,27 @@ fi
 # bigsix-push 타이머 활성 여부 (FR-36.5). 유닛이 아직 설치 전이면 WARNING 만 내고
 # 전체 배포는 실패 처리하지 않는다 — 최초 1회 push-install.sh 가 설치할 때까지
 # deploy.sh 가 그 때문에 막히면 안 된다.
-echo "==> bigsix-push@${DEPLOY_MODE}.timer 활성 여부 확인"
+#
+# `systemctl is-active` 는 설치되지 않은 유닛에도 「inactive」(rc=4) 를 뱉는다 — 즉 「설치 전」
+# 과 「설치됐으나 꺼짐」 을 그걸로는 구분할 수 없다. 그래서 설치 여부를 `systemctl cat` 으로
+# 먼저 본다 — 유닛이 없으면 rc=1 로 끝낸다.
+timer_unit="bigsix-push@${DEPLOY_MODE}.timer"
+echo "==> $timer_unit 활성 여부 확인"
 # shellcheck disable=SC2029
-timer_state=$(ssh "$HOST" "systemctl is-active 'bigsix-push@${DEPLOY_MODE}.timer' 2>/dev/null || true")
-case "$timer_state" in
-	active)
-		echo "    활성"
-		;;
-	inactive|activating|deactivating|failed)
-		echo "    경고: bigsix-push@${DEPLOY_MODE}.timer 상태 '$timer_state' — 유닛은 있으나 돌지 않는다"
-		;;
-	*)
-		echo "    경고: bigsix-push@${DEPLOY_MODE}.timer 가 설치되지 않았다 (deploy/push-install.sh 로 1회 설치 필요)"
-		;;
-esac
+if ! ssh "$HOST" "systemctl cat '$timer_unit' >/dev/null 2>&1"; then
+	echo "    경고: $timer_unit 가 설치되지 않았다 (deploy/push-install.sh 로 1회 설치 필요)"
+else
+	# shellcheck disable=SC2029
+	timer_state=$(ssh "$HOST" "systemctl is-active '$timer_unit' 2>/dev/null || true")
+	case "$timer_state" in
+		active)
+			echo "    활성"
+			;;
+		*)
+			echo "    경고: $timer_unit 상태 '$timer_state' — 유닛은 있으나 돌지 않는다"
+			;;
+	esac
+fi
 
 [ "$fail" = 0 ] || { echo "실패"; exit 1; }
 echo "==> 완료: $URL"

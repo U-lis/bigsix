@@ -19,6 +19,12 @@
 - **동작**: 같은 분 안에 cron 을 다시 실행하면 로그에 `suppressed` 가 기록된다(같은 `dedupKey`) | **계층**: 시나리오
 - **동작**: `push-install.sh` 실행 후 `bigsix-push@prod.timer` 가 활성 상태다 | **계층**: 시나리오
 
+### 배포 중 발견된 결함 및 안전망 (2026-10-03 실배포)
+
+- [x] **동작**: `pnpm run build --mode development` 가 실제로 dev relay URL(`https://push-dev.siot-ieung.duckdns.org`)을 `build/sw.js` 에 포함한다 | **계층**: 로컬 빌드 검증 — PASS (pnpm 10 의 `--` 전달 결함 수정 후 확인)
+- [x] **동작**: `pnpm run build`(prod) 가 prod relay URL(`https://push.siot-ieung.duckdns.org`)을 `build/sw.js` 에 포함한다 | **계층**: 로컬 빌드 검증 — PASS
+- [x] **동작**: sw.js 안전망 — `DEPLOY_MODE=prod` 인데 build/sw.js 에 prod URL 이 없으면 rsync 전에 `exit 1` | **계층**: 수동 시뮬레이션 — PASS (dev 빌드 산출물로 prod 기대값 대조 시 올바르게 실패 확인)
+
 ## 이 페이즈에 실제로 해당하는 엣지 케이스
 
 - EC-82: 앱 데이터 삭제 후 다시 켜면 새 구독이 생긴다. 이전 구독은 다음 cron 실행 때 `gone` 이 된다.

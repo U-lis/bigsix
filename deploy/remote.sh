@@ -61,8 +61,27 @@ echo "==> 의존성"
 pnpm install --frozen-lockfile --reporter=silent
 
 echo "==> 빌드 (mode=$VITE_MODE)"
-# `pnpm run build` 는 내부에서 `vite build` 를 돈다. `--` 뒤 인자가 vite 에 그대로 간다.
-pnpm run build -- --mode "$VITE_MODE" >/dev/null
+# pnpm 10 은 `pnpm run build -- --mode …` 의 `--` 를 npm 스크립트의 인자로 **문자 그대로**
+# 넘긴다 — 그 결과 vite 가 `vite build -- --mode development` 로 돌면서 「building for
+# production」 으로 흘러간다 (pnpm 10.33.4 로 실측). `--` 를 빼야 vite 가 플래그를 받는다.
+# 재발 방지는 아래 sw.js URL 대조로 못박는다.
+pnpm run build --mode "$VITE_MODE" >/dev/null
+
+# 빌드 산출물의 relay URL 이 DEPLOY_MODE 와 맞는지 확인한다. 어긋나면 docroot 반영 전에
+# 멈춘다 — `PUBLIC_PUSH_RELAY_URL` 은 `src/pwa-sw.ts` 가 import 해 sw.js 로 리터럴로 흘러
+# 들어가므로 어느 `.env.*` 가 쓰였는지 산출물에서 바로 확인된다.
+case "$DEPLOY_MODE" in
+	prod) EXPECT_RELAY="https://push.siot-ieung.duckdns.org" ;;
+	dev)  EXPECT_RELAY="https://push-dev.siot-ieung.duckdns.org" ;;
+esac
+echo "==> sw.js relay URL 대조 (예상: $EXPECT_RELAY)"
+if ! grep -q -F "$EXPECT_RELAY" "$REPO/build/sw.js"; then
+	echo "    build/sw.js 에서 '$EXPECT_RELAY' 를 못 찾았다 — DEPLOY_MODE=$DEPLOY_MODE 로 빌드되지 않았다." >&2
+	echo "    실제로 들어 있는 relay URL:" >&2
+	grep -oE 'https://push[^"`]*siot-ieung[^"`]*' "$REPO/build/sw.js" | head -3 >&2 || true
+	exit 1
+fi
+echo "    확인"
 
 # 해시 붙은 자산을 먼저 올리고 HTML·서비스워커를 마지막에 올린다. 반대로 하면
 # 새 HTML 이 아직 없는 청크를 가리키는 순간이 생기고, 그 사이에 들어온 클라이언트는
