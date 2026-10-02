@@ -16,6 +16,13 @@
  */
 
 /// <reference lib="webworker" />
+// push-relay 의 `sw.js` 를 받아 push · notificationclick 처리를 위임한다 (SPEC4 FR-32.2 / ADR-32).
+// `PUBLIC_PUSH_RELAY_URL` 은 `$env/static/public` 으로 빌드 시 리터럴로 치환된다 (OQ-20 해소).
+// try/catch — 릴레이에 닿지 않아도 앱 SW 설치 자체는 성공해야 한다 (EC-87, OQ-21 수동 확인).
+// 다른 import·초기화보다 먼저 와야 릴레이가 자신의 push 리스너를 등록할 기회를 가진다.
+import { PUBLIC_PUSH_RELAY_URL } from '$env/static/public';
+try { importScripts(PUBLIC_PUSH_RELAY_URL + '/sw.js') } catch {}
+
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,

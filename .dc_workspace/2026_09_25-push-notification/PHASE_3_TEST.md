@@ -10,9 +10,9 @@
 
 `tests/unit/precache-parity.test.ts` 와 같은 패턴을 따른다: `spawnSync` 로 `pnpm exec vite build --outDir <임시디렉터리>` 를 실행한 뒤 `<임시디렉터리>/sw.js` 를 문자열로 읽는다.
 
-- **동작**: 빌드된 `sw.js` 에 `importScripts(` 가 정확히 한 번 나온다 | **계층**: 빌드 산출물
-- **동작**: 그 `importScripts` 호출이 `try {` ... `} catch {}` 로 감싸져 있다 | **계층**: 빌드 산출물
-- **동작**: 인라인된 URL 이 운영 릴레이 URL `https://push.siot-ieung.duckdns.org/sw.js` 이다 | **계층**: 빌드 산출물
+- [x] **동작**: 빌드된 `sw.js` 에 `importScripts(` 가 정확히 한 번 나온다 | **계층**: 빌드 산출물
+- [x] **동작**: 그 `importScripts` 호출이 `try {` ... `} catch {}` 로 감싸져 있다 | **계층**: 빌드 산출물
+- [x] **동작**: 인라인된 URL 이 운영 릴레이 URL `https://push.siot-ieung.duckdns.org/sw.js` 이다 | **계층**: 빌드 산출물
 
 ### 수동 (OQ-21) — 결과는 IR-4 에 기록
 

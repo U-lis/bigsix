@@ -80,17 +80,17 @@ bigsix 는 「언제 · 무엇을」 만 정한다.
 
 ### FR-32: 릴레이 연결 (서비스워커 · 스크립트)
 
-- [ ] FR-32.1: 릴레이 공개 주소는 빌드 환경변수 `PUBLIC_PUSH_RELAY_URL` 하나로 받는다.
+- [x] FR-32.1: 릴레이 공개 주소는 빌드 환경변수 `PUBLIC_PUSH_RELAY_URL` 하나로 받는다.
       `.env.development` = `https://push-dev.siot-ieung.duckdns.org`,
       `.env.production` = `https://push.siot-ieung.duckdns.org`. 둘 다 커밋한다 (비밀 아님).
-- [ ] FR-32.2: `src/pwa-sw.ts` 최상위에서 `importScripts(<릴레이>/sw.js)` 를 부른다.
+- [x] FR-32.2: `src/pwa-sw.ts` 최상위에서 `importScripts(<릴레이>/sw.js)` 를 부른다.
       릴레이에 닿지 않아 예외가 나도 **SW 설치 전체가 실패하면 안 된다** — 앱 갱신 · 오프라인이
       푸시 때문에 깨지지 않게 감싼다. 앱 SW 에 `push` · `notificationclick` 핸들러를 두지 않는다.
       릴레이 `sw.js` 를 프리캐시에 넣지 않는다.
 - [ ] FR-32.3: `client.js` 는 `app.html` 에 넣지 않는다. 필요할 때(설정 화면 진입 · FR-33.6 동기화)
       `<script>` 를 동적으로 붙여 불러오고, 한 번 불린 뒤에는 재사용한다. 첫 화면과 오프라인 진입이
       릴레이 스크립트에 묶이지 않게 하기 위해서다.
-- [ ] FR-32.4: `pnpm dev` 는 5173 포트로 고정한다 (`strictPort`). dev 릴레이에 등록된 Origin 과 어긋나면
+- [x] FR-32.4: `pnpm dev` 는 5173 포트로 고정한다 (`strictPort`). dev 릴레이에 등록된 Origin 과 어긋나면
       `origin-not-allowed` 가 나기 때문이다 (연동 문서 §환경).
 
 ### FR-33: 설정 화면 `/settings`
@@ -362,7 +362,7 @@ SPEC 작성 중 읽으면서 걸린 것. 구현 중 실제로 문제가 됐는�
 | IR-1 | 문서 위치 (0.1.0) | 연동 기준 문서가 `feature/gateway` 에만 있고 main 에는 없었다 | **해소** — 0.1.0 · 0.1.1 이 main 에 병합됨 (`82c4b24` · `39b0137`) | — |
 | IR-2 | §환경 「한 Origin 은 한 앱에만 등록된다」 | 한 앱이 Origin 을 여러 개 가질 수 있는지(5173 · 4173 동시)가 문장에서 안 읽힌다. 또한 「한 Origin 은 한 앱에만」 이 환경(prod·dev) 안의 규칙인지 환경을 가로지르는 규칙인지 문서에 없다. 릴레이 env 파일에서 prod·dev 데이터 디렉터리가 분리되어 있어(`deploy/env/dev.env:7` · `prod.env:11`) 환경별 독립 규칙으로 추정 — 같은 https Origin(`https://bigsix.siot-ieung.duckdns.org`)을 dev 환경에도 등록해 dev 릴레이 빌드 임시배포본 시험에 사용한다 | 미정 — 5173 만 등록 후 임시배포 단계에서 추가 (EC-86, B.3) | 「한 앱은 Origin 을 여럿 가질 수 있다 / 없다」 와 「환경 독립 여부」 를 명시 |
 | IR-3 | §2 「`enable` 은 사용자 제스처(클릭) 안에서 부른다」 | 권한이 이미 `granted` 일 때 meta 갱신용 `enable(새 meta)` 를 제스처 밖에서 불러도 되는지 없다. FR-33.6 자동 동기화가 여기에 기댄다 | **해소(코드)** — relay client.js 는 `Notification.permission === 'default'` 일 때만 `requestPermission` 을 부른다. 이미 `granted` 이면 제스처 밖 호출 가능. 실기기 재확인 Phase 5/7 | §2 에 「권한이 이미 `granted` 이면 제스처 밖에서 `enable` 호출 가능」 명시 |
-| IR-4 | §3 `importScripts` 한 줄 | 릴레이에 닿지 않을 때 앱 SW 설치가 실패하는지, 감싸야 하는지 언급이 없다 | 미정 — OQ-21 | 실패 시 동작과 권장 패턴(try/catch 여부) 명시 |
+| IR-4 | §3 `importScripts` 한 줄 | 릴레이에 닿지 않을 때 앱 SW 설치가 실패하는지, 감싸야 하는지 언급이 없다 | **구현(Phase 3)** — ADR-32 대로 `try { importScripts(...) } catch {}` 적용, 빌드 산출물에 운영 URL 인라인·호출 1회·try/catch 유지 확인 (`tests/unit/push/sw-importscripts.test.ts`). Chrome · Firefox · Safari 실기기 확인은 OQ-21 로 Phase 7 preview 단계까지 미정 | 실패 시 동작과 권장 패턴(try/catch 여부) 명시 |
 | IR-5 | §6 발송 예시 `dedupKey` | 「같은 dedupKey 로 이미 보냄」 의 범위(구독별인지 앱 전체인지)와 보존 기간이 안 적혀 있다 | **해소(코드)** — dedup PK 는 `(subscription_id, dedup_key)` (구독별), 8일 보존 (`src/store/migrations.rs:40`, `src/store/mod.rs:161`) | §6 에 dedup 범위(구독별)와 보존 기간(8일) 명시 |
 | IR-6 | §5 「`/…` 상대 경로는 앱 출처 기준」 · §5 아이콘 URL 해석 주체 | 누가 해석하는지(릴레이 `sw.js` 가 SW 출처로 해석?) 가 없다. `icon: "/icon-192.png"` 이 여기에 기댄다. 또한 상대 경로가 어느 출처를 기준으로 해석되는지 기기 종류마다 다를 수 있다 | **우회** — cron 이 icon 을 절대 URL(`https://bigsix.siot-ieung.duckdns.org/icon-192.png`)로 보냄. 실기기 확인 Phase 7 | 해석 주체 명시; 절대 URL 권장 여부 |
 | IR-7 | §1 키 파일 경로 `~/apps/push-relay/prod/data/keys/<앱>.env` + 「systemd `EnvironmentFile=` 등」 | 예시 경로를 그대로 `EnvironmentFile=` 에 옮기면 systemd 가 `~` 를 풀지 않아 파일을 못 찾는다. 또 키 파일이 600 이라 **앱 cron 이 릴레이와 같은 사용자로 돌아야 읽힌다**는 조건이 문서에 없다 (릴레이 유닛 `deploy/systemd/push-relay@.service:10` `User=ulismoon` 에서 확인). 0.1.1 판의 「`app-key.sh` 실행 위치 · `~` 해석」 문제는 0.1.2 에서 수동 경로 인자가 사라져 해소 | FR-36.3 에서 `%h` · `User=ulismoon` 으로 우회 | `EnvironmentFile=%h/…` 예시와 「같은 사용자로 읽는다」 한 줄 |

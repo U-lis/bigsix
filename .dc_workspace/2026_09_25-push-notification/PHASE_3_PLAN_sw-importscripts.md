@@ -58,13 +58,13 @@ server: {
 
 ## 완료 체크리스트
 
-- [ ] `.env.development` 생성·커밋
-- [ ] `.env.production` 생성·커밋
-- [ ] `src/pwa-sw.ts` 에 try/catch 감싼 `importScripts` 추가
-- [ ] `vite.config.ts` 에 `server: { port: 5173, strictPort: true }` 추가
-- [ ] 빌드 산출물 테스트 통과 (PHASE_3_TEST.md 참조)
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 통과
+- [x] `.env.development` 생성·커밋
+- [x] `.env.production` 생성·커밋
+- [x] `src/pwa-sw.ts` 에 try/catch 감싼 `importScripts` 추가
+- [x] `vite.config.ts` 에 `server: { port: 5173, strictPort: true }` 추가
+- [x] 빌드 산출물 테스트 통과 (PHASE_3_TEST.md 참조)
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 통과
 - [ ] IR-4 를 수동 테스트 결과로 갱신 (OQ-21)
 
 ## 참고
