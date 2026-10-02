@@ -198,7 +198,7 @@ interface CronMessage {
 | 1 | pwa-injectmanifest | SW injectManifest 전환 | 완료 | — |
 | 2 | push-foundation | 타입 · storage · push state · meta | Complete | 1 |
 | 3 | sw-importscripts | `.env` 파일 · pwa-sw.ts · vite strictPort | Complete (OQ-21 수동 미결) | 2 |
-| 4 | settings-screen | `/settings` 화면 · relay.ts · 상단 바 링크 · reset 연동 | — | 3 |
+| 4 | settings-screen | `/settings` 화면 · relay.ts · 상단 바 링크 · reset 연동 | Complete | 3 |
 | 5 | push-autosync | autoSync.ts · layout 연결 | — | 4 |
 | 6 | cron-sender | `cron/` 구현 | — | 2 (PushMeta 타입만) |
 | 7 | deploy-wiring | systemd 유닛 · push-install.sh · deploy.sh · deploy/README | — | 5, 6 |

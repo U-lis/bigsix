@@ -95,17 +95,17 @@ performReset();
 
 ## 완료 체크리스트
 
-- [ ] `src/routes/settings/+page.ts` — `prerender = true`
-- [ ] `src/lib/ui/push/relay.ts` — `loadRelay()` · `teardownPush()` 구현
-- [ ] 화면 로직 순수 함수 추출·export (`isDevRelay` 포함)
-- [ ] `src/routes/settings/+page.svelte` — 모든 `data-*` 속성 포함 (`data-push-test` 포함)
-- [ ] 켜기/끄기/테스트 버튼 show/hide 를 CSS 로 처리 — `{#if}` DOM 제거 없음
-- [ ] 상단 바 「설정」 링크 추가 (`data-settings-open`)
-- [ ] `reset.ts` 에 `bigsix.push` 삭제 추가
-- [ ] `About.svelte` 에 `teardownPush()` 선행 호출 추가
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 통과
-- [ ] 수동: `pnpm dev` 에서 켜기·끄기·시각 변경 확인, iOS 설치/미설치 분기 확인
+- [x] `src/routes/settings/+page.ts` — `prerender = true` (verified: src/routes/settings/+page.ts:7)
+- [x] `src/lib/ui/push/relay.ts` — `loadRelay()` · `teardownPush()` 구현 (verified: relay.ts:55, relay.ts:99; cache-clear-on-failure bug fixed: relay.ts:71,88)
+- [x] 화면 로직 순수 함수 추출·export (`isDevRelay` 포함) (verified: src/lib/ui/push/pushUI.ts:22,42,70,80,90,102)
+- [x] `src/routes/settings/+page.svelte` — 모든 `data-*` 속성 포함 (`data-push-test` 포함) (verified: +page.svelte:231,237,252,266,275,284,297)
+- [x] 켜기/끄기/테스트 버튼 show/hide 를 CSS 로 처리 — `{#if}` DOM 제거 없음 (verified: +page.svelte:265-292, style .hidden)
+- [x] 상단 바 「설정」 링크 추가 (`data-settings-open`) (verified: +layout.svelte:163)
+- [x] `reset.ts` 에 `bigsix.push` 삭제 추가 (verified: reset.ts:22)
+- [x] `About.svelte` 에 `teardownPush()` 선행 호출 추가 (verified: About.svelte:38)
+- [x] `pnpm check` 오류 0 (515 files, 0 errors, 0 warnings)
+- [x] `pnpm test` 통과 (45 files, 847 tests passed; includes relay cache-retry test)
+- [ ] 수동: `pnpm dev` 에서 켜기·끄기·시각 변경 확인, iOS 설치/미설치 분기 확인 (deferred to Phase 7)
 
 ## 참고
 
