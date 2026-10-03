@@ -62,7 +62,13 @@
     return buildMeta(appState.value, catalog, tz, pushRecord.value.notifyAt);
   }
 
-  /** 릴레이 클라이언트를 붙이고 상태를 읽어 UI 에 반영한다. */
+  /**
+   * 릴레이 클라이언트를 붙이고 상태를 읽어 UI 에 반영한다.
+   *
+   * 상태가 돌아오기 전까지는 `pushState` 를 `'loading'` 그대로 둔다 — 「확인 중」
+   * 문구와 비활성 켜기 버튼이 유지된다. `state()` 가 reject 하면 loadRelay 실패와
+   * 같은 경로로 떨어뜨린다 (`off` + `network`).
+   */
   async function refreshState(): Promise<void> {
     if (!browser) return;
     try {
@@ -79,7 +85,14 @@
       errorCode = 'network';
       return;
     }
-    pushState = relay.state();
+    try {
+      // 연동 문서 §2: `state()` 는 비동기. await 를 빠뜨리면 Promise 자체가
+      // `pushState` 로 들어가 `canEnable` 이 늘 거짓 — 「알림 켜기」가 영원히 비활성.
+      pushState = await relay.state();
+    } catch {
+      pushState = 'off';
+      errorCode = 'network';
+    }
   }
 
   onMount(() => {
@@ -125,12 +138,12 @@
       }
       await window.PushRelay!.enable(base);
       pushRecord.setSentMeta(JSON.stringify(base));
-      pushState = window.PushRelay!.state();
+      pushState = await window.PushRelay!.state();
     } catch (e) {
       errorCode = errorCodeOf(e);
       // 권한 거부·미지원이면 state 가 바뀌어 있다. 그 외는 상태를 다시 읽어 둔다.
       try {
-        if (window.PushRelay !== undefined) pushState = window.PushRelay.state();
+        if (window.PushRelay !== undefined) pushState = await window.PushRelay.state();
       } catch {
         // 상태 조회 자체가 실패하면 그대로 둔다.
       }
@@ -149,11 +162,11 @@
       await window.PushRelay!.disable();
       // `sentMeta` 는 비운다 — 다음 켤 때 자동 동기화가 반드시 enable 을 다시 부른다.
       pushRecord.setSentMeta(null);
-      pushState = window.PushRelay!.state();
+      pushState = await window.PushRelay!.state();
     } catch (e) {
       errorCode = errorCodeOf(e);
       try {
-        if (window.PushRelay !== undefined) pushState = window.PushRelay.state();
+        if (window.PushRelay !== undefined) pushState = await window.PushRelay.state();
       } catch {
         // 상태 조회 자체가 실패하면 그대로 둔다.
       }
@@ -380,13 +393,16 @@
 
   /*
    * CLAUDE.md 접기 규약: `{#if}` 로 DOM 에서 빼지 않는다 — 하이드레이션·포커스 보호.
-   * `visibility: hidden; position: absolute;` 로 공간도 흐름에서 뺀다 (버튼이 자리를
-   * 차지한 채 비어 있으면 이상하다). 접근 보조에도 숨기도록 `visibility: hidden` 선택.
+   * `display: none` 으로 접는다 (저장소 선례: `DayRow.svelte:276`, `+layout.svelte:313`).
+   *
+   * 과거엔 `visibility: hidden; position: absolute;` 였는데, `.btn { width: 100% }` 과
+   * 겹쳐 absolute 요소의 100% 가 뷰포트(initial containing block) 기준으로 풀렸고
+   * 좌우 거터 오프셋만큼 가로 overflow 가 났다 — Android PWA 에서 /settings 만
+   * 가로 스크롤이 생기고 하단 네비가 잘려 보이던 원인. DOM 은 그대로 남고 하이드레이션은
+   * 영향을 받지 않는다.
    */
   .hidden {
-    visibility: hidden;
-    position: absolute;
-    pointer-events: none;
+    display: none;
   }
 
   .error {

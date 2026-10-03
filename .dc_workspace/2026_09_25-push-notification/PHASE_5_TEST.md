@@ -20,6 +20,10 @@
 - **동작**: `PushRelay.enable` 이 throw 해도 `pushAutoSync` 밖으로 예외가 전파되지 않는다 | **계층**: 단위 | [x] PASS
 - **동작**: `pushRecord.sentMeta === null` 이면 `loadRelay` 를 호출하지 않는다 | **계층**: 단위 | [x] PASS
 
+## 실기기 확인에서 발견된 결함 (2026-10-03 Android PWA)
+
+**`pushAutoSync` async 미스매치** — `relay.state()` 결과를 `await` 없이 비교해, Promise 가 `!== 'on'` 이라 자동 동기화가 항상 early return 됐다. meta 변경(프로그램 전환, 타임존 변경 등)이 릴레이에 전파되지 않았다. 수정: `autoSync.ts` 의 `if ((await relay.state()) !== 'on')` 에 `await` 추가. `autoSync.test.ts` 의 mock 도 모두 Promise 반환으로 교체해 회귀가 다시 숨지 못하게 함.
+
 ## 이 페이즈에 실제로 해당하는 엣지 케이스
 
 - EC-84: 타임존 변경 — `buildMeta` 가 새 `tz` 로 다른 meta 를 생성하므로 auto-sync 가 `enable` 을 호출한다.

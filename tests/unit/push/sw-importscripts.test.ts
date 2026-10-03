@@ -48,7 +48,17 @@ describe('빌드 산출물: sw.js importScripts (Phase 3 / FR-32.1·2)', { timeo
       let cleanupOut: string | null = null;
       let swPath = join(buildDir, 'sw.js');
 
-      if (!existsSync(swPath)) {
+      // 이미 build/sw.js 가 있어도 dev 모드 빌드 산출물이면 운영 URL 이 없어 테스트가
+      // 실패한다 (e.g. DEPLOY_MODE=dev 로 마지막 빌드를 했을 때). prod URL 존재 여부로
+      // 판단해 dev 빌드라면 새로 운영 모드 빌드를 트리거한다.
+      const PROD_URL = 'https://push.siot-ieung.duckdns.org';
+      const isDevBuild = (): boolean => {
+        if (!existsSync(swPath)) return false;
+        const content = readFileSync(swPath, 'utf8');
+        return !content.includes(PROD_URL);
+      };
+
+      if (!existsSync(swPath) || isDevBuild()) {
         cleanupOut = mkdtempSync(join(tmpdir(), 'bigsix-swimport-'));
         buildTo(cleanupOut);
         swPath = join(buildDir, 'sw.js');
@@ -67,7 +77,7 @@ describe('빌드 산출물: sw.js importScripts (Phase 3 / FR-32.1·2)', { timeo
 
       // (3) 운영 URL 이 인라인됨. 압축 결과 상수는 지역 변수에 캐시되고 `+'/sw.js'` 가 뒤에 붙어
       //     전체 리터럴이 그대로 한 조각으로 남지 않을 수 있다 — 베이스 URL 과 `/sw.js` 끝자리 둘 다 확인.
-      const PROD_URL = 'https://push.siot-ieung.duckdns.org';
+      // (PROD_URL 은 isDevBuild 판정에서 이미 선언됨.)
       assert.ok(
         sw.includes(PROD_URL),
         `운영 릴레이 베이스 URL(${PROD_URL}) 이 sw.js 에 인라인되지 않음`,

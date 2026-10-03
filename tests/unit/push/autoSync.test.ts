@@ -39,19 +39,25 @@ vi.mock('../../../src/lib/ui/push/storage', () => ({
 }));
 
 // ── PushRelay 전역 ──────────────────────────────────────────────────────────
+//
+// 실제 relay `client.js` 는 세 메서드 모두 `async function` 이다 (연동 문서 §2,
+// https://push-dev.siot-ieung.duckdns.org/client.js). 과거 이 파일의 `stateMock`
+// 은 동기 반환이어서 코드가 `relay.state()` 결과를 await 없이 비교해도 테스트는
+// 통과했고, Android PWA 에서만 조용히 깨졌다. 이번 리라이트는 세 mock 를 모두
+// Promise 로 되돌리게 해 그 미스매치를 다시 못 숨기도록 한다.
 
 type PushState = 'unsupported' | 'denied' | 'off' | 'on';
 
-const stateMock = vi.fn<() => PushState>();
-const enableMock = vi.fn<(meta: unknown) => Promise<void>>();
-const disableMock = vi.fn<() => Promise<void>>();
+const stateMock = vi.fn<() => Promise<PushState>>();
+const enableMock = vi.fn<(meta: unknown) => Promise<'on'>>();
+const disableMock = vi.fn<() => Promise<'off'>>();
 
 function installRelayGlobal(): void {
   // 테스트에서 매번 새로 심어, 각 테스트가 격리된 호출 기록을 본다.
   (window as unknown as { PushRelay: unknown }).PushRelay = {
-    state: () => stateMock(),
-    enable: (meta: unknown) => enableMock(meta),
-    disable: () => disableMock(),
+    state: async () => stateMock(),
+    enable: async (meta: unknown) => enableMock(meta),
+    disable: async () => disableMock(),
   };
 }
 
@@ -83,9 +89,9 @@ beforeEach(() => {
 
   // 기본 동작: loadRelay 는 성공, state 는 on, enable 은 성공.
   hoisted.loadRelay.mockResolvedValue(undefined);
-  stateMock.mockReturnValue('on');
-  enableMock.mockResolvedValue(undefined);
-  disableMock.mockResolvedValue(undefined);
+  stateMock.mockResolvedValue('on');
+  enableMock.mockResolvedValue('on');
+  disableMock.mockResolvedValue('off');
 
   installRelayGlobal();
 });
@@ -141,7 +147,7 @@ describe('pushAutoSync — FR-33.6 / FR-34.3 / ADR-35', () => {
     'state === "%s" 이면 enable 을 호출하지 않는다',
     async (s) => {
       hoisted.readPushRecord.mockReturnValue(RECORD_SENT);
-      stateMock.mockReturnValue(s);
+      stateMock.mockResolvedValue(s);
       hoisted.buildMeta.mockReturnValue(BASE_META);
 
       const { pushAutoSync } = await import('../../../src/lib/ui/push/autoSync');
@@ -193,5 +199,31 @@ describe('pushAutoSync — FR-33.6 / FR-34.3 / ADR-35', () => {
     assert.equal(hoisted.loadRelay.mock.calls.length, 0, 'loadRelay 는 호출되지 않는다');
     assert.equal(enableMock.mock.calls.length, 0);
     assert.equal(hoisted.buildMeta.mock.calls.length, 0);
+  });
+
+  // ── 회귀: 2026-10-03 Android PWA 버그 ───────────────────────────────────────
+  // 실제 relay `client.js` 는 `state()` 가 `async function`. 과거 코드는 반환값을
+  // `await` 없이 비교했기에 Promise 가 `!== 'on'` 이라 자동 동기화가 조용히 꺼졌다.
+  // 이 테스트는 state 를 「느린 Promise」로 돌려줘, 코드가 `await` 를 유지하는지 못박는다.
+  // await 가 다시 빠지면 enable 호출 횟수 0 으로 바로 떨어진다.
+  it('회귀: state() 가 비동기로만 resolve 돼도 (await 유지) enable 이 1회 호출된다', async () => {
+    const oldMeta: PushMeta = { ...BASE_META, program: '신입' };
+    const oldJson = JSON.stringify(oldMeta);
+    hoisted.readPushRecord.mockReturnValue({ v: 1, notifyAt: '19:00', sentMeta: oldJson });
+    hoisted.buildMeta.mockReturnValue(BASE_META);
+
+    // 다음 틱으로 미루는 Promise — 동기 비교(Promise !== 'on') 로는 enable 못 넘긴다.
+    stateMock.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve('on'), 0)),
+    );
+
+    const { pushAutoSync } = await import('../../../src/lib/ui/push/autoSync');
+    await pushAutoSync();
+
+    assert.equal(
+      enableMock.mock.calls.length,
+      1,
+      'state() 비동기 결과를 await 하지 않으면 Promise !== "on" 분기로 빠져 0 이 된다',
+    );
   });
 });

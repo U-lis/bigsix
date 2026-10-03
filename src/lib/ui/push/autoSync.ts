@@ -39,7 +39,9 @@ export async function pushAutoSync(): Promise<void> {
     await loadRelay();
     const relay = typeof window !== 'undefined' ? window.PushRelay : undefined;
     if (relay === undefined) return;
-    if (relay.state() !== 'on') return;
+    // `relay.state()` 는 비동기 — await 를 빠뜨리면 Promise 가 늘 `!== 'on'` 이라
+    // 자동 동기화가 조용히 꺼진다 (연동 문서 §2 · 2026-10-03 Android PWA 버그).
+    if ((await relay.state()) !== 'on') return;
 
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const meta = buildMeta(appState.value, loadCatalog(), tz, record.notifyAt);
