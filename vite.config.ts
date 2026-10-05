@@ -20,6 +20,13 @@ export default defineConfig({
 		__APP_VERSION__: JSON.stringify(pkg.version),
 		__COMMIT_HASH__: JSON.stringify(commitHash())
 	},
+	// SPEC4 FR-32.4 / ADR-32: dev 서버는 5173 에 고정한다. 다른 프로세스가 선점했을 때
+	// Vite 가 자동으로 다른 포트로 넘어가면 dev 릴레이에 등록된 Origin(`http://localhost:5173`) 과
+	// 어긋나 `origin-not-allowed` 가 난다 (EC-86). preview(기본 4173) 는 영향 없음.
+	server: {
+		port: 5173,
+		strictPort: true
+	},
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({
