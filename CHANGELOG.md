@@ -5,12 +5,43 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
 ### Added
 
 - **단계별 시범 영상 링크**: 오늘 화면 「동작 설명」 안, 각 단계 설명 아래에 YouTube 시범 영상 링크가 붙는다.
   60단계 전부. 플레이어를 박지 않고 새 탭으로 연다 (`src/lib/ui/session/videos.ts`).
   공식 영상이 YouTube 에 없어 비공식 채널을 쓴다 — 5종은 Convicted Condition, 핸드스탠드 푸시업은 Sollapps.
   링크 문구에 채널 이름과 「비공식」을 함께 적는다. 훅 `data-howto-video`(값: 단계 번호).
+- **푸시 알림**: 운동일 사용자가 설정한 시각에 푸시 알림을 보낸다. push-relay 를 통한 Web Push.
+  한 번 켜두면 앱을 열지 않아도 그날 운동이 있으면 알림이 온다.
+- **`/settings` 페이지**: 알림 켜기·끄기, 수신 시각(분 단위) 설정 화면. 상단 바 「설정」 링크로 진입.
+  훅 `data-push-state`, `data-push-enable`, `data-push-disable`, `data-push-time`, `data-push-error`, `data-push-need-program`, `data-push-test`.
+- **홈서버 cron** (`cron/push.ts`): 1분마다 실행. push-relay cron API 로 구독 목록을 받아,
+  현지 시각이 `[notifyAt, notifyAt+30분)` 안이고 운동일인 구독에 한해, 당일 1회(`dedupKey` = 현지 날짜)만 발송.
+  `cron/decide.ts` · `cron/message.ts` 는 순수 함수. 외부 의존성 없음.
+- **systemd 템플릿 유닛** (`deploy/systemd/bigsix-push@.{service,timer}`): `prod` · `dev` 인스턴스를 하나의 템플릿으로 관리.
+  `deploy/push-install.sh` 로 최초 1회 설치(sudo).
+- **dev 전용 테스트 발송** (`data-push-test`): dev 릴레이 빌드에서만 표시되는 「지금 푸시 보내기」 버튼.
+  누를 때마다 `meta.test` 에 UTC 타임스탬프를 덮어쓴다. cron 은 1분에 한 번 실행되어 그 시점의 최신 값을 보내므로,
+  같은 분에 여러 번 눌러도 기기에는 1건만 도달한다. `dedupKey = 'test-YYYYMMDDHHMMSS'` 는
+  한 번 발송된 테스트가 이후 분에 중복 전송되는 것을 막는다. 발송 후 기기 도달까지 최대 약 1분 소요.
+
+### Changed
+
+- **상단 바**: `/settings` 로 이동하는 「설정」 링크 추가(`data-settings-open`).
+- **`deploy/README.md`**: 런타임 설명(정적 앱 + 1분 cron), 키 교체 절차, `push-install.sh` 설명 추가.
+- **`vite.config.ts`**: 개발 서버 포트 5173 고정(`strictPort: true`). 다른 앱이 포트를 선점해도 자동 전환하지 않는다.
+- **`deploy/deploy.sh`**: `DEPLOY_MODE=dev` 로 dev 릴레이 URL 과 dev 타이머 인스턴스를 대상으로 배포 가능.
+  `deploy/remote.sh` 가 빌드 산출물 `build/sw.js` 에 `DEPLOY_MODE` 에 맞는 릴레이 URL 이 포함됐는지 확인하고,
+  일치하지 않으면 rsync 전에 실패한다(prod → dev URL 혼입, dev → prod URL 혼입 양방향). 타이머 활성 여부 확인은 경고만 내고 배포를 막지 않는다.
+
+### Known limitations
+
+- **알림 배달 지연**: 릴레이 발송 시 Web Push `Urgency` 헤더를 설정하지 않는다. Android Doze 환경에서 FCM 이 알림을 최대 수십 분 지연 배달할 수 있다. 후속 작업(IR-12)으로 분류.
+- **iOS**: 홈 화면 추가(iOS 16.4+)한 PWA 에서만 동작한다. Safari 브라우저 탭은 Web Push 를 지원하지 않는다.
+- **홈서버 의존**: 알림 수신 시각(`notifyAt`) 창에 홈서버가 꺼져 있으면 그날 알림이 가지 않는다.
+- **하단 네비 일부 잘림**: Android standalone PWA 에서 `/settings` 에서 확인됐으며, `.shell { min-height: 100dvh }` 가 전역 적용되므로 세로 높이가 짧은 다른 페이지에도 동일하게 나타날 수 있다(추정). 약 42 CSS px 세로 스크롤 후 하단 네비가 일부 잘려 보인다. 후속 작업으로 분류.
 
 ## [0.2.0] - 2026-09-25
 
@@ -150,5 +181,6 @@
 - 테스트 474개 통과. 커버리지 line 100% / branch 94.95% / funcs 100%.
 - 외부 의존성 0. Node 24 내장 타입 스트리핑과 내장 테스트 러너만 쓴다.
 
+[0.3.0]: https://github.com/U-lis/bigsix/releases/tag/v0.3.0
 [0.2.0]: https://github.com/U-lis/bigsix/releases/tag/v0.2.0
 [0.1.0]: https://github.com/U-lis/bigsix/releases/tag/v0.1.0
