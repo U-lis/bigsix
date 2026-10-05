@@ -1,0 +1,26 @@
+# bigsix 푸시 발송 — 환경별 인스턴스 (bigsix-push@prod · bigsix-push@dev).
+# 설치: deploy/push-install.sh (root 1회). 코드 교체는 deploy/deploy.sh 로 저장소를 갱신하면 끝.
+#
+# `%h` 는 systemd 홈 디렉터리 지시자인데, `User=` 가 있는 system 유닛에서는
+# 서비스 매니저 자신의 홈(`/root`)으로 풀린다 (man systemd.unit, specifiers 표의
+# 「not influenced by the User= setting」). 그래서 사용자 홈 경로는 템플릿에서
+# `__HOME__` 플레이스홀더로 두고 push-install.sh 가 치환한다.
+[Unit]
+Description=bigsix push notification sender (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ulismoon
+Group=ulismoon
+# 릴레이가 소유한 키 파일(600). 같은 사용자로 돌아야 읽힌다 (FR-36.3, ADR-39, IR-7).
+# 인스턴스 이름(`prod`/`dev`)이 릴레이 환경 디렉터리 이름과 같아 템플릿 하나로 양쪽 커버.
+EnvironmentFile=__HOME__/apps/push-relay/%i/data/keys/bigsix.env
+WorkingDirectory=__HOME__/apps/bigsix
+# `__NODE__` 는 push-install.sh 가 서버의 nvm Node 24 절대 경로로 치환한다.
+# `--experimental-strip-types` 는 Node 24 네이티브 TS 실행에 필요하다 (FR-36.4).
+ExecStart=__NODE__ --experimental-strip-types __HOME__/apps/bigsix/cron/push.ts --instance %i
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bigsix-push-%i
