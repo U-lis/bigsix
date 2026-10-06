@@ -14,6 +14,7 @@
   import {
     nextResetState, isResetReady, performReset, type ResetState,
   } from '$lib/ui/state/reset';
+  import { teardownPush } from '$lib/ui/push/relay';
 
   let dialog: HTMLDialogElement | undefined = $state();
 
@@ -30,8 +31,11 @@
   // 2단계 확인 상태.
   let resetState = $state<ResetState>('idle');
 
-  function onResetClick() {
+  async function onResetClick() {
     if (isResetReady(resetState, 'click')) {
+      // 알림이 켜져 있으면 릴레이 구독부터 끈다 (ADR-36 · FR-33.10). teardownPush 는
+      // 로드되지 않았거나 꺼져 있으면 즉시 반환하고, 실패해도 통과한다.
+      await teardownPush();
       performReset();
       resetState = 'idle';
       dialog?.close();

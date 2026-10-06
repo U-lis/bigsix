@@ -27,6 +27,7 @@
   import { tabsFor } from '$lib/ui/shell/nav';
   import About from '$lib/ui/shell/About.svelte';
   import Toast from '$lib/ui/shell/Toast.svelte';
+  import { pushAutoSync } from '$lib/ui/push/autoSync';
 
   let { children } = $props();
   let booted = $state(false);
@@ -59,6 +60,13 @@
     // 서비스 워커 등록 — dev 에서는 건너뜀 (sw.js 자체가 없어 404).
     if (document.readyState === 'complete') void sw.register();
     else window.addEventListener('load', () => void sw.register(), { once: true });
+
+    // 푸시 meta 자동 동기화 (FR-33.6 / ADR-35). queueMicrotask 로 미뤄 첫 페인트가
+    // 릴레이 스크립트 로드에 묶이지 않게 한다. sentMeta === null (한 번도 켠 적 없음)
+    // 이면 pushAutoSync 가 즉시 반환해 client.js 를 로드하지 않는다.
+    queueMicrotask(() => {
+      void pushAutoSync();
+    });
   });
 
   function openAbout() {
@@ -156,6 +164,23 @@
       </svg>
       <span class="theme-label">{THEME_LABEL[theme.value]}</span>
     </button>
+    <!--
+      FR-33.1 / UI-13: 설정 화면 진입 링크. 기존 상단 바 버튼과 같은 pill 모양을
+      유지하되 라벨을 꼭 함께 둔다 — 아이콘만 두지 않는다 (CLAUDE.md 아이콘 규칙).
+    -->
+    <a href="/settings" class="bar-link" data-settings-open aria-label="설정">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2" />
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span class="btn-label">설정</span>
+    </a>
     <!-- FR-19.1 About 진입. -->
     <button type="button" data-about-open onclick={openAbout} aria-label="앱 정보">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -288,7 +313,8 @@
       display: none;
     }
   }
-  .bar button {
+  .bar button,
+  .bar .bar-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -300,6 +326,7 @@
     border: 1px solid var(--border);
     border-radius: 999px;
     cursor: pointer;
+    text-decoration: none;
   }
 
   main {

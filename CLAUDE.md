@@ -13,8 +13,10 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | `README.md` | 도메인 사용 예, 규칙 요약, 데이터 출처 |
 | `.dc_workspace/2026_09_05-ui-2/SPEC.md` | UI 2차 개정 (SPEC2) — 이력 |
 | `.dc_workspace/2026_09_05-ui-2/GLOBAL.md` | UI 2차 개정 (SPEC2) ADR — 이력 |
-| `.dc_workspace/2026_09_18-history-export/SPEC.md` | **이번 개정 (SPEC3)** 요구·수용 기준 |
-| `.dc_workspace/2026_09_18-history-export/GLOBAL.md` | **이번 개정 (SPEC3)** ADR·데이터 모델·페이즈 |
+| `.dc_workspace/2026_09_18-history-export/SPEC.md` | SPEC3 요구·수용 기준 — 이력 |
+| `.dc_workspace/2026_09_18-history-export/GLOBAL.md` | SPEC3 ADR·데이터 모델·페이즈 — 이력 |
+| `.dc_workspace/2026_09_25-push-notification/SPEC.md` | **이번 개정 (SPEC4)** 푸시 알림 요구·IR 로그 |
+| `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | **이번 개정 (SPEC4)** ADR·데이터 모델·페이즈 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 
@@ -66,6 +68,12 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-import-dialog`(확인 다이얼로그 루트),
   `data-import-error`(값: `'not-json'|'shape'|'future-version'|'schema-missing'`),
   `data-import-block`(값: `'inprogress'`)
+  **설정 화면 (Phase 4)**:
+  `data-settings-open`(상단 바 설정 링크),
+  `data-push-state`(값: `'loading'|'unsupported'|'denied'|'off'|'on'`),
+  `data-push-enable`, `data-push-disable`, `data-push-time`,
+  `data-push-error`(값: 오류 code), `data-push-need-program`,
+  `data-push-test`(dev 빌드 전용 테스트 발송 버튼).
 - UI 문구는 사실만 적는다. 백분율·격려·게이미피케이션 금지
 - 문자열은 도메인이 준 것을 가공 없이 노출한다 (NFR-2). 시스템 시각을 UI 에서 부르지
   않는다 — 오늘 날짜는 `todayClock.today` 하나가 근원 (FR-4.4)
@@ -74,8 +82,7 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 
 - **룬만 쓴다.** `export let` · `$:` · `on:click` · `<slot>` · `svelte/store` 금지.
   파생은 `$derived`, 외부 세계와 맞물릴 때만 `$effect`
-- **서버 기능은 존재하지 않는다.** `+page.server` · `+server` · form actions · 서버 훅 ·
-  비공개 환경변수. 데이터는 정적 JSON 과 `localStorage` 뿐
+- **SvelteKit 서버 기능은 없다. 홈서버 cron(`cron/`) 하나가 있다.** `+page.server` · `+server` · form actions · 서버 훅 · 비공개 환경변수는 없다. 클라이언트 데이터는 정적 JSON 과 `localStorage` 뿐. `cron/` 는 서버에서 Node 로 직접 실행하는 스크립트로, SvelteKit 과 무관하다
 - **도메인 계층 불가침.** `src/lib/domain/**` 은 이번 UI 작업에서 손대지 않는다.
   UI 는 도메인이 노출한 순수 함수를 부를 뿐이다
 - **도메인 참조는 `$lib/domain`(값) · `$lib/domain/types`(타입) 로만.**
@@ -89,8 +96,9 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - **`src/lib/ui/` 는 역할별 하위 폴더로 나눈다.** 직속에 파일을 두지 않는다.
   현재 폴더: `shell` (앱 껍데기 — 상단 바 · About · sw), `state` (storage · state ·
   boot · today · reset), `common` (재사용 폼), `today` (오늘 화면 파생),
-  `session` (진행 중 세션 · 타이머 · 알림 · 세션 컴포넌트), 그리고 `history`
-  (기록 탭, Phase 4 에서 추가) (FR-29.3 / ADR-26)
+  `session` (진행 중 세션 · 타이머 · 알림 · 세션 컴포넌트), `history`
+  (기록 탭, Phase 4 에서 추가), 그리고 `push`
+  (알림 켜기·끄기·자동 동기화, SPEC4 에서 추가) (FR-29.3 / ADR-26, ADR-30)
 - 순수 로직은 룬을 쓰지 않는 순수 함수로 뺀다 (`ui/shell/nav.ts`, `ui/today/todayScreen.ts`).
   `localStorage` 나 브라우저 상태에 닿지 않으므로 SSR/하이드레이션이 어긋나지 않는다
 - `{화면}/+page.svelte` 는 `padding: 1rem 0` 만. 좌우 padding · `max-width` · `margin`
@@ -107,6 +115,7 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - 도메인 내부 파일 직접 참조 6곳 · `.ts` 확장자 흔적 · `src/lib/ui/` 평평함 —
   2026-09-18 SPEC3 진입 전 구조 점검에서 발견. FR-29 (Phase 1) 로 정정.
   재발 방지는 `tests/unit/structure.test.ts` (ADR-27 네 규칙을 정적으로 못박음)
+- `PushRelay.state()` 를 동기로 타입한 버그 (0.3.0-dev) — 실제 `client.js` 의 `state` · `enable` · `disable` 는 `async function` 이다. `relay.ts` 에서 동기 반환 타입으로 선언해, `await` 없이 Promise 를 비교하면 항상 `!== 'on'` 이 참. 영향: 알림 켜기 버튼 항상 비활성, 자동 동기화 항상 early return, teardown 미작동. 원인: 단위 테스트가 동기 mock 을 써서 이 불일치를 숨겼다. 재발 방지: 외부 비동기 API 를 타이핑할 때 실제 반환 타입(`Promise<…>`)을 확인한다. 동기 편의 래퍼가 없다면 mock 도 async 로 맞춘다
 
 ## 명령
 
@@ -118,7 +127,7 @@ pnpm build          # 정적 빌드
 pnpm preview        # 빌드 후 서빙. PWA 확인은 여기서만
 
 grep -rnE '#[0-9a-fA-F]{3,6}\b' src --include='*.svelte'
-# → `+layout.svelte:69` 의 `<meta name="theme-color">` 한 줄만 남아야 한다
+# → `+layout.svelte:79` 의 `<meta name="theme-color">` 한 줄만 남아야 한다
 ```
 
 푸시와 배포는 사용자의 명시적 지시가 있을 때만.

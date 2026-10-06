@@ -10,7 +10,8 @@ export default defineConfig({
 		// SvelteKit 이 심는 `$lib` 별칭을 테스트 러너에서도 풀 수 있게 한다
 		// (FR-29.1 로 UI 가 `$lib/domain` 경유로 도메인을 부르기 시작하면 tests 도 이 경로를 만난다).
 		alias: {
-			$lib: fileURLToPath(new URL('./src/lib', import.meta.url))
+			$lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
+			'$env/static/public': fileURLToPath(new URL('./tests/unit/__mocks__/env-static-public.ts', import.meta.url))
 		}
 	},
 	test: {
