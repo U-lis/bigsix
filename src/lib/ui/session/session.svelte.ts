@@ -36,7 +36,7 @@ import type {
 } from '$lib/domain/types';
 import {
   clearInProgress,
-  writeInProgress,
+  writeInProgressCompat,
   type InProgressSession,
   type SetEntry,
 } from '$lib/ui/state/storage';
@@ -222,7 +222,9 @@ class InProgressStore {
   private persist(): void {
     if (this.#session === null) return;
     try {
-      writeInProgress(this.#session);
+      // Phase 1: 단일 세션을 drafts 맵에 담아 저장한다 (R-2).
+      // Phase 2 에서 스토어가 drafts 맵으로 전환되면 writeInProgress 를 직접 쓴다.
+      writeInProgressCompat(this.#session);
       this.#saveStatus = 'ok';
     } catch {
       this.#saveStatus = 'write-blocked';

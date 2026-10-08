@@ -29,7 +29,7 @@ export interface ImportCounts {
  * - `not-json`: JSON.parse 실패.
  * - `schema-missing`: `meta` 가 없거나 `meta.schemaVersion` 이 숫자가 아님.
  * - `shape`: `appState` 필드가 없거나 `isAppStateShape` 실패 (EC-64).
- * - `future-version`: `meta.schemaVersion > CURRENT_SCHEMA_VERSION` (EC-63). `detail` 에 버전 문자열.
+ * - `future-version`: `meta.schemaVersion > APP_STATE_SCHEMA_VERSION` (EC-63). `detail` 에 버전 문자열.
  */
 export type ImportResult =
   | { ok: true; appState: AppState; counts: ImportCounts }

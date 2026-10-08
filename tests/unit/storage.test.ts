@@ -9,15 +9,20 @@ import assert from 'node:assert/strict';
 
 import {
   APP_STATE_KEY,
+  APP_STATE_SCHEMA_VERSION,
   CURRENT_SCHEMA_VERSION,
   IN_PROGRESS_KEY,
+  IN_PROGRESS_SCHEMA_VERSION,
   clearAppState,
   clearInProgress,
+  draftKey,
   readAppState,
   readInProgress,
+  readInProgressCompat,
   validateAndMigrateAppStateEnvelope,
   writeAppState,
   writeInProgress,
+  writeInProgressCompat,
   type InProgressSession,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
@@ -228,15 +233,15 @@ describe('AppState 와 진행 중 세션은 별도 키 (FR-2.6)', () => {
       kind: 'work',
       workSets: [],
     };
-    writeInProgress(ip);
+    writeInProgressCompat(ip);
     assert.equal(window.localStorage.getItem(APP_STATE_KEY), 'sentinel');
   });
 });
 
 // ── InProgressSession 저장·복원 (FR-2) ────────────────────────────────────
 
-describe('readInProgress / writeInProgress — 라운드트립', () => {
-  it('write 한 값을 그대로 돌려받는다', () => {
+describe('readInProgress / writeInProgress — 라운드트립 (단일 세션 호환 래퍼)', () => {
+  it('writeInProgressCompat 로 쓴 값을 readInProgressCompat 가 그대로 돌려받는다', () => {
     const ip: InProgressSession = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
@@ -245,8 +250,8 @@ describe('readInProgress / writeInProgress — 라운드트립', () => {
       kind: 'work',
       workSets: [{ value: 20, rpe: 7 }, { value: 18 }],
     };
-    writeInProgress(ip);
-    const r = readInProgress();
+    writeInProgressCompat(ip);
+    const r = readInProgressCompat();
     assert.equal(r.status, 'ok');
     if (r.status === 'ok') assert.deepEqual(r.value, ip);
   });
@@ -256,10 +261,12 @@ describe('readInProgress / writeInProgress — 라운드트립', () => {
     assert.equal(r.status, 'empty');
   });
 
-  it('필수 필드 누락은 corrupt', () => {
+  it('v4 봉투의 inProgress 가 손상돼 있으면 corrupt — isDraftsShape 가 거절', () => {
+    // v4 → v5 마이그레이터는 inProgress 를 drafts 맵의 원소로 옮긴다. 모양이 어긋나면
+    // isDraftsShape 가 거절해 corrupt 다 — 조용히 삼키지 않는다 (FR-1 손상 감지).
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
-      JSON.stringify({ schemaVersion: CURRENT_SCHEMA_VERSION, inProgress: { startedAt: '2026-09-05' } }),
+      JSON.stringify({ schemaVersion: 4, inProgress: { startedAt: '2026-09-05' } }),
     );
     const r = readInProgress();
     assert.equal(r.status, 'corrupt');
@@ -268,7 +275,7 @@ describe('readInProgress / writeInProgress — 라운드트립', () => {
   it('미래 버전은 future-version', () => {
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
-      JSON.stringify({ schemaVersion: 999, inProgress: {} }),
+      JSON.stringify({ schemaVersion: 999, drafts: {} }),
     );
     const r = readInProgress();
     assert.equal(r.status, 'future-version');
@@ -278,7 +285,7 @@ describe('readInProgress / writeInProgress — 라운드트립', () => {
 describe('clearAppState / clearInProgress', () => {
   it('명시 clear 는 해당 키만 지운다', () => {
     writeAppState(initialState());
-    writeInProgress({
+    writeInProgressCompat({
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -321,11 +328,15 @@ describe('FR-20.3 v2 봉투의 warmupSets 를 버리고 읽는다 (EC-48)', () =
     const r = readInProgress();
     assert.equal(r.status, 'ok');
     if (r.status !== 'ok') return;
-    assert.deepEqual(r.value.workSets, [{ value: 20 }]);
-    assert.equal('warmupSets' in (r.value as unknown as Record<string, unknown>), false);
+    // v2 → v3 → v4 → v5 체인 결과: drafts 맵의 한 원소.
+    const key = draftKey('pushup', 'work');
+    const draft = r.value[key];
+    assert.ok(draft, 'drafts 맵에 pushup:work 가 있어야 한다');
+    assert.deepEqual(draft.workSets, [{ value: 20 }]);
+    assert.equal('warmupSets' in (draft as unknown as Record<string, unknown>), false);
   });
 
-  it('v3 로 다시 쓰면 warmupSets 가 남지 않는다', () => {
+  it('v2 봉투를 읽고 다시 쓰면 봉투 버전이 IN_PROGRESS_SCHEMA_VERSION 이고 warmupSets 가 남지 않는다', () => {
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
       JSON.stringify({
@@ -346,9 +357,10 @@ describe('FR-20.3 v2 봉투의 warmupSets 를 버리고 읽는다 (EC-48)', () =
     if (r.status !== 'ok') return;
     writeInProgress(r.value);
     const env = JSON.parse(window.localStorage.getItem(IN_PROGRESS_KEY) as string);
-    // 재저장은 항상 CURRENT (FR-28 로 v4).
-    assert.equal(env.schemaVersion, CURRENT_SCHEMA_VERSION);
-    assert.equal('warmupSets' in env.inProgress, false);
+    // 재저장은 항상 IN_PROGRESS_SCHEMA_VERSION (SPEC5 로 v5).
+    assert.equal(env.schemaVersion, IN_PROGRESS_SCHEMA_VERSION);
+    const key = draftKey('pushup', 'work');
+    assert.equal('warmupSets' in env.drafts[key], false);
   });
 });
 
@@ -381,8 +393,8 @@ describe('FR-28.6 v3 → v4 no-op 마이그레이션 (AppState)', () => {
   });
 });
 
-describe('FR-28.3 InProgressSession.target 저장·복원', () => {
-  it('target 이 있는 봉투를 쓰고 읽으면 깊은 동등으로 복원된다', () => {
+describe('FR-28.3 SessionDraft.target 저장·복원', () => {
+  it('target 이 있는 draft 를 쓰고 읽으면 깊은 동등으로 복원된다', () => {
     const ip: InProgressSession = {
       startedAt: '2026-09-18',
       progressionId: 'pushup',
@@ -392,8 +404,8 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
       workSets: [{ value: 20, rpe: 7 }],
       target: sampleTarget,
     };
-    writeInProgress(ip);
-    const r = readInProgress();
+    writeInProgressCompat(ip);
+    const r = readInProgressCompat();
     assert.equal(r.status, 'ok');
     if (r.status === 'ok') {
       assert.deepEqual(r.value, ip);
@@ -401,7 +413,7 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
     }
   });
 
-  it('target 없는 v3 봉투를 v4 로 읽으면 target === undefined', () => {
+  it('target 없는 v3 봉투를 v5 로 읽으면 target === undefined', () => {
     // 옛 진행 중 세션은 스냅샷 없이 완료된다 (FR-28.6 / RISK-6).
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
@@ -417,7 +429,7 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
         },
       }),
     );
-    const r = readInProgress();
+    const r = readInProgressCompat();
     assert.equal(r.status, 'ok');
     if (r.status === 'ok') {
       assert.equal(r.value.target, undefined);
@@ -425,7 +437,7 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
     }
   });
 
-  it('isInProgressShape — target 있는 · 없는 두 형태 모두 통과 (읽기가 성공하면 곧 이 함수의 통과다)', () => {
+  it('isSessionDraftShape — target 있는 · 없는 두 형태 모두 통과 (읽기가 성공하면 곧 이 함수의 통과다)', () => {
     // target 있는 형태.
     const withTarget: InProgressSession = {
       startedAt: '2026-09-18',
@@ -436,30 +448,33 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
       workSets: [],
       target: sampleTarget,
     };
-    writeInProgress(withTarget);
+    writeInProgressCompat(withTarget);
     assert.equal(readInProgress().status, 'ok');
     // target 없는 형태.
     window.localStorage.clear();
     const noTarget: InProgressSession = { ...withTarget };
     delete (noTarget as unknown as Record<string, unknown>).target;
-    writeInProgress(noTarget);
+    writeInProgressCompat(noTarget);
     assert.equal(readInProgress().status, 'ok');
   });
 
-  it('isInProgressShape — target 형태 어긋난 값은 corrupt 로 거절된다', () => {
+  it('isSessionDraftShape — target 형태 어긋난 값은 corrupt 로 거절된다', () => {
+    const badKey = draftKey('pushup', 'work');
     // `{ goal: null }` 은 target 형태가 아니다.
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
       JSON.stringify({
-        schemaVersion: CURRENT_SCHEMA_VERSION,
-        inProgress: {
-          startedAt: '2026-09-18',
-          progressionId: 'pushup',
-          step: 4,
-          performedStep: 4,
-          kind: 'work',
-          workSets: [],
-          target: { goal: null, work: [] },
+        schemaVersion: IN_PROGRESS_SCHEMA_VERSION,
+        drafts: {
+          [badKey]: {
+            startedAt: '2026-09-18',
+            progressionId: 'pushup',
+            step: 4,
+            performedStep: 4,
+            kind: 'work',
+            workSets: [],
+            target: { goal: null, work: [] },
+          },
         },
       }),
     );
@@ -468,15 +483,17 @@ describe('FR-28.3 InProgressSession.target 저장·복원', () => {
     window.localStorage.setItem(
       IN_PROGRESS_KEY,
       JSON.stringify({
-        schemaVersion: CURRENT_SCHEMA_VERSION,
-        inProgress: {
-          startedAt: '2026-09-18',
-          progressionId: 'pushup',
-          step: 4,
-          performedStep: 4,
-          kind: 'work',
-          workSets: [],
-          target: { goal: {}, work: 'oops' },
+        schemaVersion: IN_PROGRESS_SCHEMA_VERSION,
+        drafts: {
+          [badKey]: {
+            startedAt: '2026-09-18',
+            progressionId: 'pushup',
+            step: 4,
+            performedStep: 4,
+            kind: 'work',
+            workSets: [],
+            target: { goal: {}, work: 'oops' },
+          },
         },
       }),
     );

@@ -21,7 +21,7 @@
    */
   import type { AppState, Catalog, IsoDate } from '$lib/domain/types';
   import { todayClock } from '$lib/ui/state/today.svelte';
-  import { CURRENT_SCHEMA_VERSION } from '$lib/ui/state/storage';
+  import { APP_STATE_SCHEMA_VERSION } from '$lib/ui/state/storage';
   import { appState as appStateStore } from '$lib/ui/state/state.svelte';
   import { inProgress } from '$lib/ui/session/session.svelte';
   import { buildExportJson, type ExportMeta } from './exportJson';
@@ -47,7 +47,7 @@
       version: __APP_VERSION__,
       commit: __COMMIT_HASH__,
       exportedAt: todayClock.nowIsoLocal(),
-      schemaVersion: CURRENT_SCHEMA_VERSION,
+      schemaVersion: APP_STATE_SCHEMA_VERSION,
     };
   }
 

@@ -94,17 +94,17 @@ Phase 2 에서 스토어를 전면 재작성하기 전까지 중간 커밋이 �
 
 ## 완료 체크리스트
 
-- [ ] `APP_STATE_SCHEMA_VERSION = 4`, `IN_PROGRESS_SCHEMA_VERSION = 5` 정의됨
-- [ ] `AppStateEnvelope.schemaVersion` 이 `APP_STATE_SCHEMA_VERSION` 타입
-- [ ] `InProgressEnvelope.schemaVersion` 이 `IN_PROGRESS_SCHEMA_VERSION` 타입, `drafts` 맵 구조
-- [ ] `migrateInProgressV4toV5` 구현, `target` 보존 확인
-- [ ] `draftKey(id, kind)` 순수 함수 export
-- [ ] `readInProgress()` 반환 타입 `ReadResult<Record<string, SessionDraft>>`
-- [ ] `writeInProgress(drafts)` 새 시그니처
-- [ ] `writeInProgressCompat` 래퍼 존재 (Phase 2 에서 제거 예정)
-- [ ] `importJson.ts` 의 schemaVersion 검사가 `APP_STATE_SCHEMA_VERSION` 기준
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `APP_STATE_SCHEMA_VERSION = 4`, `IN_PROGRESS_SCHEMA_VERSION = 5` 정의됨 — Verified in `storage.ts:41,49`
+- [x] `AppStateEnvelope.schemaVersion` 이 `APP_STATE_SCHEMA_VERSION` 타입 — Verified in `storage.ts:60`
+- [x] `InProgressEnvelope.schemaVersion` 이 `IN_PROGRESS_SCHEMA_VERSION` 타입, `drafts` 맵 구조 — Verified in `storage.ts:70-73`
+- [x] `migrateInProgressV4toV5` 구현, `target` 보존 확인 — Verified in `storage.ts:296-309`; `target` spread-preserved
+- [x] `draftKey(id, kind)` 순수 함수 export — Verified in `storage.ts:143-148`
+- [x] `readInProgress()` 반환 타입 `ReadResult<Record<string, SessionDraft>>` — Verified in `storage.ts:434`
+- [x] `writeInProgress(drafts)` 새 시그니처 — Verified in `storage.ts:473`
+- [x] `writeInProgressCompat` 래퍼 존재 (Phase 2 에서 제거 예정) — Verified in `storage.ts:493-496`; `readInProgressCompat` also present at `storage.ts:508-515`
+- [x] `importJson.ts` 의 schemaVersion 검사가 `APP_STATE_SCHEMA_VERSION` 기준 — Verified in `importJson.ts:87` via `validateAndMigrateAppStateEnvelope` which uses `APP_STATE_SCHEMA_VERSION`
+- [x] `pnpm check` 오류 0 — 529 files, 0 errors, 0 warnings
+- [x] `pnpm test` 전부 통과 (베이스라인 920) — 938 tests passed (54 test files)
 
 ## 비고
 

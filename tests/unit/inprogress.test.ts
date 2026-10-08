@@ -10,8 +10,8 @@ import { inProgress, isStaleStartedAt, maxSetRpe } from '../../src/lib/ui/sessio
 import { todayClock } from '../../src/lib/ui/state/today.svelte.ts';
 import {
   IN_PROGRESS_KEY,
-  readInProgress,
-  writeInProgress,
+  readInProgressCompat,
+  writeInProgressCompat,
   type InProgressSession,
   type SetEntry,
 } from '../../src/lib/ui/state/storage.ts';
@@ -58,16 +58,16 @@ describe('pushWorkSet — FR-2.3 세트마다 저장', () => {
     assert.ok(window.localStorage.getItem(IN_PROGRESS_KEY) !== null);
 
     inProgress.pushWorkSet({ value: 20 });
-    let saved = readInProgress();
+    let saved = readInProgressCompat();
     assert.equal(saved.status, 'ok');
     if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 1);
 
     inProgress.pushWorkSet({ value: 18 });
-    saved = readInProgress();
+    saved = readInProgressCompat();
     if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 2);
 
     inProgress.pushWorkSet({ value: 16 });
-    saved = readInProgress();
+    saved = readInProgressCompat();
     if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 3);
   });
 });
@@ -84,8 +84,8 @@ describe('init — FR-2.4 / EC-17 재실행 복원', () => {
       kind: 'work',
       workSets: [{ value: 20, rpe: 7 }],
     };
-    writeInProgress(s);
-    inProgress.init(readInProgress().status === 'ok' ? s : null);
+    writeInProgressCompat(s);
+    inProgress.init(readInProgressCompat().status === 'ok' ? s : null);
     assert.deepEqual(inProgress.value, s);
   });
 });
@@ -160,7 +160,7 @@ describe('세트별 RPE — FR-6.7b / L-8', () => {
     inProgress.pushWorkSet({ value: 20, rpe: 7 });
     inProgress.pushWorkSet({ value: 18, rpe: 9 });
     // 저장된 상태에서 세트별 RPE 가 확인된다.
-    const saved = readInProgress();
+    const saved = readInProgressCompat();
     assert.equal(saved.status, 'ok');
     if (saved.status === 'ok') {
       assert.equal(saved.value.workSets[0].rpe, 7);
@@ -271,7 +271,7 @@ describe('FR-18 자유 운동 세션', () => {
     inProgress.pushWorkSet({ value: 12 });
 
     // 새 저장소 상태 확인
-    const saved = readInProgress();
+    const saved = readInProgressCompat();
     assert.equal(saved.status, 'ok');
     if (saved.status === 'ok') {
       assert.equal(saved.value.kind, 'free');
@@ -281,8 +281,8 @@ describe('FR-18 자유 운동 세션', () => {
 
     // discard 후 init 으로 복원
     inProgress.discard();
-    if (saved.status === 'ok') writeInProgress(saved.value);
-    const back = readInProgress();
+    if (saved.status === 'ok') writeInProgressCompat(saved.value);
+    const back = readInProgressCompat();
     assert.equal(back.status, 'ok');
     if (back.status === 'ok') inProgress.init(back.value);
     assert.equal(inProgress.value?.kind, 'free');
@@ -345,7 +345,7 @@ describe('FR-28.3 begin — plan 의 goal/work 를 target 스냅샷으로 저장
   it('target 은 봉투에도 저장되어 재부팅 후에도 복원된다', () => {
     const plan = makePlan();
     inProgress.begin('2026-09-05', plan);
-    const saved = readInProgress();
+    const saved = readInProgressCompat();
     assert.equal(saved.status, 'ok');
     if (saved.status === 'ok') {
       assert.deepEqual(saved.value.target?.goal, plan.goal);

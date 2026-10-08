@@ -25,7 +25,7 @@ import type {
  * - `app` 은 항상 `'bigsix'`. 다른 값을 쓰지 않는다 — 문자열로 검증하기 쉬운 표식.
  * - `version` 은 `__APP_VERSION__`. `commit` 은 `__COMMIT_HASH__`.
  * - `exportedAt` 은 `todayClock.nowIsoLocal()` (로컬 오프셋 포함 ISO 8601, ADR-24).
- * - `schemaVersion` 은 `CURRENT_SCHEMA_VERSION` (현재 4).
+ * - `schemaVersion` 은 `APP_STATE_SCHEMA_VERSION` (현재 4).
  */
 export interface ExportMeta {
   app: 'bigsix';

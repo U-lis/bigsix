@@ -12,7 +12,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   IN_PROGRESS_KEY,
   writeAppState,
-  writeInProgress,
+  writeInProgressCompat,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 
@@ -98,7 +98,7 @@ describe('boot — 미래 버전 감지 시 덮어쓰지 않는다 (EC-3)', () =
 
 describe('boot — 진행 중 세션 복원 (FR-2.4)', () => {
   it('저장된 진행 중 세션이 있으면 inProgress 로 돌려준다', () => {
-    writeInProgress({
+    writeInProgressCompat({
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,

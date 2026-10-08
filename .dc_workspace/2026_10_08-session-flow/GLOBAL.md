@@ -237,7 +237,7 @@ class InProgressStore {
 
 | 페이즈 | 키워드 | 설명 | 상태 | 선행 조건 |
 |--------|--------|------|------|----------|
-| 1 | storage-v5 | 저장 스키마 v5 (ADR-43) | 대기 | — |
+| 1 | storage-v5 | 저장 스키마 v5 (ADR-43) | Complete | — |
 | 2 | store-drafts | 스토어 칸 목록 API (ADR-41/42/45) | 대기 | 1 |
 | 3 | finish-pure | 순수 플래너·실행기 (ADR-44) | 대기 | 2 |
 | 4 | ui-cards | 카드 개선·FinishBar·FinishDialog (ADR-46/47) | 대기 | 3 |

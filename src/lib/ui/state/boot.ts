@@ -25,7 +25,7 @@ import {
 import { loadCatalog } from '$lib/data/catalog';
 import {
   readAppState,
-  readInProgress,
+  readInProgressCompat,
   writeAppState,
   type InProgressSession,
 } from './storage';
@@ -116,7 +116,9 @@ export function boot(today: IsoDate): BootResult {
 
   // 진행 중 세션 복원 (FR-2.4). 손상됐거나 접근 차단이면 null 로 둔다 —
   // AppState 처럼 확인 UI 로 다루기에는 무겁다. 사용자는 세션을 다시 시작하면 된다.
-  const ip = readInProgress();
+  // Phase 1: 호환 래퍼가 drafts 맵의 첫 원소를 단일 세션으로 돌려준다 (R-2).
+  // Phase 2 에서 스토어가 drafts 맵으로 전환되면 readInProgress 를 직접 쓴다.
+  const ip = readInProgressCompat();
   const inProgress: InProgressSession | null = ip.status === 'ok' ? ip.value : null;
 
   const result: BootResult = {
