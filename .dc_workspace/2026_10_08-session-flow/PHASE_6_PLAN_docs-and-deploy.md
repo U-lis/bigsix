@@ -95,16 +95,24 @@ Phase 5 완료.
 
 ## 완료 체크리스트
 
-- [ ] `README.md` 세션 흐름 설명 추가됨
-- [ ] `CHANGELOG.md` `[Unreleased]` 항목 추가됨
-- [ ] `CLAUDE.md` 훅 목록에 SPEC5 훅 추가, 기존 삭제된 훅 제거됨
-- [ ] `CLAUDE.md` 문서 지도 SPEC5 항목 추가됨
+- [x] `README.md` 세션 흐름 설명 추가됨
+- [x] `CHANGELOG.md` `[Unreleased]` 항목 추가됨
+- [x] `CLAUDE.md` 훅 목록에 SPEC5 훅 추가, 기존 삭제된 훅 제거됨
+- [x] `CLAUDE.md` 문서 지도 SPEC5 항목 추가됨
 - [ ] `./deploy/deploy.sh feature/session-flow` 완료
 - [ ] 14개 폰 체크리스트 전부 통과
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 전부 통과 (베이스라인 920)
 
 ## 비고
 
 - `deploy.sh` 는 prod 모드로 실행한다. 서비스워커가 업데이트되어야 PWA 갱신이 확인된다(체크리스트 14).
 - 푸시 알림 체크리스트(13)는 `/settings` 화면에서 켜짐 상태를 확인하는 것으로 갈음한다.
+
+## 알려진 긴장 (수정 대상 아님)
+
+`src/lib/ui/history/ImportDialog.svelte:95` — 진행 중 기록(`hasInProgress`)이 있을 때 가져오기
+`<label>` 을 `{#if}` 로 DOM 에서 제거한다. CLAUDE.md 는 접기를 CSS(`opacity`/`pointer-events`/
+`aria-hidden`)로 하고 `{#if}` 로 DOM 에서 빼지 않는다는 규약을 정한다. 이 파일은 이전 커밋
+(main 브랜치)에서 이 구조로 만들어졌고, SPEC5 작업 범위가 아니라 그대로 둔다.
+후속 작업에서 CSS 접기로 전환할 때 수정한다.

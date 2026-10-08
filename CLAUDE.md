@@ -15,8 +15,10 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | `.dc_workspace/2026_09_05-ui-2/GLOBAL.md` | UI 2차 개정 (SPEC2) ADR — 이력 |
 | `.dc_workspace/2026_09_18-history-export/SPEC.md` | SPEC3 요구·수용 기준 — 이력 |
 | `.dc_workspace/2026_09_18-history-export/GLOBAL.md` | SPEC3 ADR·데이터 모델·페이즈 — 이력 |
-| `.dc_workspace/2026_09_25-push-notification/SPEC.md` | **이번 개정 (SPEC4)** 푸시 알림 요구·IR 로그 |
-| `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | **이번 개정 (SPEC4)** ADR·데이터 모델·페이즈 |
+| `.dc_workspace/2026_09_25-push-notification/SPEC.md` | SPEC4 푸시 알림 요구·ADR — 이력 |
+| `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | SPEC4 ADR·데이터 모델·페이즈 — 이력 |
+| `.dc_workspace/2026_10_08-session-flow/SPEC.md` | **이번 개정 (SPEC5)** 세션 흐름 요구·수용 기준 |
+| `.dc_workspace/2026_10_08-session-flow/GLOBAL.md` | **이번 개정 (SPEC5)** ADR·데이터 모델·페이즈 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 
@@ -74,6 +76,42 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-push-enable`, `data-push-disable`, `data-push-time`,
   `data-push-error`(값: 오류 code), `data-push-need-program`,
   `data-push-test`(dev 빌드 전용 테스트 발송 버튼).
+  **오늘 화면 카드 (기존)**:
+  `data-today`(값: `'plan'|'no-program'`, 오늘 화면 루트),
+  `data-goto-programs`(프로그램 선택 링크),
+  `data-progression`(값: 종목 ID, 운동 카드 루트), `data-step`(값: 단계 번호),
+  `data-kind`(값: `'work'|'consolidation'|'free'`, 칸 종류),
+  `data-active`(값: `'true'|'false'`, 진행 중 칸 여부),
+  `data-locked`(값: `'true'`, 잠긴 종목 카드), `data-lock-reason`(잠김 사유 — FreeExerciseForm · 단계 화면).
+  **공통 확인 다이얼로그 (Confirm)**:
+  `data-confirm`(다이얼로그 루트), `data-confirm-cancel`(취소), `data-confirm-yes`(확인).
+  **횟수 입력 (RepsInput)**:
+  `data-reps-input`(입력 루트), `data-reps-value`(숫자 입력), `data-reps-submit`(확정),
+  `data-reps-error`(오류 메시지).
+  **자유 운동 폼 (FreeExerciseForm)**:
+  `data-free-open`(폼 열기 버튼), `data-free-form`(폼 루트),
+  `data-free-progression`(종목 선택), `data-free-step`(단계 선택),
+  `data-free-error`(오류), `data-free-cancel`(취소), `data-free-save`(저장).
+  **오늘 화면 세션 흐름 (SPEC5)**:
+  `data-finish`(「오늘 운동 마치기」 버튼),
+  `data-finish-bar`(FinishBar 루트),
+  `data-finish-dialog`(기록 확인 다이얼로그 루트),
+  `data-finish-row`(값: 칸 키, 다이얼로그 행),
+  `data-finish-result`(기록 결과 안내),
+  `data-finish-fail`(값: 칸 키, 기록 실패 안내),
+  `data-finish-cancel`(다이얼로그 취소),
+  `data-finish-confirm`(다이얼로그 확인),
+  `data-set-row`(값: 세트 1-based 번호), `data-set-short`(미달 세트), `data-set-extra`(추가 세트),
+  `data-set-edit`, `data-set-delete`,
+  `data-abandon-mark`(값: `'on'|'off'`), `data-abandoned`(중단 표시된 카드),
+  `data-draft-blocked`(값: `'true'`, 날짜 지난 칸으로 인한 입력 차단),
+  `data-draft-blocked-reason`(차단 사유 문구),
+  `data-stale-banner`(StaleBanner 루트),
+  `data-stale-drafts`(값: `YYYY-MM-DD`, 날짜별 미완료 블록),
+  `data-stale-record`(그 날짜로 기록 버튼), `data-stale-discard`(버리기 버튼),
+  `data-stale-discard-confirm`(버리기 2단 확인), `data-stale-discard-cancel`(버리기 2단 취소),
+  `data-stale-result`(값: `YYYY-MM-DD`, 기록 결과 안내),
+  `data-stale-fail`(값: 칸 키, 기록 실패 안내).
 - UI 문구는 사실만 적는다. 백분율·격려·게이미피케이션 금지
 - 문자열은 도메인이 준 것을 가공 없이 노출한다 (NFR-2). 시스템 시각을 UI 에서 부르지
   않는다 — 오늘 날짜는 `todayClock.today` 하나가 근원 (FR-4.4)

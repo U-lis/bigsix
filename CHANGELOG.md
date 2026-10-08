@@ -5,6 +5,23 @@
 
 ## [Unreleased]
 
+### Added
+- Multiple in-progress drafts per session: sets for each exercise are kept independently and are not overwritten when switching between exercises
+- FinishBar and FinishDialog: a single "Finish today's workout" button records all drafts at once
+- Extra sets beyond the plan are automatically recorded as free exercises (`kind: 'free'`) so promotion judgment is based on planned sets only
+- StaleBanner: prompts to record or discard drafts from a previous day on next entry; does not silently discard them
+
+### Changed
+- "Impossible" button renamed to "Abandon this step" (`data-abandon-mark`) with toggle behavior; the record is written at finish time, not immediately on press
+- Free exercise form opens a per-exercise draft instead of recording immediately
+- Storage schema: in-progress envelope bumped to v5; AppState envelope remains v4 so records survive a rollback to v0.3.0
+
+### Removed
+- Per-exercise "Record session" button (`data-finalize`) — all exercises are recorded together via "Finish today's workout"
+
+### Known limitations
+- `src/lib/ui/history/ImportDialog.svelte:95` — `ImportDialog` hides the import `<label>` with `{#if hasInProgress}` when drafts exist. This was inherited from main. `CLAUDE.md` prefers CSS folding (`opacity`/`pointer-events`/`aria-hidden`) over DOM removal. The behavior is correct but the implementation deviates from the convention.
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
