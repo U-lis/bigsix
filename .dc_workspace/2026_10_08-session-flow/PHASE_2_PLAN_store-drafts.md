@@ -73,20 +73,27 @@ export function staleDrafts(
 
 ## 완료 체크리스트
 
-- [ ] `session.svelte.ts` 가 `#drafts = $state<Record<string, SessionDraft>>({})` 기반으로 재작성됨
-- [ ] `init`, `getDraft`, `beginWork`, `beginFree`, `beginConsolidation` 구현됨
-- [ ] `pushSet`, `updateSet`, `removeSet`, `markAbandoned`, `discardDraft`, `discardAll` 구현됨
-- [ ] 모든 상태 변경이 불변 spread 로 처리됨
-- [ ] `finalize`/`abandon` 임시 stub 존재 (Phase 4 제거 예정)
-- [ ] `isStaleStartedAt` 이 제거되거나 deprecated 처리됨
-- [ ] `stale.ts` 의 `staleDrafts` 함수 구현됨
-- [ ] `boot.ts` 가 `Record<string, SessionDraft> | null` 을 반환함
-- [ ] `tests/unit/inprogress.test.ts` 갱신됨
-- [ ] `tests/unit/boot.test.ts` 갱신됨
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `session.svelte.ts` 가 `#drafts = $state<Record<string, SessionDraft>>({})` 기반으로 재작성됨
+- [x] `init`, `getDraft`, `beginWork`, `beginFree`, `beginConsolidation` 구현됨
+- [x] `pushSet`, `updateSet`, `removeSet`, `markAbandoned`, `discardDraft`, `discardAll` 구현됨
+- [x] 모든 상태 변경이 불변 spread 로 처리됨
+- [x] `finalize`/`abandon` 임시 stub 존재 (Phase 4 제거 예정)
+- [x] `isStaleStartedAt` 이 제거되거나 deprecated 처리됨
+- [x] `stale.ts` 의 `staleDrafts` 함수 구현됨
+- [x] `boot.ts` 가 `Record<string, SessionDraft> | null` 을 반환함
+- [x] `tests/unit/inprogress.test.ts` 갱신됨
+- [x] `tests/unit/boot.test.ts` 갱신됨
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 전부 통과 (베이스라인 920)
 
 ## 비고
 
 - `beginWork` 에서 칸 충돌 시 덮어쓰지 않는 정책은 EC-100(앞 종목 승급 후 뒤 종목 계획 변경)을 처리하는 핵심이다. 이미 시작한 칸의 `target` 스냅샷이 기준이기 때문이다.
 - `finish` stub 은 `throw new Error('Phase 3 에서 구현')` 처럼 명시적 에러를 내도 된다. 빌드·테스트가 이 경로를 호출하지 않으면 ok.
+
+- **검증 추가 (2026-10-08)**: `beginWork` / `beginFree` 반환 타입을 `void` → `boolean` 으로 변경.
+  `true` = 새 칸 생성, `false` = 기존 키가 막아 보호된 경우.
+  Phase 4 에서 `begin()` compat 래퍼 → `beginWork` 전환 시 스테일 키 충돌을 감지할 수 있어야 하고,
+  입력을 묵시적으로 버리면 안 된다 (FR-44 / PHASE_4 카드 참고).
+  스테일 키 충돌 테스트 2건이 `tests/unit/session/inprogress.test.ts` 에 추가됐다.
+  `staleDrafts` 결과의 각 `SessionDraft` 키는 `draftKey(d.progressionId, d.kind)` 로 파생한다.

@@ -481,39 +481,6 @@ export function writeInProgress(drafts: Record<string, SessionDraft>): void {
   storage.store.setItem(IN_PROGRESS_KEY, JSON.stringify(envelope));
 }
 
-/**
- * Phase 1 호환 래퍼 (R-2).
- *
- * 기존 스토어(`session.svelte.ts`)는 단일 세션 하나만 들고 있다. Phase 2 에서
- * 스토어가 drafts 맵으로 완전히 전환될 때까지, 이 래퍼가 단일 세션을
- * `{ [draftKey]: session }` 맵으로 감싸 `writeInProgress` 를 호출한다.
- *
- * **Phase 2 에서 제거한다.**
- */
-export function writeInProgressCompat(session: InProgressSession): void {
-  const key = draftKey(session.progressionId, session.kind);
-  writeInProgress({ [key]: session });
-}
-
-/**
- * Phase 1 호환 래퍼 (R-2).
- *
- * `readInProgress()` 는 drafts 맵을 돌려주지만 Phase 1 의 스토어·부팅 코드는 아직
- * 단일 세션 모델이다. 이 래퍼가 drafts 맵의 첫 원소를 꺼내 돌려준다 — 저장된 칸이
- * 하나뿐이던 v4 시절과 같은 모습으로. 맵이 비어 있으면 `empty` 로 돌려준다 (옛
- * `readInProgress` 가 저장이 없을 때 돌려주던 모양과 같다).
- *
- * **Phase 2 에서 제거한다.**
- */
-export function readInProgressCompat(): ReadResult<InProgressSession> {
-  const r = readInProgress();
-  if (r.status !== 'ok') return r;
-  const keys = Object.keys(r.value);
-  if (keys.length === 0) return { status: 'empty' };
-  // Phase 1 에서는 칸이 최대 하나다 (스토어가 단일 세션). 여럿이면 첫 번째를 쓴다.
-  return { status: 'ok', value: r.value[keys[0]] };
-}
-
 export function clearInProgress(): void {
   const storage = getStorage();
   if (!storage.ok) throw storage.error;

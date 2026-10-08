@@ -18,15 +18,26 @@ import {
   draftKey,
   readAppState,
   readInProgress,
-  readInProgressCompat,
   validateAndMigrateAppStateEnvelope,
   writeAppState,
   writeInProgress,
-  writeInProgressCompat,
-  type InProgressSession,
+  type SessionDraft,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 import type { AppState, SessionTarget } from '../../src/lib/domain/types.ts';
+
+// SPEC5 Phase 2 — 단일 세션용 테스트 헬퍼. Phase 1 의 compat 래퍼가 사라졌으므로
+// 테스트 쪽에서 draft 하나짜리 drafts 맵을 만들어 `writeInProgress` 를 부른다.
+function writeOne(session: SessionDraft): void {
+  writeInProgress({ [draftKey(session.progressionId, session.kind)]: session });
+}
+function readOne(): SessionDraft | null {
+  const r = readInProgress();
+  if (r.status !== 'ok') return null;
+  const keys = Object.keys(r.value);
+  if (keys.length === 0) return null;
+  return r.value[keys[0]];
+}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -225,7 +236,7 @@ describe('AppState 와 진행 중 세션은 별도 키 (FR-2.6)', () => {
 
   it('writeInProgress 는 APP_STATE_KEY 를 건드리지 않는다', () => {
     window.localStorage.setItem(APP_STATE_KEY, 'sentinel');
-    const ip: InProgressSession = {
+    const ip: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -233,16 +244,16 @@ describe('AppState 와 진행 중 세션은 별도 키 (FR-2.6)', () => {
       kind: 'work',
       workSets: [],
     };
-    writeInProgressCompat(ip);
+    writeOne(ip);
     assert.equal(window.localStorage.getItem(APP_STATE_KEY), 'sentinel');
   });
 });
 
-// ── InProgressSession 저장·복원 (FR-2) ────────────────────────────────────
+// ── SessionDraft 저장·복원 (FR-2) ─────────────────────────────────────────
 
-describe('readInProgress / writeInProgress — 라운드트립 (단일 세션 호환 래퍼)', () => {
-  it('writeInProgressCompat 로 쓴 값을 readInProgressCompat 가 그대로 돌려받는다', () => {
-    const ip: InProgressSession = {
+describe('readInProgress / writeInProgress — 단일 draft 라운드트립', () => {
+  it('writeOne 으로 쓴 값을 readOne 이 그대로 돌려받는다', () => {
+    const ip: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 4,
@@ -250,10 +261,8 @@ describe('readInProgress / writeInProgress — 라운드트립 (단일 세션 �
       kind: 'work',
       workSets: [{ value: 20, rpe: 7 }, { value: 18 }],
     };
-    writeInProgressCompat(ip);
-    const r = readInProgressCompat();
-    assert.equal(r.status, 'ok');
-    if (r.status === 'ok') assert.deepEqual(r.value, ip);
+    writeOne(ip);
+    assert.deepEqual(readOne(), ip);
   });
 
   it('저장된 값이 없으면 empty', () => {
@@ -285,7 +294,7 @@ describe('readInProgress / writeInProgress — 라운드트립 (단일 세션 �
 describe('clearAppState / clearInProgress', () => {
   it('명시 clear 는 해당 키만 지운다', () => {
     writeAppState(initialState());
-    writeInProgressCompat({
+    writeOne({
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -395,7 +404,7 @@ describe('FR-28.6 v3 → v4 no-op 마이그레이션 (AppState)', () => {
 
 describe('FR-28.3 SessionDraft.target 저장·복원', () => {
   it('target 이 있는 draft 를 쓰고 읽으면 깊은 동등으로 복원된다', () => {
-    const ip: InProgressSession = {
+    const ip: SessionDraft = {
       startedAt: '2026-09-18',
       progressionId: 'pushup',
       step: 4,
@@ -404,13 +413,11 @@ describe('FR-28.3 SessionDraft.target 저장·복원', () => {
       workSets: [{ value: 20, rpe: 7 }],
       target: sampleTarget,
     };
-    writeInProgressCompat(ip);
-    const r = readInProgressCompat();
-    assert.equal(r.status, 'ok');
-    if (r.status === 'ok') {
-      assert.deepEqual(r.value, ip);
-      assert.deepEqual(r.value.target, sampleTarget);
-    }
+    writeOne(ip);
+    const back = readOne();
+    assert.ok(back !== null);
+    assert.deepEqual(back, ip);
+    assert.deepEqual(back!.target, sampleTarget);
   });
 
   it('target 없는 v3 봉투를 v5 로 읽으면 target === undefined', () => {
@@ -429,17 +436,15 @@ describe('FR-28.3 SessionDraft.target 저장·복원', () => {
         },
       }),
     );
-    const r = readInProgressCompat();
-    assert.equal(r.status, 'ok');
-    if (r.status === 'ok') {
-      assert.equal(r.value.target, undefined);
-      assert.equal('target' in (r.value as unknown as Record<string, unknown>), false);
-    }
+    const back = readOne();
+    assert.ok(back !== null);
+    assert.equal(back!.target, undefined);
+    assert.equal('target' in (back as unknown as Record<string, unknown>), false);
   });
 
   it('isSessionDraftShape — target 있는 · 없는 두 형태 모두 통과 (읽기가 성공하면 곧 이 함수의 통과다)', () => {
     // target 있는 형태.
-    const withTarget: InProgressSession = {
+    const withTarget: SessionDraft = {
       startedAt: '2026-09-18',
       progressionId: 'squat',
       step: 3,
@@ -448,13 +453,13 @@ describe('FR-28.3 SessionDraft.target 저장·복원', () => {
       workSets: [],
       target: sampleTarget,
     };
-    writeInProgressCompat(withTarget);
+    writeOne(withTarget);
     assert.equal(readInProgress().status, 'ok');
     // target 없는 형태.
     window.localStorage.clear();
-    const noTarget: InProgressSession = { ...withTarget };
+    const noTarget: SessionDraft = { ...withTarget };
     delete (noTarget as unknown as Record<string, unknown>).target;
-    writeInProgressCompat(noTarget);
+    writeOne(noTarget);
     assert.equal(readInProgress().status, 'ok');
   });
 

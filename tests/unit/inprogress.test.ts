@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
 //
-// 진행 중 세션 스토어 (FR-2, FR-6.7a/7b, EC-7 / EC-7a / EC-17 / EC-25).
+// 진행 중 세션 스토어 (FR-2 · FR-6.7a/7b · FR-39 · EC-7 / EC-7a / EC-17 / EC-25).
 // localStorage 를 만지므로 happy-dom 환경.
+//
+// SPEC5 Phase 2 — 스토어가 drafts 맵으로 전환됐다. 이 파일은 호환 래퍼
+// (`begin`/`pushWorkSet`/`updateWorkSet`/`finalize`/`abandon`/`discard`) 가 Phase 4
+// 에서 제거되기 전까지 기존 FR 커버리지를 지키는 자리다. 새 API 전용 테스트는
+// `tests/unit/session/inprogress.test.ts` 에서 다룬다.
 
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
@@ -10,9 +15,10 @@ import { inProgress, isStaleStartedAt, maxSetRpe } from '../../src/lib/ui/sessio
 import { todayClock } from '../../src/lib/ui/state/today.svelte.ts';
 import {
   IN_PROGRESS_KEY,
-  readInProgressCompat,
-  writeInProgressCompat,
-  type InProgressSession,
+  draftKey,
+  readInProgress,
+  writeInProgress,
+  type SessionDraft,
   type SetEntry,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
@@ -20,6 +26,15 @@ import type { AppState, PlannedExercise } from '../../src/lib/domain/types.ts';
 import { catalog, stateAt, ALL_UNLOCKED_STEPS } from './helpers.ts';
 
 // ── 공통 헬퍼 ─────────────────────────────────────────────────────────────
+
+/** 저장된 drafts 맵에서 첫 draft 하나를 꺼낸다 — 옛 테스트의 "저장된 세션" 의미. */
+function savedDraft(): SessionDraft | null {
+  const r = readInProgress();
+  if (r.status !== 'ok') return null;
+  const keys = Object.keys(r.value);
+  if (keys.length === 0) return null;
+  return r.value[keys[0]];
+}
 
 function makePlan(): PlannedExercise {
   return {
@@ -58,17 +73,17 @@ describe('pushWorkSet — FR-2.3 세트마다 저장', () => {
     assert.ok(window.localStorage.getItem(IN_PROGRESS_KEY) !== null);
 
     inProgress.pushWorkSet({ value: 20 });
-    let saved = readInProgressCompat();
-    assert.equal(saved.status, 'ok');
-    if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 1);
+    let s = savedDraft();
+    assert.ok(s !== null);
+    assert.equal(s!.workSets.length, 1);
 
     inProgress.pushWorkSet({ value: 18 });
-    saved = readInProgressCompat();
-    if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 2);
+    s = savedDraft();
+    assert.equal(s!.workSets.length, 2);
 
     inProgress.pushWorkSet({ value: 16 });
-    saved = readInProgressCompat();
-    if (saved.status === 'ok') assert.equal(saved.value.workSets.length, 3);
+    s = savedDraft();
+    assert.equal(s!.workSets.length, 3);
   });
 });
 
@@ -76,7 +91,7 @@ describe('pushWorkSet — FR-2.3 세트마다 저장', () => {
 
 describe('init — FR-2.4 / EC-17 재실행 복원', () => {
   it('writeInProgress → 새 store init 하면 값이 유지된다', () => {
-    const s: InProgressSession = {
+    const s: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -84,8 +99,11 @@ describe('init — FR-2.4 / EC-17 재실행 복원', () => {
       kind: 'work',
       workSets: [{ value: 20, rpe: 7 }],
     };
-    writeInProgressCompat(s);
-    inProgress.init(readInProgressCompat().status === 'ok' ? s : null);
+    const key = draftKey(s.progressionId, s.kind);
+    writeInProgress({ [key]: s });
+    const r = readInProgress();
+    assert.equal(r.status, 'ok');
+    if (r.status === 'ok') inProgress.init(r.value);
     assert.deepEqual(inProgress.value, s);
   });
 });
@@ -159,13 +177,10 @@ describe('세트별 RPE — FR-6.7b / L-8', () => {
     inProgress.begin('2026-09-05', makePlan());
     inProgress.pushWorkSet({ value: 20, rpe: 7 });
     inProgress.pushWorkSet({ value: 18, rpe: 9 });
-    // 저장된 상태에서 세트별 RPE 가 확인된다.
-    const saved = readInProgressCompat();
-    assert.equal(saved.status, 'ok');
-    if (saved.status === 'ok') {
-      assert.equal(saved.value.workSets[0].rpe, 7);
-      assert.equal(saved.value.workSets[1].rpe, 9);
-    }
+    const s = savedDraft();
+    assert.ok(s !== null);
+    assert.equal(s!.workSets[0].rpe, 7);
+    assert.equal(s!.workSets[1].rpe, 9);
   });
 
   it('완료된 세션 기록에는 세션 RPE 최댓값 하나만 남는다', () => {
@@ -185,7 +200,7 @@ describe('세트별 RPE — FR-6.7b / L-8', () => {
 
 describe('isStaleStartedAt — FR-2.9 / EC-7a', () => {
   it('시작 날짜가 오늘이 아니면 true', () => {
-    const s: InProgressSession = {
+    const s: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -197,7 +212,7 @@ describe('isStaleStartedAt — FR-2.9 / EC-7a', () => {
   });
 
   it('같으면 false', () => {
-    const s: InProgressSession = {
+    const s: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
@@ -257,7 +272,7 @@ void initialState;
 
 // ── FR-18 자유 운동 세션 진행·복원·완료 ──────────────────────────────────
 describe('FR-18 자유 운동 세션', () => {
-  it('beginFree 로 시작하면 InProgressSession.kind === "free"', () => {
+  it('beginFree 로 시작하면 draft.kind === "free"', () => {
     inProgress.beginFree('2026-09-05', 'pushup', 3);
     assert.equal(inProgress.value?.kind, 'free');
     assert.equal(inProgress.value?.progressionId, 'pushup');
@@ -270,19 +285,16 @@ describe('FR-18 자유 운동 세션', () => {
     inProgress.pushWorkSet({ value: 15 });
     inProgress.pushWorkSet({ value: 12 });
 
-    // 새 저장소 상태 확인
-    const saved = readInProgressCompat();
-    assert.equal(saved.status, 'ok');
-    if (saved.status === 'ok') {
-      assert.equal(saved.value.kind, 'free');
-      assert.equal(saved.value.workSets.length, 2);
-      assert.equal(saved.value.workSets[0].value, 15);
-    }
+    const s = savedDraft();
+    assert.ok(s !== null);
+    assert.equal(s!.kind, 'free');
+    assert.equal(s!.workSets.length, 2);
+    assert.equal(s!.workSets[0].value, 15);
 
     // discard 후 init 으로 복원
     inProgress.discard();
-    if (saved.status === 'ok') writeInProgressCompat(saved.value);
-    const back = readInProgressCompat();
+    writeInProgress({ [draftKey('pushup', 'free')]: s! });
+    const back = readInProgress();
     assert.equal(back.status, 'ok');
     if (back.status === 'ok') inProgress.init(back.value);
     assert.equal(inProgress.value?.kind, 'free');
@@ -345,12 +357,10 @@ describe('FR-28.3 begin — plan 의 goal/work 를 target 스냅샷으로 저장
   it('target 은 봉투에도 저장되어 재부팅 후에도 복원된다', () => {
     const plan = makePlan();
     inProgress.begin('2026-09-05', plan);
-    const saved = readInProgressCompat();
-    assert.equal(saved.status, 'ok');
-    if (saved.status === 'ok') {
-      assert.deepEqual(saved.value.target?.goal, plan.goal);
-      assert.deepEqual(saved.value.target?.work, plan.work);
-    }
+    const s = savedDraft();
+    assert.ok(s !== null);
+    assert.deepEqual(s!.target?.goal, plan.goal);
+    assert.deepEqual(s!.target?.work, plan.work);
   });
 });
 

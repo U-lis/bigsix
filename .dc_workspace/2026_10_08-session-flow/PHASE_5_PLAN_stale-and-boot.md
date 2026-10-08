@@ -62,3 +62,14 @@ Phase 2 에서 `BootResult.inProgress` 타입이 `Record<string, SessionDraft> |
 
 - `data-stale` 훅과 `isStaleStartedAt` 함수가 코드 어디에도 남지 않아야 한다.
 - StaleBanner 내 「버리기」 2단 확인은 `{#if}` 없이 CSS 로 단계를 토글한다 (CLAUDE.md 접기 규칙).
+
+## 비고 (Phase 2 검증에서 추가)
+
+### `staleDrafts` 키 파생
+
+`staleDrafts(drafts, today)` 가 돌려주는 `Record<IsoDate, SessionDraft[]>` 의 각 원소에는
+draft 키가 직접 포함되지 않는다. `StaleBanner` 가 「버리기」 (`discardDraft(key)`) 나
+「그 날짜로 기록」 (`finish(..., { kind: 'date', date })`) 을 호출할 때 키가 필요하다.
+키는 `draftKey(d.progressionId, d.kind)` 로 파생한다 — `draftKey` 는 `$lib/ui/state/storage` 에서
+import 해 쓴다. `StaleBanner` 구현 시 이 파생을 사용하거나, 필요하다면 스토어에
+`staleDraftEntries(today): { key: string; draft: SessionDraft }[]` getter 를 추가해도 된다.

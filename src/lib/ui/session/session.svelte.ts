@@ -1,26 +1,24 @@
 /**
- * 진행 중 세션 스토어 (FR-2).
+ * 진행 중 세션 스토어 (FR-2 / FR-39 / FR-41.2 / ADR-41 / ADR-42 / ADR-45).
  *
- * `SessionRecord` 는 완결된 세션만 표현하므로 UI 쪽 별도 스키마다 (FR-2.1).
- * 세트 값을 하나 입력할 때마다 저장한다 (FR-2.3 / D-3).
+ * SPEC5 Phase 2 — 진행 중 기록을 종목별 **칸**(`SessionDraft`) 으로 쪼개
+ * `#drafts: Record<string, SessionDraft>` 로 들고 다닌다. 키는
+ * `draftKey(progressionId, kind)` 다. 한 종목에 work · consolidation · free 칸이
+ * 공존할 수 있다 (한 종목에 free 칸은 최대 하나).
  *
- * 완료 시 세트별 RPE 중 **최댓값**을 세션 RPE 로 넘긴다 (FR-6.7a / D-11).
- * 하나도 없으면 필드 자체를 만들지 않는다 — 0 으로 대체하지 않는다.
- * 세트별 RPE 원본은 진행 중 세션 스토어에는 있고, 완료 시 `setRpes` 로 도메인 기록에
- * 넘어간다 (FR-28.1). `SessionRecord.rpe` 는 계속 최댓값 하나이며 판정만 그것을 본다.
+ * 변경은 모두 **불변 spread** 로 처리한다 (R-3) — Svelte 반응성 유지.
+ * 세트를 하나 입력할 때마다 저장한다 (FR-2.3 / D-3).
  *
- * 완료 시 세션 스냅샷 세 필드를 도메인에 얹는다 (FR-28 / ADR-23):
- *   - `target` — begin 시점의 `plan.goal` · `plan.work` 스냅샷.
- *   - `setRpes` — 세트별 RPE 배열 (미입력 자리는 null).
- *   - `completedAt` — `todayClock.nowIsoLocal()` 이 낸 로컬 오프셋 포함 ISO 문자열.
- *
- * 완료·중단 시 `applySession` / `abandonChallenge` 로 도메인에 반영하고 진행 중
- * 데이터를 제거한다 (FR-2.5).
+ * 완료 로직(`finish`) 과 플래너·실행기(`planFinish`/`executeFinish`)는 Phase 3 에서
+ * 구현한다. 이 파일의 `finish` 는 Phase 3 자리이고, `finalize`/`abandon` 는
+ * ExerciseCard · +page.svelte 가 Phase 4 에서 FinishBar 로 넘어갈 때까지 쓰는
+ * **임시 호환 래퍼** 다 (R-2).
  */
 
 import {
   abandonChallenge,
   applySession,
+  planConsolidation,
   recordConsolidation,
   type AbandonResult,
 } from '$lib/domain';
@@ -36,40 +34,242 @@ import type {
 } from '$lib/domain/types';
 import {
   clearInProgress,
-  writeInProgressCompat,
-  type InProgressSession,
+  draftKey,
+  writeInProgress,
+  type SessionDraft,
   type SetEntry,
 } from '$lib/ui/state/storage';
 import { todayClock } from '$lib/ui/state/today.svelte';
 
+type DraftKind = SessionDraft['kind'];
+
+export type FinishScope = { kind: 'all' } | { kind: 'date'; date: IsoDate };
+
+/** Phase 3 에서 채운다. 지금은 자리만 잡는다. */
+export interface FinishResult {
+  nextState: AppState;
+  perDraft: Record<string, { ok: true; record: SessionRecord } | { ok: false; reason: string }>;
+}
+
 class InProgressStore {
-  #session = $state<InProgressSession | null>(null);
+  /**
+   * 진행 중 칸 맵 (ADR-42). 키는 `draftKey(progressionId, kind)` (ADR-41).
+   * 모든 변경은 불변 spread 로 처리한다 (R-3).
+   */
+  #drafts = $state<Record<string, SessionDraft>>({});
   #saveStatus = $state<'ok' | 'write-blocked'>('ok');
 
-  get value(): InProgressSession | null {
-    return this.#session;
+  get drafts(): Record<string, SessionDraft> {
+    return this.#drafts;
   }
 
   get saveStatus(): 'ok' | 'write-blocked' {
     return this.#saveStatus;
   }
 
+  // ── 기본 API ───────────────────────────────────────────────────────────
+
   /** 부팅 시 복원. `boot()` 이 부른다. */
-  init(loaded: InProgressSession | null): void {
-    this.#session = loaded;
+  init(loaded: Record<string, SessionDraft> | null): void {
+    this.#drafts = loaded ?? {};
     this.#saveStatus = 'ok';
   }
 
   /**
-   * 진행 중 세션을 시작한다.
-   * `startedAt` 은 UI 층이 주입한다 (todayClock 값) — 이 값이 완료 시 SessionInput.date 가 된다.
+   * 칸 하나를 꺼낸다. `onDate` 가 주어지면 `draft.startedAt === onDate` 인 칸만
+   * 돌려준다 — 그 날짜의 칸이 아니면 undefined (오늘 카드에서 날짜 넘긴 칸을 걸러낼 때 쓴다).
+   */
+  getDraft(
+    progressionId: ProgressionId,
+    kind: DraftKind,
+    onDate?: IsoDate,
+  ): SessionDraft | undefined {
+    const key = draftKey(progressionId, kind);
+    const draft = this.#drafts[key];
+    if (draft === undefined) return undefined;
+    if (onDate !== undefined && draft.startedAt !== onDate) return undefined;
+    return draft;
+  }
+
+  /**
+   * `work` 칸을 시작한다. 키 충돌 시 **덮어쓰지 않는다** — 이미 쌓인 세트를
+   * 보호한다 (FR-39.2 / EC-99 / EC-100). 번갈아 운동하는 사용자가 다른 종목을
+   * 손댔다가 돌아왔을 때 기존 세트가 사라지면 안 되기 때문이다.
    *
-   * `plan.goal` · `plan.work` 를 `target` 스냅샷으로 저장한다 (FR-28.3 / ADR-22).
-   * 세션이 끝난 뒤 단계가 오르내려도 시작 시점 목표는 그대로 남는다 —
-   * 그래서 재계산이 아니라 스냅샷이 필요하다.
+   * `plan.goal` · `plan.work` 를 `target` 스냅샷으로 저장한다 (FR-39.3 / ADR-22).
+   *
+   * 돌려주는 값은 **새로 열렸는지** 다 — `true` 는 새 칸 생성, `false` 는 기존 칸이
+   * 있어 보호된 경우 (Phase 4 에서 UI 가 입력 상실을 감지하는 신호).
+   */
+  beginWork(startedAt: IsoDate, plan: PlannedExercise): boolean {
+    const key = draftKey(plan.progressionId, 'work');
+    if (this.#drafts[key] !== undefined) return false;
+    const draft: SessionDraft = {
+      startedAt,
+      progressionId: plan.progressionId,
+      step: plan.step,
+      performedStep: plan.performedStep,
+      kind: 'work',
+      workSets: [],
+      target: { goal: plan.goal, work: plan.work },
+    };
+    this.#drafts = { ...this.#drafts, [key]: draft };
+    this.persist();
+    return true;
+  }
+
+  /**
+   * 자유 운동 칸 시작 (FR-18.1). 계획이 없으므로 `target` 도 없다.
+   * 키 충돌 시 덮어쓰지 않는다 — 사용자가 같은 종목 free 칸에 다시 들어와도
+   * 기존 세트를 보호한다.
+   *
+   * 돌려주는 값은 **새로 열렸는지** 다 — `true` 는 새 칸 생성, `false` 는 기존 칸이
+   * 있어 보호된 경우.
+   */
+  beginFree(startedAt: IsoDate, progressionId: ProgressionId, step: number): boolean {
+    const key = draftKey(progressionId, 'free');
+    if (this.#drafts[key] !== undefined) return false;
+    const draft: SessionDraft = {
+      startedAt,
+      progressionId,
+      step,
+      performedStep: step,
+      kind: 'free',
+      workSets: [],
+    };
+    this.#drafts = { ...this.#drafts, [key]: draft };
+    this.persist();
+    return true;
+  }
+
+  /**
+   * 다지기 칸 시작 (ADR-45). 도메인 `planConsolidation` 으로 목표를 만들어
+   * `target` 스냅샷으로 저장한다. `linkedTo` 는 이 다지기가 뒤잇는 work 칸 키다
+   * (EC-94 — abandon 취소 시 함께 닫을지 묻는 근거).
+   *
+   * 키 충돌 시 덮어쓰지 않는다 — 다지기 칸이 이미 있으면 그대로 둔다.
+   */
+  beginConsolidation(
+    startedAt: IsoDate,
+    state: AppState,
+    catalog: Catalog,
+    progressionId: ProgressionId,
+    linkedTo: string,
+  ): void {
+    const key = draftKey(progressionId, 'consolidation');
+    if (this.#drafts[key] !== undefined) return;
+    const planned = planConsolidation(state, catalog, progressionId);
+    const draft: SessionDraft = {
+      startedAt,
+      progressionId,
+      step: planned.step,
+      performedStep: planned.performedStep,
+      kind: 'consolidation',
+      workSets: [],
+      target: { goal: planned.goal, work: planned.work },
+      linkedTo,
+    };
+    this.#drafts = { ...this.#drafts, [key]: draft };
+    this.persist();
+  }
+
+  pushSet(key: string, entry: SetEntry): void {
+    const draft = this.#drafts[key];
+    if (draft === undefined) return;
+    const next: SessionDraft = { ...draft, workSets: [...draft.workSets, entry] };
+    this.#drafts = { ...this.#drafts, [key]: next };
+    this.persist(); // FR-2.3 — 세트마다 저장
+  }
+
+  updateSet(key: string, index: number, entry: SetEntry): void {
+    const draft = this.#drafts[key];
+    if (draft === undefined) return;
+    if (index < 0 || index >= draft.workSets.length) return;
+    const nextSets = [...draft.workSets];
+    nextSets[index] = entry;
+    this.#drafts = { ...this.#drafts, [key]: { ...draft, workSets: nextSets } };
+    this.persist();
+  }
+
+  removeSet(key: string, index: number): void {
+    const draft = this.#drafts[key];
+    if (draft === undefined) return;
+    if (index < 0 || index >= draft.workSets.length) return;
+    const nextSets = [...draft.workSets];
+    nextSets.splice(index, 1);
+    this.#drafts = { ...this.#drafts, [key]: { ...draft, workSets: nextSets } };
+    this.persist();
+  }
+
+  /**
+   * 「이 단계 중단」 토글 (ADR-45). 즉시 기록하지 않고 플래그만 세운다 —
+   * 「오늘 운동 마치기」 시점의 플래너가 abandon op 로 전환한다.
+   */
+  markAbandoned(key: string, abandoned: boolean): void {
+    const draft = this.#drafts[key];
+    if (draft === undefined) return;
+    this.#drafts = { ...this.#drafts, [key]: { ...draft, abandoned } };
+    this.persist();
+  }
+
+  /** 단일 칸 제거. */
+  discardDraft(key: string): void {
+    if (!(key in this.#drafts)) return;
+    const next = { ...this.#drafts };
+    delete next[key];
+    this.#drafts = next;
+    this.persist();
+  }
+
+  /** 전체 비우기. */
+  discardAll(): void {
+    this.#drafts = {};
+    this.persist();
+  }
+
+  /**
+   * 「오늘 운동 마치기」 시점의 기록·판정. Phase 3 에서 플래너·실행기로 구현한다.
+   * Phase 2 에서는 자리만 잡는다 — 아무도 부르지 않는다.
+   */
+  finish(
+    _state: AppState,
+    _catalog: Catalog,
+    _nowIsoLocal: string,
+    _scope?: FinishScope,
+  ): FinishResult {
+    throw new Error('finish 는 Phase 3 에서 구현된다');
+  }
+
+  // ── Phase 4 에서 제거할 임시 호환 래퍼 (R-2) ─────────────────────────
+  //
+  // ExerciseCard · +page.svelte · ExportBar · reset.ts 가 아직 단일 세션 모델을
+  // 쓴다. Phase 4 에서 ui-cards 가 FinishBar · drafts 바인딩으로 넘어가면 아래
+  // 래퍼들은 모두 제거한다. 여기 묶어 두어 Phase 4 때 통째로 지우기 쉽게 한다.
+
+  /**
+   * [COMPAT · Phase 4 제거] 단일 세션 모델의 `inProgress.value` 를 흉내낸다.
+   * drafts 맵에서 하나를 꺼내 돌려준다. 둘 이상이면 첫 번째를 돌려주므로,
+   * 다중 종목이 열린 상태에서의 의미는 모호하다 — Phase 4 에서 카드가 자기 칸을
+   * `drafts` 에서 직접 집어가면 이 getter 는 사라진다.
+   */
+  get value(): SessionDraft | null {
+    const keys = Object.keys(this.#drafts);
+    if (keys.length === 0) return null;
+    return this.#drafts[keys[0]];
+  }
+
+  /**
+   * [COMPAT · Phase 4 제거] 기존 `begin(startedAt, plan)` — kind 가 work 든
+   * consolidation 이든 플랜 하나로 칸을 연다. ExerciseCard · +page.svelte 가
+   * 다지기 승인에도 이걸 쓴다. Phase 4 에서 beginWork · beginConsolidation 으로
+   * 쪼갠다.
+   *
+   * 기존 단일 세션 모델이 그랬듯 **덮어쓴다** — 같은 키가 있으면 교체한다
+   * (Phase 2 의 beginWork 는 보호하지만, 이 래퍼는 옛 호출자의 기대를 따른다).
    */
   begin(startedAt: IsoDate, plan: PlannedExercise): void {
-    this.#session = {
+    const key = draftKey(plan.progressionId, plan.kind);
+    const draft: SessionDraft = {
       startedAt,
       progressionId: plan.progressionId,
       step: plan.step,
@@ -78,57 +278,37 @@ class InProgressStore {
       workSets: [],
       target: { goal: plan.goal, work: plan.work },
     };
+    this.#drafts = { ...this.#drafts, [key]: draft };
     this.persist();
   }
 
-  /**
-   * 자유 운동 세션 시작 (FR-18.1). 계획(PlannedExercise)이 없으므로 UI 가
-   * 사용자의 선택(종목·단계)을 그대로 넘긴다. `performedStep` 은 사용자가
-   * 실제로 수행하는 단계 그대로다 (다지기 개념 없음).
-   */
-  beginFree(startedAt: IsoDate, progressionId: ProgressionId, step: number): void {
-    this.#session = {
-      startedAt,
-      progressionId,
-      step,
-      performedStep: step,
-      kind: 'free',
-      workSets: [],
-    };
-    this.persist();
-  }
-
+  /** [COMPAT · Phase 4 제거] 가장 처음 들어온 칸에 세트를 민다. */
   pushWorkSet(entry: SetEntry): void {
-    if (this.#session === null) return;
-    this.#session = {
-      ...this.#session,
-      workSets: [...this.#session.workSets, entry],
-    };
-    this.persist(); // FR-2.3 — 세트마다 저장
+    const keys = Object.keys(this.#drafts);
+    if (keys.length === 0) return;
+    this.pushSet(keys[0], entry);
   }
 
+  /** [COMPAT · Phase 4 제거] 가장 처음 들어온 칸의 세트를 바꾼다. */
   updateWorkSet(index: number, entry: SetEntry): void {
-    if (this.#session === null) return;
-    if (index < 0 || index >= this.#session.workSets.length) return;
-    const next = [...this.#session.workSets];
-    next[index] = entry;
-    this.#session = { ...this.#session, workSets: next };
-    this.persist();
+    const keys = Object.keys(this.#drafts);
+    if (keys.length === 0) return;
+    this.updateSet(keys[0], index, entry);
   }
 
   /**
-   * 세션을 완료해 도메인에 반영한다 (FR-2.5).
-   * 다지기 세션이면 `recordConsolidation`, 아니면 `applySession` 이다 —
-   * 다지기는 `evaluateSession` 이 승급 판정에서 제외해야 하기 때문에 별도 API 다.
-   * (`applySession` 도 kind='consolidation' 을 안전하게 처리하나, 다지기 전용
-   * API 를 통과시켜 의도를 명확히 남긴다.)
+   * [COMPAT · Phase 4 제거] 단일 세션 완료. 첫 칸을 꺼내 도메인에 기록한 뒤 그
+   * 칸만 제거한다. Phase 3 의 `finish` 가 플래너·실행기로 다중 칸을 처리하게
+   * 되면 이 래퍼는 Phase 4 에서 사라진다.
    */
   finalize(
     state: AppState,
     catalog: Catalog,
   ): { record: SessionRecord; nextState: AppState } {
-    if (this.#session === null) throw new Error('진행 중 세션이 없다');
-    const s = this.#session;
+    const keys = Object.keys(this.#drafts);
+    if (keys.length === 0) throw new Error('진행 중 세션이 없다');
+    const key = keys[0];
+    const s = this.#drafts[key];
     const values = s.workSets.map((e) => e.value);
     const sessionRpe = maxSetRpe(s.workSets);
     const extras = buildExtras(s);
@@ -149,8 +329,6 @@ class InProgressStore {
       nextState = result.state;
       record = result.record;
     } else {
-      // work / free 는 applySession 을 그대로 탄다. free 는 applySession 이 조기
-      // 반환으로 state.steps 를 손대지 않는다 (FR-18.4 / EC-40).
       const input: SessionInput = {
         date: s.startedAt, // FR-2.8 / D-7
         progressionId: s.progressionId,
@@ -160,8 +338,6 @@ class InProgressStore {
         kind: s.kind, // 'work' | 'free'
       };
       if (sessionRpe !== undefined) input.rpe = sessionRpe;
-      // FR-28: extras.target/setRpes/completedAt 을 입력에 실어 넘긴다. undefined 인
-      // 필드는 명시 대입하지 않아 record 스프레드에 undefined 로 실리지 않게 한다.
       if (extras.target !== undefined) input.target = extras.target;
       if (extras.setRpes !== undefined) input.setRpes = extras.setRpes;
       if (extras.completedAt !== undefined) input.completedAt = extras.completedAt;
@@ -170,22 +346,20 @@ class InProgressStore {
       record = result.record;
     }
 
-    this.#session = null;
-    try {
-      clearInProgress();
-    } catch {
-      // 정리 실패는 앱을 죽이지 않는다. 다음 부팅에서 재정리한다.
-    }
+    this.discardDraft(key);
     return { record, nextState };
   }
 
   /**
-   * 세션 중 '불가능' 을 눌러 중단한다 (FR-6.8).
-   * 반환된 `canConsolidate === true` 이면 UI 는 확인을 거쳐 다지기를 시작한다 (FR-6.9).
+   * [COMPAT · Phase 4 제거] 단일 세션 중단. 첫 칸을 꺼내 도메인 `abandonChallenge`
+   * 에 넘긴 뒤 그 칸을 제거한다. Phase 4 에서 FinishBar 플래너가 abandon op 로
+   * 전환하면 이 래퍼는 사라진다.
    */
   abandon(state: AppState, catalog: Catalog): AbandonResult {
-    if (this.#session === null) throw new Error('진행 중 세션이 없다');
-    const s = this.#session;
+    const keys = Object.keys(this.#drafts);
+    if (keys.length === 0) throw new Error('진행 중 세션이 없다');
+    const key = keys[0];
+    const s = this.#drafts[key];
     const values = s.workSets.map((e) => e.value);
     const sessionRpe = maxSetRpe(s.workSets);
     const extras = buildExtras(s);
@@ -200,31 +374,23 @@ class InProgressStore {
       extras,
     );
 
-    this.#session = null;
-    try {
-      clearInProgress();
-    } catch {
-      // ignore
-    }
+    this.discardDraft(key);
     return result;
   }
 
-  /** 화면에서 확인 없이 전체 취소. 진행 중 데이터만 지운다 — 도메인 상태는 그대로. */
+  /** [COMPAT · Phase 5 제거] 전체 비우기 (reset.ts 가 부른다). */
   discard(): void {
-    this.#session = null;
-    try {
-      clearInProgress();
-    } catch {
-      // ignore
-    }
+    this.discardAll();
   }
 
+  /** 저장은 drafts 가 비면 키를 지우고(옛 세션 모델과 같은 결과), 아니면 봉투를 쓴다. */
   private persist(): void {
-    if (this.#session === null) return;
     try {
-      // Phase 1: 단일 세션을 drafts 맵에 담아 저장한다 (R-2).
-      // Phase 2 에서 스토어가 drafts 맵으로 전환되면 writeInProgress 를 직접 쓴다.
-      writeInProgressCompat(this.#session);
+      if (Object.keys(this.#drafts).length === 0) {
+        clearInProgress();
+      } else {
+        writeInProgress(this.#drafts);
+      }
       this.#saveStatus = 'ok';
     } catch {
       this.#saveStatus = 'write-blocked';
@@ -243,14 +409,13 @@ export function maxSetRpe(entries: SetEntry[]): number | undefined {
 }
 
 /**
- * 진행 중 세션에서 FR-28 세 필드를 만든다 (ADR-23).
+ * 진행 중 칸에서 FR-28 세 필드를 만든다 (ADR-23).
  *
  * - `target` — 시작 시점의 스냅샷. begin 이 저장해 두었다. 자유 운동은 없다.
- * - `setRpes` — 세트마다의 RPE 배열. 미입력은 null (세션 RPE 인 최댓값과 다르다 —
- *   완료 후에도 세트별 원본을 남기기 위한 저장 필드).
+ * - `setRpes` — 세트마다의 RPE 배열. 미입력은 null.
  * - `completedAt` — 완료·중단 시각. `todayClock.nowIsoLocal()` 로 로컬 오프셋 포함.
  */
-function buildExtras(session: InProgressSession): SessionExtras {
+function buildExtras(session: SessionDraft): SessionExtras {
   const extras: SessionExtras = {
     setRpes: session.workSets.map((e) => e.rpe ?? null),
     completedAt: todayClock.nowIsoLocal(),
@@ -260,11 +425,14 @@ function buildExtras(session: InProgressSession): SessionExtras {
 }
 
 /**
- * 시작 날짜가 오늘이 아닌지 판정 (FR-2.9 / EC-7a).
- * 화면 상단에 "이 세션은 YYYY-MM-DD 세션입니다" 문구를 띄우는 근거.
+ * [COMPAT · Phase 5 제거] 시작 날짜가 오늘이 아닌지 판정 (FR-2.9 / EC-7a).
+ *
+ * +page.svelte 가 단일 세션 모델로 상단 배너를 띄우는 자리에서 쓴다.
+ * Phase 5 (ADR-48) 가 `stale.ts` 의 `staleDrafts` + `StaleBanner` 로 교체하면
+ * 이 shim 은 사라진다.
  */
 export function isStaleStartedAt(
-  session: InProgressSession | null,
+  session: SessionDraft | null,
   today: IsoDate,
 ): boolean {
   if (session === null) return false;

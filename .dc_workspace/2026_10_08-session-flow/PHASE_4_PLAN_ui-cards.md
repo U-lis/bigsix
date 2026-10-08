@@ -102,3 +102,17 @@ Phase 3 의 `planFinish` 가 생성한 ops 를 받아 사람이 읽을 수 있�
 - `data-set-row` 는 1-based 세트 번호를 값으로 가진다.
 - `data-set-edit`, `data-set-delete` 는 세트 행 안 버튼에 붙인다.
 - 편집 인터페이스는 기존 방식(인라인 편집 또는 모달)을 따른다 — 새 패턴을 도입하지 않는다.
+
+### 6. 스테일 키 충돌 처리 (Phase 2 검증에서 추가)
+
+`beginWork(today, plan)` 이 `false` 를 돌려주는 경우 — 같은 `progressionId:work` 키에 날 넘긴
+스테일 칸이 이미 있을 때 — 카드는 세트 입력을 비활성화하고 사실 문구를 표시해야 한다:
+
+> 「{startedAt} 미완료 기록이 있습니다 — 먼저 기록하거나 버리세요」
+
+구체적으로:
+- ExerciseCard 는 `beginWork` 반환값을 받는다 (또는 `getDraft(id, kind, today)` 가 `undefined`
+  인데 `getDraft(id, kind)` 가 `defined` 임을 확인해 간접 감지한다).
+- 입력 영역은 CSS `disabled` + `data-draft-blocked` 훅으로 잠근다 (CLAUDE.md 잠금 규칙 준수).
+- 문구는 `StaleBanner` (Phase 5) 가 전역 안내를 제공하기 전까지 카드 수준에서도 표시한다.
+- 입력을 묵시적으로 버리는 경로는 없어야 한다.

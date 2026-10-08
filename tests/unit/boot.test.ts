@@ -11,8 +11,10 @@ import {
   APP_STATE_KEY,
   CURRENT_SCHEMA_VERSION,
   IN_PROGRESS_KEY,
+  draftKey,
   writeAppState,
-  writeInProgressCompat,
+  writeInProgress,
+  type SessionDraft,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 
@@ -94,27 +96,70 @@ describe('boot — 미래 버전 감지 시 덮어쓰지 않는다 (EC-3)', () =
   });
 });
 
-// ── 진행 중 세션 복원 (FR-2.4 / EC-17) ────────────────────────────────────
+// ── 진행 중 drafts 복원 (FR-2.4 / FR-45 / EC-17) ─────────────────────────
 
-describe('boot — 진행 중 세션 복원 (FR-2.4)', () => {
-  it('저장된 진행 중 세션이 있으면 inProgress 로 돌려준다', () => {
-    writeInProgressCompat({
+describe('boot — 진행 중 drafts 복원 (FR-2.4 / FR-45)', () => {
+  it('저장된 진행 중 drafts 가 있으면 그 맵을 inProgress 로 돌려준다', () => {
+    const draft: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
       performedStep: 3,
       kind: 'work',
       workSets: [{ value: 8 }],
+    };
+    const key = draftKey('pushup', 'work');
+    writeInProgress({ [key]: draft });
+    const r = boot('2026-09-05');
+    assert.ok(r.inProgress !== null);
+    assert.deepEqual(Object.keys(r.inProgress!), [key]);
+    assert.equal(r.inProgress![key].progressionId, 'pushup');
+    assert.equal(r.inProgress![key].workSets.length, 1);
+  });
+
+  it('두 종목이 각자의 칸을 가지면 복원 결과도 두 칸이다 (FR-39.2)', () => {
+    const d1: SessionDraft = {
+      startedAt: '2026-09-05',
+      progressionId: 'pushup',
+      step: 3,
+      performedStep: 3,
+      kind: 'work',
+      workSets: [{ value: 20 }],
+    };
+    const d2: SessionDraft = {
+      startedAt: '2026-09-05',
+      progressionId: 'squat',
+      step: 4,
+      performedStep: 4,
+      kind: 'work',
+      workSets: [{ value: 15 }],
+    };
+    writeInProgress({
+      [draftKey('pushup', 'work')]: d1,
+      [draftKey('squat', 'work')]: d2,
     });
     const r = boot('2026-09-05');
     assert.ok(r.inProgress !== null);
-    assert.equal(r.inProgress?.progressionId, 'pushup');
-    assert.equal(r.inProgress?.workSets.length, 1);
+    assert.deepEqual(
+      Object.keys(r.inProgress!).sort(),
+      [draftKey('pushup', 'work'), draftKey('squat', 'work')].sort(),
+    );
   });
 
   it('없으면 null', () => {
     const r = boot('2026-09-05');
     assert.equal(r.inProgress, null);
+  });
+
+  it('v5 미래 봉투는 조용히 null 로 떨어진다 (R-7 롤백 안전)', () => {
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({ schemaVersion: 999, drafts: {} }),
+    );
+    const r = boot('2026-09-05');
+    assert.equal(r.inProgress, null);
+    // AppState 쪽에는 영향 없다 — storageStatus 는 그대로.
+    assert.ok(r.storageStatus === 'empty' || r.storageStatus === 'ok');
   });
 });
 

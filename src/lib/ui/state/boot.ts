@@ -25,9 +25,9 @@ import {
 import { loadCatalog } from '$lib/data/catalog';
 import {
   readAppState,
-  readInProgressCompat,
+  readInProgress,
   writeAppState,
-  type InProgressSession,
+  type SessionDraft,
 } from './storage';
 import type { StorageStatus } from './state.svelte';
 
@@ -36,7 +36,11 @@ export interface BootResult {
   catalog: Catalog;
   today: IsoDate;
   agenda: DayAgenda;
-  inProgress: InProgressSession | null;
+  /**
+   * 진행 중 칸 맵 (SPEC5 FR-45 / ADR-42). 저장이 비었거나 손상·미래 버전·접근
+   * 차단이면 null — 그 자리에서 조용히 빈 상태로 시작한다 (FR-2.4 / R-7).
+   */
+  inProgress: Record<string, SessionDraft> | null;
   storageStatus: StorageStatus;
   /** 미래 버전 데이터를 만났을 때만 채워진다 (FR-1.5 / EC-3). */
   futureVersion?: number;
@@ -114,12 +118,13 @@ export function boot(today: IsoDate): BootResult {
 
   const agenda = planOn(state, catalog, today); // FR-3.1 (4)
 
-  // 진행 중 세션 복원 (FR-2.4). 손상됐거나 접근 차단이면 null 로 둔다 —
-  // AppState 처럼 확인 UI 로 다루기에는 무겁다. 사용자는 세션을 다시 시작하면 된다.
-  // Phase 1: 호환 래퍼가 drafts 맵의 첫 원소를 단일 세션으로 돌려준다 (R-2).
-  // Phase 2 에서 스토어가 drafts 맵으로 전환되면 readInProgress 를 직접 쓴다.
-  const ip = readInProgressCompat();
-  const inProgress: InProgressSession | null = ip.status === 'ok' ? ip.value : null;
+  // 진행 중 drafts 맵 복원 (FR-2.4 / FR-45). 손상·미래 버전·접근 차단이면 null 로
+  // 둔다 — AppState 처럼 확인 UI 로 다루기에는 무겁다. 사용자는 세션을 다시
+  // 시작하면 된다. v0.3.0 롤백 → v5 봉투는 future-version 으로 떨어져 여기서도
+  // 조용히 null 로 처리된다 (R-7). 기록(AppState) 은 v4 그대로여서 안전하다.
+  const ip = readInProgress();
+  const inProgress: Record<string, SessionDraft> | null =
+    ip.status === 'ok' ? ip.value : null;
 
   const result: BootResult = {
     state,
