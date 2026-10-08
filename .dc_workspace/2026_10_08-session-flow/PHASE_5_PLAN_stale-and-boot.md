@@ -47,16 +47,16 @@ Phase 2 에서 `BootResult.inProgress` 타입이 `Record<string, SessionDraft> |
 
 ## 완료 체크리스트
 
-- [ ] `StaleBanner` 구현, `data-stale-drafts`, `data-stale-record`, `data-stale-discard` 훅 있음
-- [ ] 「그 날짜로 기록」이 `scope: { kind: 'date', date }` 로 `finish` 를 호출함 (FR-44.2)
-- [ ] 「버리기」가 2단 확인 후 해당 날짜 칸을 삭제함 (FR-44.3)
-- [ ] `+page.svelte` 오늘 카드가 `startedAt === today` 인 칸만 보임 (FR-44.4)
-- [ ] `reset.ts` 가 `discardAll()` 을 호출함 (FR-45.5)
-- [ ] `ExportBar` 의 가져오기 차단 조건이 drafts 비어 있는지 검사함 (FR-45.4)
-- [ ] `tests/unit/reset.test.ts` 통과
-- [ ] `tests/unit/history-importJson.test.ts` 의 가져오기 차단 케이스 통과
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `StaleBanner` 구현, `data-stale-drafts`, `data-stale-record`, `data-stale-discard` 훅 있음 — Verified in `src/lib/ui/session/StaleBanner.svelte`
+- [x] 「그 날짜로 기록」이 `scope: { kind: 'date', date }` 로 `finish` 를 호출함 (FR-44.2) — Verified in `StaleBanner.svelte:99-101`
+- [x] 「버리기」가 2단 확인 후 해당 날짜 칸을 삭제함 (FR-44.3) — CSS folding via `.confirming`, `doDiscard()` at `StaleBanner.svelte:67`
+- [x] `+page.svelte` 오늘 카드가 `startedAt === today` 인 칸만 보임 (FR-44.4) — Verified in `src/routes/+page.svelte:85-93` (`filterTodayDrafts`)
+- [x] `reset.ts` 가 `discardAll()` 을 호출함 (FR-45.5) — Verified in `src/lib/ui/state/reset.ts:18`
+- [x] `ExportBar` 의 가져오기 차단 조건이 drafts 비어 있는지 검사함 (FR-45.4) — `hasAnyDraft(inProgress.drafts)` in `src/lib/ui/history/ExportBar.svelte:76`; predicate extracted to `src/lib/ui/session/stale.ts:44`
+- [x] `tests/unit/reset.test.ts` 통과
+- [x] `tests/unit/history-importJson.test.ts` 의 가져오기 차단 케이스 통과 — `hasAnyDraft` pure function tested with proper `SessionDraft` fixtures
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 전부 통과 (베이스라인 976)
 
 ## 비고
 

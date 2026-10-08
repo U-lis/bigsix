@@ -10,9 +10,10 @@
  * 세트를 하나 입력할 때마다 저장한다 (FR-2.3 / D-3).
  *
  * Phase 4 에서 임시 호환 래퍼(`begin` · `pushWorkSet` · `updateWorkSet` · `finalize`
- * · `abandon`) 를 제거했다. 남은 두 메서드 `value` getter / `discard()` 와 함수
- * `isStaleStartedAt` 은 Phase 5 가 다룰 ExportBar · reset.ts · StaleBanner 가 쓰는
- * **임시 shim** 이다 — Phase 5 종료 시 함께 사라진다.
+ * · `abandon`) 를 제거했다. Phase 5 에서 마지막 shim (`value` getter · `discard()`
+ * · `isStaleStartedAt`) 도 제거했다 — ExportBar 는 `drafts` 맵을 직접 보고,
+ * reset.ts 는 `discardAll()` 을 부르며, 날 넘긴 칸은 `StaleBanner` + `staleDrafts`
+ * 가 다룬다.
  */
 
 import type {
@@ -258,27 +259,6 @@ class InProgressStore {
     return result;
   }
 
-  // ── Phase 5 shim — ExportBar · reset.ts 가 남아 있는 동안만 유지 ─────
-  //
-  // Phase 5 에서 ExportBar 는 `Object.keys(drafts).length` 로, reset.ts 는
-  // `discardAll()` 로 전환된다. 그 커밋에서 아래 두 멤버는 함께 사라진다.
-
-  /**
-   * [COMPAT · Phase 5 제거] ExportBar 의 `hasInProgress` 가 참조한다. 다중 칸
-   * 모델에서는 의미가 모호하다 (어떤 칸?). 「하나라도 있는가」를 묻는 용도로만
-   * 쓴다. drafts 맵에서 아무 draft 하나를 돌려주고, 비었으면 null.
-   */
-  get value(): SessionDraft | null {
-    const keys = Object.keys(this.#drafts);
-    if (keys.length === 0) return null;
-    return this.#drafts[keys[0]];
-  }
-
-  /** [COMPAT · Phase 5 제거] reset.ts 가 전체 초기화에서 쓴다 — `discardAll` 과 동일. */
-  discard(): void {
-    this.discardAll();
-  }
-
   /** 저장은 drafts 가 비면 키를 지우고(옛 세션 모델과 같은 결과), 아니면 봉투를 쓴다. */
   private persist(): void {
     try {
@@ -292,21 +272,6 @@ class InProgressStore {
       this.#saveStatus = 'write-blocked';
     }
   }
-}
-
-/**
- * [COMPAT · Phase 5 제거] 시작 날짜가 오늘이 아닌지 판정 (FR-2.9 / EC-7a).
- *
- * Phase 5 (ADR-48) 가 `stale.ts` 의 `staleDrafts` + `StaleBanner` 로 교체한다.
- * 지금은 참조처가 없다 — Phase 5 이전에 지워져도 무방하지만 Phase 5 범위
- * (StaleBanner 교체) 를 작게 유지하기 위해 남겨 둔다.
- */
-export function isStaleStartedAt(
-  session: SessionDraft | null,
-  today: IsoDate,
-): boolean {
-  if (session === null) return false;
-  return session.startedAt !== today;
 }
 
 export const inProgress = new InProgressStore();

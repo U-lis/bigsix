@@ -36,3 +36,11 @@ export function staleDrafts(
   }
   return out;
 }
+
+/**
+ * drafts 맵에 칸이 하나라도 있으면 true 를 돌려준다.
+ * ExportBar 의 가져오기 차단 조건으로 쓴다 (SPEC5 FR-45.4).
+ */
+export function hasAnyDraft(drafts: Record<string, SessionDraft>): boolean {
+  return Object.keys(drafts).length > 0;
+}

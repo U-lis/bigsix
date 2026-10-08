@@ -26,6 +26,7 @@
   import { planFinish, type FinishResult } from '$lib/ui/session/finish';
   import ExerciseCard from '$lib/ui/session/ExerciseCard.svelte';
   import ProposalBanner from '$lib/ui/session/ProposalBanner.svelte';
+  import StaleBanner from '$lib/ui/session/StaleBanner.svelte';
   import FreeExerciseForm from '$lib/ui/session/FreeExerciseForm.svelte';
   import FinishBar from '$lib/ui/session/FinishBar.svelte';
   import FinishDialog from '$lib/ui/session/FinishDialog.svelte';
@@ -192,6 +193,16 @@
 </script>
 
 <section data-today={screen.kind}>
+  <!-- SPEC5 FR-44 · ADR-48: 날 넘긴 칸은 StaleBanner 가 상단에서 처리한다. 오늘
+       카드는 draft.startedAt === today 인 칸만 보이므로 섞이지 않는다. -->
+  <StaleBanner
+    today={todayClock.today}
+    appStateValue={appState.value}
+    {catalog}
+    nowIsoLocal={() => todayClock.nowIsoLocal()}
+    onApply={(next) => appState.apply(next)}
+  />
+
   {#if screen.kind === 'no-program'}
     <!-- FR-17.1 리다이렉트 아님. 안내와 진입 버튼을 화면에 둔다 (EC-39). -->
     <p class="no-program">선택한 프로그램이 없습니다.</p>

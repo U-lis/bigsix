@@ -241,7 +241,7 @@ class InProgressStore {
 | 2 | store-drafts | 스토어 칸 목록 API (ADR-41/42/45) | Complete | 1 |
 | 3 | finish-pure | 순수 플래너·실행기 (ADR-44) | Complete | 2 |
 | 4 | ui-cards | 카드 개선·FinishBar·FinishDialog (ADR-46/47) | Complete | 3 |
-| 5 | stale-and-boot | StaleBanner·부팅·초기화 (ADR-48) | 대기 | 4 |
+| 5 | stale-and-boot | StaleBanner·부팅·초기화 (ADR-48) | Complete | 4 |
 | 6 | docs-and-deploy | README·CHANGELOG·CLAUDE.md·배포 | 대기 | 5 |
 
 ---

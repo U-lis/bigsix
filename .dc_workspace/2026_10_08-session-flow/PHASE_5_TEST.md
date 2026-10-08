@@ -12,15 +12,15 @@ Phase 2 에서 이미 작성됐다면 여기서 중복 추가하지 않는다.
 
 ### 부팅 v4→v5 이전 (`tests/unit/boot.test.ts`)
 
-- **동작**: v4 진행 중 봉투가 있는 상태에서 부팅하면 drafts 맵으로 복원되고 `boot.inProgress` 가 null 이 아니다 (EC-98) | **계층**: 단위
+- **동작**: v4 진행 중 봉투가 있는 상태에서 부팅하면 drafts 맵으로 복원되고 `boot.inProgress` 가 null 이 아니다 (EC-98) | **계층**: 단위 | **결과**: [x] PASS
 
 ### 초기화 (`tests/unit/reset.test.ts`)
 
-- **동작**: `performReset()` 호출 후 `inProgress.drafts` 가 비어 있다 (FR-45.5) | **계층**: 단위
+- **동작**: `performReset()` 호출 후 `inProgress.drafts` 가 비어 있다 (FR-45.5) | **계층**: 단위 | **결과**: [x] PASS
 
 ### 가져오기 차단 (`tests/unit/history-importJson.test.ts`)
 
-- **동작**: drafts 맵에 칸이 있을 때 가져오기를 시도하면 `data-import-block="inprogress"` 조건이 활성화된다 | **계층**: 단위
+- **동작**: drafts 맵에 칸이 있을 때 가져오기를 시도하면 `data-import-block="inprogress"` 조건이 활성화된다 | **계층**: 단위 | **결과**: [x] PASS — `hasAnyDraft()` pure function tested with `SessionDraft` fixtures
 
 ## 이 페이즈에 실제로 해당하는 엣지 케이스
 

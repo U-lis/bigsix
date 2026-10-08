@@ -24,6 +24,7 @@
   import { APP_STATE_SCHEMA_VERSION } from '$lib/ui/state/storage';
   import { appState as appStateStore } from '$lib/ui/state/state.svelte';
   import { inProgress } from '$lib/ui/session/session.svelte';
+  import { hasAnyDraft } from '$lib/ui/session/stale';
   import { buildExportJson, type ExportMeta } from './exportJson';
   import { buildExportCsv } from './exportCsv';
   import { saveFile, type SaveResult } from './download.svelte';
@@ -70,8 +71,9 @@
     });
   }
 
-  // FR-27.4 (EC-62): 진행 중 세션이 있으면 가져오기 자체가 열리지 않는다.
-  let hasInProgress = $derived(inProgress.value !== null);
+  // FR-27.4 (EC-62) · SPEC5 FR-45.4: 진행 중 칸이 하나라도 있으면 가져오기 자체가
+  // 열리지 않는다. drafts 맵이 비어 있지 않으면 차단한다.
+  let hasInProgress = $derived(hasAnyDraft(inProgress.drafts));
 
   function onImportConfirm(next: AppState) {
     appStateStore.replace(next);
