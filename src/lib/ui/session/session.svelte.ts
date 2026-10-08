@@ -1,7 +1,7 @@
 /**
  * 진행 중 세션 스토어 (FR-2 / FR-39 / FR-41.2 / ADR-41 / ADR-42 / ADR-45).
  *
- * SPEC5 Phase 2 — 진행 중 기록을 종목별 **칸**(`SessionDraft`) 으로 쪼개
+ * SPEC5 — 진행 중 기록을 종목별 **칸**(`SessionDraft`) 으로 쪼개
  * `#drafts: Record<string, SessionDraft>` 로 들고 다닌다. 키는
  * `draftKey(progressionId, kind)` 다. 한 종목에 work · consolidation · free 칸이
  * 공존할 수 있다 (한 종목에 free 칸은 최대 하나).
@@ -9,29 +9,20 @@
  * 변경은 모두 **불변 spread** 로 처리한다 (R-3) — Svelte 반응성 유지.
  * 세트를 하나 입력할 때마다 저장한다 (FR-2.3 / D-3).
  *
- * 완료 로직(`finish`) 과 플래너·실행기(`planFinish`/`executeFinish`)는 Phase 3 에서
- * 구현한다. 이 파일의 `finish` 는 Phase 3 자리이고, `finalize`/`abandon` 는
- * ExerciseCard · +page.svelte 가 Phase 4 에서 FinishBar 로 넘어갈 때까지 쓰는
- * **임시 호환 래퍼** 다 (R-2).
+ * Phase 4 에서 임시 호환 래퍼(`begin` · `pushWorkSet` · `updateWorkSet` · `finalize`
+ * · `abandon`) 를 제거했다. 남은 두 메서드 `value` getter / `discard()` 와 함수
+ * `isStaleStartedAt` 은 Phase 5 가 다룰 ExportBar · reset.ts · StaleBanner 가 쓰는
+ * **임시 shim** 이다 — Phase 5 종료 시 함께 사라진다.
  */
 
-import {
-  abandonChallenge,
-  applySession,
-  planConsolidation,
-  recordConsolidation,
-  type AbandonResult,
-} from '$lib/domain';
 import type {
   AppState,
   Catalog,
   IsoDate,
   PlannedExercise,
   ProgressionId,
-  SessionExtras,
-  SessionInput,
-  SessionRecord,
 } from '$lib/domain/types';
+import { planConsolidation } from '$lib/domain';
 import {
   executeFinish,
   planFinish,
@@ -45,7 +36,6 @@ import {
   type SessionDraft,
   type SetEntry,
 } from '$lib/ui/state/storage';
-import { todayClock } from '$lib/ui/state/today.svelte';
 
 type DraftKind = SessionDraft['kind'];
 
@@ -99,7 +89,7 @@ class InProgressStore {
    * `plan.goal` · `plan.work` 를 `target` 스냅샷으로 저장한다 (FR-39.3 / ADR-22).
    *
    * 돌려주는 값은 **새로 열렸는지** 다 — `true` 는 새 칸 생성, `false` 는 기존 칸이
-   * 있어 보호된 경우 (Phase 4 에서 UI 가 입력 상실을 감지하는 신호).
+   * 있어 보호된 경우 (ExerciseCard 가 입력 상실을 감지하는 신호).
    */
   beginWork(startedAt: IsoDate, plan: PlannedExercise): boolean {
     const key = draftKey(plan.progressionId, 'work');
@@ -237,19 +227,19 @@ class InProgressStore {
    * `nextState` 를 `appState` 에 반영하는 일은 호출자(+page.svelte / FinishBar) 가
    * 한다. 이 메서드는 스토어 자체(drafts)만 바꾼다.
    *
-   * `agendaOrder` 는 Phase 2 임시로 drafts 삽입 순서를 쓴다 — Phase 4 에서 오늘
-   * 화면의 실제 agenda 순서를 넘겨받도록 바뀐다.
+   * `agendaOrder` 는 호출자가 오늘 화면의 실제 agenda 순서에서 끌어온다.
    */
   finish(
     state: AppState,
     catalog: Catalog,
     nowIsoLocal: string,
     scope?: FinishScope,
+    agendaOrder?: readonly ProgressionId[],
   ): FinishResult {
-    const agendaOrder = Array.from(
+    const order: readonly ProgressionId[] = agendaOrder ?? Array.from(
       new Set(Object.values(this.#drafts).map((d) => d.progressionId)),
     );
-    const plan = planFinish(this.#drafts, agendaOrder, scope);
+    const plan = planFinish(this.#drafts, order, scope);
     const result = executeFinish(state, catalog, plan, nowIsoLocal);
 
     // 성공한 칸만 drafts 에서 지운다 (FR-42.6).
@@ -268,17 +258,15 @@ class InProgressStore {
     return result;
   }
 
-  // ── Phase 4 에서 제거할 임시 호환 래퍼 (R-2) ─────────────────────────
+  // ── Phase 5 shim — ExportBar · reset.ts 가 남아 있는 동안만 유지 ─────
   //
-  // ExerciseCard · +page.svelte · ExportBar · reset.ts 가 아직 단일 세션 모델을
-  // 쓴다. Phase 4 에서 ui-cards 가 FinishBar · drafts 바인딩으로 넘어가면 아래
-  // 래퍼들은 모두 제거한다. 여기 묶어 두어 Phase 4 때 통째로 지우기 쉽게 한다.
+  // Phase 5 에서 ExportBar 는 `Object.keys(drafts).length` 로, reset.ts 는
+  // `discardAll()` 로 전환된다. 그 커밋에서 아래 두 멤버는 함께 사라진다.
 
   /**
-   * [COMPAT · Phase 4 제거] 단일 세션 모델의 `inProgress.value` 를 흉내낸다.
-   * drafts 맵에서 하나를 꺼내 돌려준다. 둘 이상이면 첫 번째를 돌려주므로,
-   * 다중 종목이 열린 상태에서의 의미는 모호하다 — Phase 4 에서 카드가 자기 칸을
-   * `drafts` 에서 직접 집어가면 이 getter 는 사라진다.
+   * [COMPAT · Phase 5 제거] ExportBar 의 `hasInProgress` 가 참조한다. 다중 칸
+   * 모델에서는 의미가 모호하다 (어떤 칸?). 「하나라도 있는가」를 묻는 용도로만
+   * 쓴다. drafts 맵에서 아무 draft 하나를 돌려주고, 비었으면 null.
    */
   get value(): SessionDraft | null {
     const keys = Object.keys(this.#drafts);
@@ -286,127 +274,7 @@ class InProgressStore {
     return this.#drafts[keys[0]];
   }
 
-  /**
-   * [COMPAT · Phase 4 제거] 기존 `begin(startedAt, plan)` — kind 가 work 든
-   * consolidation 이든 플랜 하나로 칸을 연다. ExerciseCard · +page.svelte 가
-   * 다지기 승인에도 이걸 쓴다. Phase 4 에서 beginWork · beginConsolidation 으로
-   * 쪼갠다.
-   *
-   * 기존 단일 세션 모델이 그랬듯 **덮어쓴다** — 같은 키가 있으면 교체한다
-   * (Phase 2 의 beginWork 는 보호하지만, 이 래퍼는 옛 호출자의 기대를 따른다).
-   */
-  begin(startedAt: IsoDate, plan: PlannedExercise): void {
-    const key = draftKey(plan.progressionId, plan.kind);
-    const draft: SessionDraft = {
-      startedAt,
-      progressionId: plan.progressionId,
-      step: plan.step,
-      performedStep: plan.performedStep,
-      kind: plan.kind,
-      workSets: [],
-      target: { goal: plan.goal, work: plan.work },
-    };
-    this.#drafts = { ...this.#drafts, [key]: draft };
-    this.persist();
-  }
-
-  /** [COMPAT · Phase 4 제거] 가장 처음 들어온 칸에 세트를 민다. */
-  pushWorkSet(entry: SetEntry): void {
-    const keys = Object.keys(this.#drafts);
-    if (keys.length === 0) return;
-    this.pushSet(keys[0], entry);
-  }
-
-  /** [COMPAT · Phase 4 제거] 가장 처음 들어온 칸의 세트를 바꾼다. */
-  updateWorkSet(index: number, entry: SetEntry): void {
-    const keys = Object.keys(this.#drafts);
-    if (keys.length === 0) return;
-    this.updateSet(keys[0], index, entry);
-  }
-
-  /**
-   * [COMPAT · Phase 4 제거] 단일 세션 완료. 첫 칸을 꺼내 도메인에 기록한 뒤 그
-   * 칸만 제거한다. Phase 3 의 `finish` 가 플래너·실행기로 다중 칸을 처리하게
-   * 되면 이 래퍼는 Phase 4 에서 사라진다.
-   */
-  finalize(
-    state: AppState,
-    catalog: Catalog,
-  ): { record: SessionRecord; nextState: AppState } {
-    const keys = Object.keys(this.#drafts);
-    if (keys.length === 0) throw new Error('진행 중 세션이 없다');
-    const key = keys[0];
-    const s = this.#drafts[key];
-    const values = s.workSets.map((e) => e.value);
-    const sessionRpe = maxSetRpe(s.workSets);
-    const extras = buildExtras(s);
-
-    let nextState: AppState;
-    let record: SessionRecord;
-
-    if (s.kind === 'consolidation') {
-      const result = recordConsolidation(
-        state,
-        catalog,
-        s.progressionId,
-        s.startedAt,
-        values,
-        sessionRpe,
-        extras,
-      );
-      nextState = result.state;
-      record = result.record;
-    } else {
-      const input: SessionInput = {
-        date: s.startedAt, // FR-2.8 / D-7
-        progressionId: s.progressionId,
-        step: s.step,
-        performedStep: s.performedStep,
-        sets: values,
-        kind: s.kind, // 'work' | 'free'
-      };
-      if (sessionRpe !== undefined) input.rpe = sessionRpe;
-      if (extras.target !== undefined) input.target = extras.target;
-      if (extras.setRpes !== undefined) input.setRpes = extras.setRpes;
-      if (extras.completedAt !== undefined) input.completedAt = extras.completedAt;
-      const result = applySession(state, catalog, input);
-      nextState = result.state;
-      record = result.record;
-    }
-
-    this.discardDraft(key);
-    return { record, nextState };
-  }
-
-  /**
-   * [COMPAT · Phase 4 제거] 단일 세션 중단. 첫 칸을 꺼내 도메인 `abandonChallenge`
-   * 에 넘긴 뒤 그 칸을 제거한다. Phase 4 에서 FinishBar 플래너가 abandon op 로
-   * 전환하면 이 래퍼는 사라진다.
-   */
-  abandon(state: AppState, catalog: Catalog): AbandonResult {
-    const keys = Object.keys(this.#drafts);
-    if (keys.length === 0) throw new Error('진행 중 세션이 없다');
-    const key = keys[0];
-    const s = this.#drafts[key];
-    const values = s.workSets.map((e) => e.value);
-    const sessionRpe = maxSetRpe(s.workSets);
-    const extras = buildExtras(s);
-
-    const result = abandonChallenge(
-      state,
-      catalog,
-      s.progressionId,
-      s.startedAt, // FR-2.8
-      values,
-      sessionRpe,
-      extras,
-    );
-
-    this.discardDraft(key);
-    return result;
-  }
-
-  /** [COMPAT · Phase 5 제거] 전체 비우기 (reset.ts 가 부른다). */
+  /** [COMPAT · Phase 5 제거] reset.ts 가 전체 초기화에서 쓴다 — `discardAll` 과 동일. */
   discard(): void {
     this.discardAll();
   }
@@ -427,37 +295,11 @@ class InProgressStore {
 }
 
 /**
- * 세트별 RPE 중 최댓값 (FR-6.7a).
- * 하나도 없으면 undefined 를 돌려준다 — 0 으로 채우지 않는다.
- */
-export function maxSetRpe(entries: SetEntry[]): number | undefined {
-  const rpes = entries.map((e) => e.rpe).filter((r): r is number => r !== undefined);
-  if (rpes.length === 0) return undefined;
-  return Math.max(...rpes);
-}
-
-/**
- * 진행 중 칸에서 FR-28 세 필드를 만든다 (ADR-23).
- *
- * - `target` — 시작 시점의 스냅샷. begin 이 저장해 두었다. 자유 운동은 없다.
- * - `setRpes` — 세트마다의 RPE 배열. 미입력은 null.
- * - `completedAt` — 완료·중단 시각. `todayClock.nowIsoLocal()` 로 로컬 오프셋 포함.
- */
-function buildExtras(session: SessionDraft): SessionExtras {
-  const extras: SessionExtras = {
-    setRpes: session.workSets.map((e) => e.rpe ?? null),
-    completedAt: todayClock.nowIsoLocal(),
-  };
-  if (session.target !== undefined) extras.target = session.target;
-  return extras;
-}
-
-/**
  * [COMPAT · Phase 5 제거] 시작 날짜가 오늘이 아닌지 판정 (FR-2.9 / EC-7a).
  *
- * +page.svelte 가 단일 세션 모델로 상단 배너를 띄우는 자리에서 쓴다.
- * Phase 5 (ADR-48) 가 `stale.ts` 의 `staleDrafts` + `StaleBanner` 로 교체하면
- * 이 shim 은 사라진다.
+ * Phase 5 (ADR-48) 가 `stale.ts` 의 `staleDrafts` + `StaleBanner` 로 교체한다.
+ * 지금은 참조처가 없다 — Phase 5 이전에 지워져도 무방하지만 Phase 5 범위
+ * (StaleBanner 교체) 를 작게 유지하기 위해 남겨 둔다.
  */
 export function isStaleStartedAt(
   session: SessionDraft | null,

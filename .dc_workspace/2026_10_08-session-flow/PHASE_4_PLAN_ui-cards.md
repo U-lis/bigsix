@@ -81,21 +81,29 @@ Phase 3 의 `planFinish` 가 생성한 ops 를 받아 사람이 읽을 수 있�
 
 ## 완료 체크리스트
 
-- [ ] `ExerciseCard` 가 `draftKey` 기반 칸에 바인딩됨
-- [ ] 「세션 완료 기록」 버튼 및 `data-finalize` 훅 제거됨
-- [ ] 「이 단계 중단」 토글 구현, `data-abandon-mark` 훅 있음
-- [ ] 미달 세트에 `data-set-short` 와 사실 문구 표시됨 (FR-40)
-- [ ] 추가 세트에 `data-set-extra` 표시됨 (FR-39.6)
-- [ ] 중단 카드 입력 영역이 CSS 로 접힘 (ADR-47)
-- [ ] `FinishBar` 구현, `data-finish` 훅 있음, 활성 조건 맞음 (FR-42.2)
-- [ ] `FinishDialog` 구현, `data-finish-dialog`, `data-finish-row` 훅 있음 (FR-42.3)
-- [ ] `FreeExerciseForm` 이 `beginFree` 만 호출하도록 수정됨 (FR-43.1)
-- [ ] `+page.svelte` 에서 마치기 흐름 완성됨 (FR-42.4~7)
-- [ ] 다지기 제안 흐름 완성됨 (FR-41.3~4)
-- [ ] `summarizeDraft.ts` 구현됨, FinishDialog 가 이를 사용함 (FR-42.3, NFR-2)
-- [ ] `finalize`/`abandon` 임시 stub 제거됨
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `ExerciseCard` 가 `draftKey` 기반 칸에 바인딩됨 — `ExerciseCard.svelte:60`
+- [x] 「세션 완료 기록」 버튼 및 `data-finalize` 훅 제거됨 — `ExerciseCard.svelte` 전체에 없음
+- [x] 「이 단계 중단」 토글 구현, `data-abandon-mark` 훅 있음 — `ExerciseCard.svelte:292`
+- [x] 미달 세트에 `data-set-short` 와 사실 문구 표시됨 (FR-40) — `ExerciseCard.svelte:220,237`
+- [x] 추가 세트에 `data-set-extra` 표시됨 (FR-39.6) — `ExerciseCard.svelte:219`
+- [x] 중단 카드 입력 영역이 CSS 로 접힘 (ADR-47) — `ExerciseCard.svelte:376`
+- [x] `FinishBar` 구현, `data-finish` 훅 있음, 활성 조건 맞음 (FR-42.2) — `FinishBar.svelte:24`
+- [x] `FinishDialog` 구현, `data-finish-dialog`, `data-finish-row` 훅 있음 (FR-42.3) — `FinishDialog.svelte:40,58`
+- [x] `FreeExerciseForm` 이 `beginFree` 만 호출하도록 수정됨 (FR-43.1) — `FreeExerciseForm.svelte:60`
+- [x] `+page.svelte` 에서 마치기 흐름 완성됨 (FR-42.4~7) — `+page.svelte:141-157`
+- [x] 다지기 제안 흐름 완성됨 (FR-41.3~4) — `+page.svelte:98-138`
+- [x] `summarizeDraft.ts` 구현됨, FinishDialog 가 이를 사용함 (FR-42.3, NFR-2) — `summarizeDraft.ts`, `FinishDialog.svelte:13`
+- [x] `finalize`/`abandon` 임시 stub 제거됨 — `session.svelte.ts` 에 없음
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 전부 통과 (972/972)
+
+## 검증자 메모
+
+- **FR-6.7a RPE 테스트 추가**: 삭제된 `inprogress.test.ts` 가 검증하던 `SessionRecord.rpe === max(setRpes)` 동작이 새 테스트 슈트에 없었음. `finish.test.ts` 에 `executeFinish — FR-6.7a` 블록 추가 (2 케이스).
+- **EC-102 테스트 추가**: `finish` 후 같은 종목 `beginWork` 가 가능한지 확인하는 테스트를 `inprogress.test.ts` 에 추가.
+- **Agenda order 수정**: `inProgress.finish()` 가 내부적으로 draft 삽입 순서로 agendaOrder 를 파생하고 있었음. `finish()` 에 선택적 `agendaOrder` 매개변수 추가, `+page.svelte` 의 `confirmFinish()` 에서 실제 화면 순서를 전달하도록 수정.
+- **Phase 5 수동 체크리스트**: `data-*` 훅 존재 확인, 자유 운동 흐름, 잠긴 종목, write-blocked 배너는 Phase 6 폰 수동 확인 항목.
+- **DocString/non-test 후보** (수동 검토): `finish.ts` 모듈·인터페이스 docstring 군(criterion #5), `summarizeDraft.ts` 모듈 docstring. 소스 파일이므로 이번 pruning 에서 미적용.
 
 ## 비고
 

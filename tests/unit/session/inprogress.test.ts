@@ -347,3 +347,33 @@ describe('finish — 플래너·실행기 결선', () => {
     assert.ok(inProgress.getDraft('squat', 'consolidation') !== undefined);
   });
 });
+
+// ── FR-39.2 / EC-102 — finish 로 칸이 지워진 뒤 같은 종목 재개 ────────────
+//
+// finish 는 성공한 칸만 drafts 에서 지운다. 그 뒤 같은 progressionId 로 다시
+// beginWork 를 호출하면 키 충돌이 없으므로 새 칸이 열려야 한다 (true 반환) —
+// 번갈아 운동하는 사용자가 한 종목을 마치고 바로 다시 시작할 수 있어야 한다.
+
+describe('finish 후 같은 종목 재개 (EC-102)', () => {
+  it('finish 로 칸이 제거된 뒤 같은 종목으로 beginWork 가 가능하다', () => {
+    const key = draftKey('pushup', 'work');
+    const first = inProgress.beginWork('2026-10-08', plan('pushup', 3));
+    assert.equal(first, true);
+    inProgress.pushSet(key, { value: 20 });
+    inProgress.pushSet(key, { value: 20 });
+
+    const state = stateAt({ pushup: 3 });
+    const { perDraft } = inProgress.finish(state, catalog, '2026-10-08T10:00:00+09:00');
+    assert.equal(perDraft.length, 1);
+    assert.equal(perDraft[0].ok, true);
+    // 칸이 지워졌는지 확인.
+    assert.equal(inProgress.getDraft('pushup', 'work'), undefined);
+
+    // 같은 종목으로 다시 beginWork — 키 충돌이 없으므로 새 칸이 열린다.
+    const second = inProgress.beginWork('2026-10-08', plan('pushup', 3));
+    assert.equal(second, true, 'finish 뒤 같은 종목으로 다시 시작할 수 있어야 한다');
+    const d = inProgress.getDraft('pushup', 'work');
+    assert.ok(d !== undefined);
+    assert.equal(d!.workSets.length, 0, '새로 열린 칸은 비어 있어야 한다');
+  });
+});

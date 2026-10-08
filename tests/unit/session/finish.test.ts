@@ -562,3 +562,41 @@ describe('FinishPlan 모양', () => {
     assert.ok(!/%|대단|훌륭|승급|성공|실패/.test(plan.groups[0].summary));
   });
 });
+
+// ── FR-6.7a — SessionRecord.rpe === max(setRpes) ─────────────────────────
+//
+// `executeFinish` 가 work op 의 setRpes 중 최댓값을 세션 RPE 로 삼아 도메인에
+// 넘기는지 검증한다 (FR-6.7a). 이 값은 `evaluate.ts` 의 rpeVeto (RPE 10 이면
+// 승급 보류) 가 참조하므로 null/undefined 전환 규약이 깨지면 판정이 흔들린다.
+
+describe('executeFinish — FR-6.7a 세션 RPE = max(setRpes)', () => {
+  it('work op setRpes [7, 9, 8] → SessionRecord.rpe === 9', () => {
+    const drafts: Record<string, SessionDraft> = {
+      [draftKey('pushup', 'work')]: workDraft('pushup', {
+        sets: [20, 20, 20],
+        rpes: [7, 9, 8],
+        targetSets: 3,
+      }),
+    };
+    const plan = planFinish(drafts, ['pushup']);
+    const initial = stateAt({ pushup: 3 });
+    const { nextState } = executeFinish(initial, catalog, plan, NOW);
+    assert.equal(nextState.history.length, 1);
+    assert.equal(nextState.history[0].rpe, 9);
+  });
+
+  it('work op setRpes 가 모두 null/undefined → SessionRecord.rpe === undefined', () => {
+    const drafts: Record<string, SessionDraft> = {
+      [draftKey('pushup', 'work')]: workDraft('pushup', {
+        sets: [20, 20],
+        rpes: [],
+        targetSets: 2,
+      }),
+    };
+    const plan = planFinish(drafts, ['pushup']);
+    const initial = stateAt({ pushup: 3 });
+    const { nextState } = executeFinish(initial, catalog, plan, NOW);
+    assert.equal(nextState.history.length, 1);
+    assert.equal(nextState.history[0].rpe, undefined);
+  });
+});
