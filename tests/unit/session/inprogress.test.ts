@@ -297,13 +297,53 @@ describe('init — 외부에서 받은 drafts 맵을 받아들인다', () => {
   });
 });
 
-// ── finish — Phase 3 자리 (지금은 throw) ─────────────────────────────────
+// ── finish — Phase 3 플래너·실행기 결선 ──────────────────────────────────
+//
+// 자세한 플래너·실행기 규칙은 `finish.test.ts` 가 검증한다. 여기서는 스토어가
+// 두 함수를 올바르게 엮고, 성공한 칸만 drafts 에서 지우는지만 확인한다 (FR-42.6).
 
-describe('finish — Phase 3 자리', () => {
-  it('호출하면 "Phase 3" 를 알리는 에러를 던진다', () => {
-    assert.throws(
-      () => inProgress.finish(stateAt({ pushup: 3 }), catalog, '2026-10-08T10:00:00+09:00'),
-      /Phase 3/,
-    );
+describe('finish — 플래너·실행기 결선', () => {
+  it('성공한 칸만 drafts 에서 제거된다', () => {
+    const key = draftKey('pushup', 'work');
+    inProgress.beginWork('2026-10-08', plan('pushup', 3));
+    inProgress.pushSet(key, { value: 20 });
+    inProgress.pushSet(key, { value: 20 });
+
+    const state = stateAt({ pushup: 3 });
+    const { nextState, perDraft } = inProgress.finish(state, catalog, '2026-10-08T10:00:00+09:00');
+
+    assert.equal(perDraft.length, 1);
+    assert.equal(perDraft[0].ok, true);
+    assert.equal(inProgress.getDraft('pushup', 'work'), undefined);
+    assert.equal(nextState.history.length, 1);
+  });
+
+  it('실패한 칸은 drafts 에 남아 재시도 가능하다 (FR-42.6)', () => {
+    // squat 를 1 단계로 두어 consolidation 칸이 recordConsolidation 에서 throw 하게 한다.
+    const state = stateAt({ squat: 1 });
+    inProgress.init({
+      [draftKey('squat', 'consolidation')]: {
+        startedAt: '2026-10-08',
+        progressionId: 'squat',
+        step: 1,
+        performedStep: 0,
+        kind: 'consolidation',
+        workSets: [{ value: 10 }, { value: 10 }],
+        target: {
+          goal: { label: 'beginner', sets: 2, value: 10 },
+          work: [
+            { target: 10, mode: 'fixed' },
+            { target: 10, mode: 'fixed' },
+          ],
+        },
+      },
+    });
+
+    const { perDraft } = inProgress.finish(state, catalog, '2026-10-08T10:00:00+09:00');
+    const consolResult = perDraft.find((r) => r.draftKey === draftKey('squat', 'consolidation'));
+    assert.ok(consolResult !== undefined);
+    assert.equal(consolResult!.ok, false);
+    // 실패 칸은 남아 있다.
+    assert.ok(inProgress.getDraft('squat', 'consolidation') !== undefined);
   });
 });

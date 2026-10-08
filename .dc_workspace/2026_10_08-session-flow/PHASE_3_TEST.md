@@ -29,3 +29,12 @@
 
 - `target` 이 undefined 인 칸(자유 운동 칸)의 op 에는 `target` 필드 자체가 없다 (undefined 명시 대입 금지).
 - op date 는 `draft.startedAt` 이며, `nowIsoLocal` 과 다를 수 있다 (EC-97 날짜 지정 기록).
+
+## 검증 결과 (2026-10-08)
+
+모든 동작 항목 통과. 991 tests passed.
+
+### 추가된 테스트 (검증 중 발견)
+
+- **동작**: `draft.target === undefined` 인 work 칸 → N=M, 전체 세트가 work op 하나로 (throw 없음, 세트 손실 없음) | `finish.test.ts:277-302`
+- **동작**: `draft.target === undefined` 인 consolidation 칸 → N=M, 전체 세트가 consolidation op 하나로 (throw 없음, 세트 손실 없음) | `finish.test.ts:304-325`

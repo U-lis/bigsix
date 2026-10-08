@@ -128,19 +128,24 @@ Phase 4 에서 실제 agenda 순서를 연결한다.
 
 ## 완료 체크리스트
 
-- [ ] `finish.ts` 에 `planFinish`, `executeFinish`, 관련 타입 구현됨
-- [ ] 빈 칸(세트 0개)이 계획에서 제외됨 (EC-89)
-- [ ] work 칸 초과 세트가 `free` op 으로 분리됨 (EC-91)
-- [ ] consolidation 칸 초과 세트가 `free` op 으로 분리되고 `performedStep = step - 1` (EC-92)
-- [ ] 중단 칸이 `abandon` op 으로 처리됨 (FR-41.2)
-- [ ] 그룹 원자성 — 중간 그룹 실패 시 해당 그룹만 건너뜀, 이후 그룹 계속 (FR-42.6)
-- [ ] `session.svelte.ts` 의 `finish` stub 이 실제 구현으로 교체됨
-- [ ] 성공한 칸만 `drafts` 에서 삭제됨 (FR-42.6)
-- [ ] `setRpes` 가 op 의 세트 슬라이스에 맞게 잘림
-- [ ] `completedAt` 이 모든 op 에 전달됨
-- [ ] `scope: date` 필터가 동작함 (FR-44.2)
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과 (베이스라인 920)
+- [x] `finish.ts` 에 `planFinish`, `executeFinish`, 관련 타입 구현됨 — `src/lib/ui/session/finish.ts`
+- [x] 빈 칸(세트 0개)이 계획에서 제외됨 (EC-89) — `finish.ts:217` (`if (ops.length === 0) continue`)
+- [x] work 칸 초과 세트가 `free` op 으로 분리됨 (EC-91) — `finish.ts:243`
+- [x] consolidation 칸 초과 세트가 `free` op 으로 분리되고 `performedStep = step - 1` (EC-92) — `finish.ts:259`
+- [x] 중단 칸이 `abandon` op 으로 처리됨 (FR-41.2) — `finish.ts:231-234`
+- [x] 그룹 원자성 — 중간 그룹 실패 시 해당 그룹만 건너뜀, 이후 그룹 계속 (FR-42.6) — `finish.ts:356-370`
+- [x] `session.svelte.ts` 의 `finish` stub 이 실제 구현으로 교체됨 — `session.svelte.ts:243-269`
+- [x] 성공한 칸만 `drafts` 에서 삭제됨 (FR-42.6) — `session.svelte.ts:255-266`
+- [x] `setRpes` 가 op 의 세트 슬라이스에 맞게 잘림 — `finish.ts:237-243`
+- [x] `completedAt` 이 모든 op 에 전달됨 — `finish.ts:399-401, 415-416, 421-429`
+- [x] `scope: date` 필터가 동작함 (FR-44.2) — `finish.ts:151`
+- [x] `pnpm check` 오류 0
+- [x] `pnpm test` 전부 통과 (베이스라인 920) — 991 통과
+
+## 검증 비고 (2026-10-08)
+
+- **`target` 없는 칸 (v4 마이그레이션)**: `draft.target === undefined` 일 때 `N = draft.target?.work.length ?? M = M` 이므로 전체 세트가 정규 op 하나로 기록된다. throw 없음, 세트 손실 없음. 테스트 추가됨 (`finish.test.ts:276-326`).
+- **`abandonChallenge` 의 step 출처**: 도메인 `abandonChallenge()`는 `state.steps[progressionId]` 를 직접 읽는다 — op 의 `step`/`performedStep` 인자를 전달받지 않는다. 단일 사용자 정적 앱에서 `finish()` 호출 시점과 칸 생성 시점 사이에 단계가 바뀔 경로가 없으므로 허용 가능 (EC-100 스냅샷 원칙 확인).
 
 ## 비고
 

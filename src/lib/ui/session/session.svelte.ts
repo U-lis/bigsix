@@ -33,6 +33,12 @@ import type {
   SessionRecord,
 } from '$lib/domain/types';
 import {
+  executeFinish,
+  planFinish,
+  type FinishResult,
+  type FinishScope,
+} from '$lib/ui/session/finish';
+import {
   clearInProgress,
   draftKey,
   writeInProgress,
@@ -43,13 +49,7 @@ import { todayClock } from '$lib/ui/state/today.svelte';
 
 type DraftKind = SessionDraft['kind'];
 
-export type FinishScope = { kind: 'all' } | { kind: 'date'; date: IsoDate };
-
-/** Phase 3 에서 채운다. 지금은 자리만 잡는다. */
-export interface FinishResult {
-  nextState: AppState;
-  perDraft: Record<string, { ok: true; record: SessionRecord } | { ok: false; reason: string }>;
-}
+export type { FinishResult, FinishScope };
 
 class InProgressStore {
   /**
@@ -228,16 +228,44 @@ class InProgressStore {
   }
 
   /**
-   * 「오늘 운동 마치기」 시점의 기록·판정. Phase 3 에서 플래너·실행기로 구현한다.
-   * Phase 2 에서는 자리만 잡는다 — 아무도 부르지 않는다.
+   * 「오늘 운동 마치기」 시점의 기록·판정 (ADR-44).
+   *
+   * `planFinish` 로 작업 플랜을 만들고 `executeFinish` 로 도메인에 적용한다.
+   * 성공한 칸만 drafts 맵에서 제거한다 (FR-42.6) — 실패 칸은 남겨 다시 시도할 수
+   * 있게 한다.
+   *
+   * `nextState` 를 `appState` 에 반영하는 일은 호출자(+page.svelte / FinishBar) 가
+   * 한다. 이 메서드는 스토어 자체(drafts)만 바꾼다.
+   *
+   * `agendaOrder` 는 Phase 2 임시로 drafts 삽입 순서를 쓴다 — Phase 4 에서 오늘
+   * 화면의 실제 agenda 순서를 넘겨받도록 바뀐다.
    */
   finish(
-    _state: AppState,
-    _catalog: Catalog,
-    _nowIsoLocal: string,
-    _scope?: FinishScope,
+    state: AppState,
+    catalog: Catalog,
+    nowIsoLocal: string,
+    scope?: FinishScope,
   ): FinishResult {
-    throw new Error('finish 는 Phase 3 에서 구현된다');
+    const agendaOrder = Array.from(
+      new Set(Object.values(this.#drafts).map((d) => d.progressionId)),
+    );
+    const plan = planFinish(this.#drafts, agendaOrder, scope);
+    const result = executeFinish(state, catalog, plan, nowIsoLocal);
+
+    // 성공한 칸만 drafts 에서 지운다 (FR-42.6).
+    let next = this.#drafts;
+    for (const r of result.perDraft) {
+      if (r.ok && r.draftKey in next) {
+        const { [r.draftKey]: _dropped, ...rest } = next;
+        next = rest;
+      }
+    }
+    if (next !== this.#drafts) {
+      this.#drafts = next;
+      this.persist();
+    }
+
+    return result;
   }
 
   // ── Phase 4 에서 제거할 임시 호환 래퍼 (R-2) ─────────────────────────
