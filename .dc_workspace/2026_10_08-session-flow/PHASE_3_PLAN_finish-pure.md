@@ -53,6 +53,8 @@ interface FinishResult {
 
 #### `planFinish(drafts, agendaOrder, scope?)` 구현
 
+`finish.ts` 는 `draftKey` 를 `$lib/ui/state/storage` 에서 import 해 사용한다 (Phase 1 에서 `storage.ts` 에 정의).
+
 - `scope` 가 `{ kind: 'date', date }` 이면 `draft.startedAt === date` 인 칸만 대상으로 한다.
 - 대상 칸마다 플래너 규칙을 적용한다 (ADR-44):
   - `workSets` 길이 0 → op 없음, DraftOps 생성 안 함 (EC-89)

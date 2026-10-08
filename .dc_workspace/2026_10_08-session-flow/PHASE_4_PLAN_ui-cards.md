@@ -72,10 +72,11 @@ Phase 3 완료.
 - work 카드 → 다지기 카드 순서 렌더링.
 - 호환 래퍼(`finalize`, `abandon`) 제거.
 
-### 6. `summarizeDraft` 레이블 모듈 신설 (선택)
+### 6. `summarizeDraft` 레이블 모듈 신설
 
 카드에서 종목명·단계명을 보여주는 문자열 조립 순수 함수를 `src/lib/ui/session/summarizeDraft.ts` 에 분리한다.
-단위 테스트 가능. Phase 3 의 `planFinish` 가 생성한 ops 를 받아 사람이 읽을 수 있는 summary 문자열을 반환한다.
+FinishDialog 의 칸별 요약 문구(FR-42.3, NFR-2)가 이 함수를 사용하므로 필수다. 단위 테스트 가능.
+Phase 3 의 `planFinish` 가 생성한 ops 를 받아 사람이 읽을 수 있는 summary 문자열을 반환한다.
 이 함수는 catalog 를 인자로 받아 종목명·단계명을 조회한다.
 
 ## 완료 체크리스트
@@ -91,6 +92,7 @@ Phase 3 완료.
 - [ ] `FreeExerciseForm` 이 `beginFree` 만 호출하도록 수정됨 (FR-43.1)
 - [ ] `+page.svelte` 에서 마치기 흐름 완성됨 (FR-42.4~7)
 - [ ] 다지기 제안 흐름 완성됨 (FR-41.3~4)
+- [ ] `summarizeDraft.ts` 구현됨, FinishDialog 가 이를 사용함 (FR-42.3, NFR-2)
 - [ ] `finalize`/`abandon` 임시 stub 제거됨
 - [ ] `pnpm check` 오류 0
 - [ ] `pnpm test` 전부 통과 (베이스라인 920)

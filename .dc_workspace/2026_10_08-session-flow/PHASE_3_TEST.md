@@ -12,6 +12,7 @@
 - **동작**: work 칸 2×20, 실제 세트 [20, 18] → op `work` 하나 (sets=[20,18]) | **계층**: 단위
 - **동작**: work 칸 2×20, 실제 세트 [20, 18, 15] → op `work`(sets=[20,18]) + op `free`(sets=[15]) | **계층**: 단위
 - **동작**: `abandoned === true` 인 work 칸 → op `abandon` (전체 세트, sets=[20,18,15]) | **계층**: 단위
+- **동작**: `abandoned === true` 이고 세트 0개인 work 칸 → op `abandon` 하나 (sets=[]) (EC-95) | **계층**: 단위
 - **동작**: consolidation 칸 목표 3세트, 실제 5세트 → op `consolidation`(sets=[...3]) + op `free`(sets=[...2], performedStep = step-1) (EC-92) | **계층**: 단위
 - **동작**: free 칸 → op `free` (전체 세트) 그대로 통과 | **계층**: 단위
 - **동작**: 그룹 순서 — agendaOrder [pushup, squat] 이고 pushup:work, squat:work, pushup:free 가 있으면 pushup:work → squat:work → pushup:free 순 | **계층**: 단위

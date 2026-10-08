@@ -15,6 +15,7 @@ Phase 1 완료.
 ### 1. `session.svelte.ts` 전면 재작성
 
 기존 `InProgressStore` 클래스를 새 API 로 교체한다. 핵심 상태는 `#drafts = $state<Record<string, SessionDraft>>({})`.
+`draftKey` 는 Phase 1 에서 `storage.ts` 에 정의됐으므로 `$lib/ui/state/storage` 에서 import 해 사용한다.
 
 **API 구현 목록 (ADR-42 스토어 API 절 참조)**:
 

@@ -201,7 +201,8 @@ class InProgressStore {
 | 경로 | 역할 |
 |------|------|
 | `src/lib/ui/session/finish.ts` | `planFinish` · `executeFinish` · 관련 타입 (Phase 3) |
-| `src/lib/ui/session/stale.ts` | `staleDrafts` 순수 함수 (Phase 5) |
+| `src/lib/ui/session/stale.ts` | `staleDrafts` 순수 함수 (Phase 2) |
+| `src/lib/ui/session/summarizeDraft.ts` | 칸별 요약 문구 생성 순수 함수 (Phase 4) |
 | `src/lib/ui/session/FinishBar.svelte` | 「오늘 운동 마치기」 버튼 영역 (Phase 4) |
 | `src/lib/ui/session/FinishDialog.svelte` | 기록 확인 다이얼로그 (Phase 4) |
 | `src/lib/ui/session/StaleBanner.svelte` | 날 넘긴 칸 안내 (Phase 5) |

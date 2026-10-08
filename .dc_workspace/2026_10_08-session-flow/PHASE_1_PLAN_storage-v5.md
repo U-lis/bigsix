@@ -20,11 +20,27 @@
 - `AppState` 읽기·쓰기(`readAppState`, `writeAppState`)가 `CURRENT_SCHEMA_VERSION` 를 참조하던 곳을
   `APP_STATE_SCHEMA_VERSION` 으로 교체한다.
 - `validateAndMigrateAppStateEnvelope` 의 `CURRENT_SCHEMA_VERSION` 참조도 `APP_STATE_SCHEMA_VERSION` 으로 교체한다.
-- export/import (`exportJson.ts` 에서 `CURRENT_SCHEMA_VERSION` 을 import 하는 경우): `APP_STATE_SCHEMA_VERSION` 으로 교체한다.
-  - 실제로는 `exportJson.ts` 가 `CURRENT_SCHEMA_VERSION` 을 직접 import 하지 않고
-    `ExportMeta.schemaVersion: number` 를 호출자가 채우므로,
-    호출 지점(`ExportBar.svelte` 또는 동등 파일)에서 `APP_STATE_SCHEMA_VERSION` 을 넘기도록 수정한다.
-  - `importJson.ts` 의 `CURRENT_SCHEMA_VERSION` 참조도 `APP_STATE_SCHEMA_VERSION` 으로 교체한다.
+- `CURRENT_SCHEMA_VERSION` 을 참조하는 모든 실제 코드를 아래 목록에 따라 교체한다.
+  각 파일·라인은 워크트리에서 직접 확인한 결과다:
+
+  | 파일 | 라인 | 내용 | 변경 |
+  |------|------|------|------|
+  | `storage.ts` | 37 | `export const CURRENT_SCHEMA_VERSION = 4` | `APP_STATE_SCHEMA_VERSION = 4` · `IN_PROGRESS_SCHEMA_VERSION = 5` 로 교체 |
+  | `storage.ts` | 42 | `AppStateEnvelope.schemaVersion: typeof CURRENT_SCHEMA_VERSION` | `APP_STATE_SCHEMA_VERSION` |
+  | `storage.ts` | 47 | `InProgressEnvelope.schemaVersion: typeof CURRENT_SCHEMA_VERSION` | `IN_PROGRESS_SCHEMA_VERSION` (→ v5 구조로 교체) |
+  | `storage.ts` | 174 | `migrateAppStateEnvelope` while `< CURRENT_SCHEMA_VERSION` | `APP_STATE_SCHEMA_VERSION` |
+  | `storage.ts` | 220 | `migrateInProgressEnvelope` while `< CURRENT_SCHEMA_VERSION` | `IN_PROGRESS_SCHEMA_VERSION` |
+  | `storage.ts` | 285 | `readAppState` future-version `> CURRENT_SCHEMA_VERSION` | `APP_STATE_SCHEMA_VERSION` |
+  | `storage.ts` | 308 | `writeAppState` 봉투 `schemaVersion: CURRENT_SCHEMA_VERSION` | `APP_STATE_SCHEMA_VERSION` |
+  | `storage.ts` | 348 | `readInProgress` future-version `> CURRENT_SCHEMA_VERSION` | `IN_PROGRESS_SCHEMA_VERSION` |
+  | `storage.ts` | 366 | `writeInProgress` 봉투 `schemaVersion: CURRENT_SCHEMA_VERSION` | `IN_PROGRESS_SCHEMA_VERSION` |
+  | `storage.ts` | 400 | `validateAndMigrateAppStateEnvelope` future-version `> CURRENT_SCHEMA_VERSION` | `APP_STATE_SCHEMA_VERSION` |
+  | `ExportBar.svelte` | 24 | `import { CURRENT_SCHEMA_VERSION } from '$lib/ui/state/storage'` | `APP_STATE_SCHEMA_VERSION` import 로 교체 |
+  | `ExportBar.svelte` | 50 | `schemaVersion: CURRENT_SCHEMA_VERSION` (meta 조립) | `APP_STATE_SCHEMA_VERSION` |
+
+  `importJson.ts:32` 와 `exportJson.ts:28` 는 JSDoc 주석만 있고 실제 코드 참조가 없다.
+  `importJson.ts:32` 의 JSDoc (`CURRENT_SCHEMA_VERSION` 언급)은 `APP_STATE_SCHEMA_VERSION` 으로
+  문구만 수정한다. 실제 검증 로직은 `validateAndMigrateAppStateEnvelope`(`storage.ts:400`) 를 통해 실행된다 — 그 함수는 위 표에 이미 포함돼 있다.
 
 ### 2. `SessionDraft` 타입 추가 (`src/lib/ui/state/storage.ts`)
 
@@ -51,11 +67,13 @@
   - **주의**: `target` 필드를 그대로 보존한다 (R-1).
 - `migrateInProgressEnvelope` 의 while 조건을 `< IN_PROGRESS_SCHEMA_VERSION` 으로 교체한다.
 
-### 5. `draftKey` 순수 함수 추가 (`src/lib/ui/state/storage.ts` 또는 `src/lib/ui/session/session.svelte.ts`)
+### 5. `draftKey` 순수 함수 추가 (`src/lib/ui/state/storage.ts`)
 
-- `draftKey(progressionId: ProgressionId, kind: 'work' | 'consolidation' | 'free'): string`
+- `draftKey` 는 **`src/lib/ui/state/storage.ts`** 에만 정의하고 export 한다.
+- `session.svelte.ts` 와 UI 컴포넌트는 `$lib/ui/state/storage` 에서 import 한다.
+- 시그니처: `export function draftKey(progressionId: ProgressionId, kind: 'work' | 'consolidation' | 'free'): string`
 - 반환 형식: `${progressionId}:${kind}`.
-- 이 파일 어디에 두든 export 하고, 두 파일에 걸쳐 임포트 규칙을 지킨다.
+- 마이그레이션(`migrateInProgressV4toV5`)도 같은 파일 안에 있으므로 import 없이 직접 호출한다.
 
 ### 6. `readInProgress` · `writeInProgress` · `clearInProgress` 갱신
 

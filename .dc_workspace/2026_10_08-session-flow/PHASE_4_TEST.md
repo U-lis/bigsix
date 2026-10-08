@@ -13,6 +13,14 @@
 - **동작**: abandon op → summary 에 「중단」 포함 | **계층**: 단위
 - **동작**: summary 에 판정 결과·격려·백분율이 포함되지 않는다 (NFR-2 / R-4) | **계층**: 단위
 
+### FR-43.2: 잠긴 종목 선택 불가 (회귀)
+
+`FreeExerciseForm` 의 잠금 검사는 `$derived(checkGate(currentState, catalog, progressionId))`
+(`FreeExerciseForm.svelte:51`) 로 구현된다. `checkGate` 는 `src/lib/domain/gate.ts:21` 의 순수 함수이며
+`tests/unit/gate.test.ts` 에서 이미 테스트된다. 도메인 로직은 이 Phase 에서 변경하지 않으므로 회귀는
+기존 `gate.test.ts` 통과로 확인한다. 컴포넌트 바인딩은 DOM 테스트 인프라 부재(R-5)로 단위 테스트 불가 —
+Phase 6 폰 체크리스트 항목 8(자유 운동 흐름)에서 수동 확인한다.
+
 ### `data-*` 훅 존재 확인 (Playwright 가 없으므로 구조 테스트 또는 수동 확인)
 
 DOM 테스트 인프라가 없으므로 (R-5) 아래 항목은 Phase 6 수동 체크리스트(체크리스트 항목 1~14)로 대체한다.
