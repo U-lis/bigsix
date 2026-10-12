@@ -265,7 +265,7 @@ DoneCard 에서 세트를 추가하면 그 종목의 **자유 운동 칸(`free` 
 | `src/lib/ui/session/FinishDialog.svelte` | 기록 확인 다이얼로그 (Phase 4) |
 | `src/lib/ui/session/StaleBanner.svelte` | 날 넘긴 칸 안내 (Phase 5) |
 | `src/lib/ui/today/done.ts` | `recordedToday` · `doneResultLabel` · `doneSetShortfall` · `syncDoneDrafts` 순수 함수 (Phase 7) |
-| `src/lib/ui/today/DoneCard.svelte` | 오늘 기록 완료 종목 카드 (Phase 7) |
+| `src/lib/ui/session/DoneCard.svelte` | 오늘 기록 완료 종목 카드 (Phase 7) |
 | `tests/unit/session/storage-v5.test.ts` | storage v5 단위 테스트 (Phase 1) |
 | `tests/unit/session/inprogress.test.ts` | 스토어 단위 테스트 (Phase 2) |
 | `tests/unit/session/finish.test.ts` | planFinish · executeFinish 단위 테스트 (Phase 3) |

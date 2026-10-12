@@ -41,23 +41,17 @@ function recordedToday(
 #### 1-2. `doneResultLabel`
 
 ```ts
-function doneResultLabel(record: SessionRecord): string
+function doneResultLabel(progName: string, record: SessionRecord): string
 ```
 
 - `+page.svelte` 의 `recordLine` 함수(현재 `src/routes/+page.svelte:182`)와 동일한 문자열 규칙을 쓴다.
-  - `promotedTo !== undefined && promotedTo !== null` → `{종목명}: {step}단계 → {promotedTo}단계 (승급)`
-  - `blockedBy !== undefined` → `{종목명}: {step}단계 (보류 · {blockedBy})`
-  - `outcome === 'abandoned'` → `{종목명}: {step}단계 중단`
-  - 나머지 → `{종목명}: {step}단계 기록`
+  - `promotedTo !== undefined && promotedTo !== null` → `{progName}: {step}단계 → {promotedTo}단계 (승급)`
+  - `blockedBy !== undefined` → `{progName}: {step}단계 (보류 · {blockedBy})`
+  - `outcome === 'abandoned'` → `{progName}: {step}단계 중단`
+  - 나머지 → `{progName}: {step}단계 기록`
+- catalog 를 받지 않는다 — 종목명을 미리 해석해 전달한다 (순수성 유지).
 - 이 함수로 `+page.svelte` 의 `recordLine` 을 대체한다 (DRY — 아래 3항 참조).
 - `record` 인자를 변경하지 않는다.
-- 종목명은 호출자가 미리 `progressionName(catalog, id)` 로 구해 인자로 전달한다.
-
-  ```ts
-  function doneResultLabel(progName: string, record: SessionRecord): string
-  ```
-
-  (catalog 를 받지 않고 미리 해석된 이름을 받는다 — 순수성 유지.)
 
 #### 1-3. `doneSetShortfall`
 
@@ -115,9 +109,10 @@ applySync(actions: SyncAction[]): void
   - `report`: `drafts` 를 변경하지 않는다. 호출자(UI)가 이 결과를 표시에 활용한다.
 - 모든 변경을 단 한 번의 `persist()` 로 저장한다 (R-10 방지).
 
-### 3. `src/lib/ui/today/DoneCard.svelte` — 완료 카드 컴포넌트
+### 3. `src/lib/ui/session/DoneCard.svelte` — 완료 카드 컴포넌트
 
-`src/lib/ui/today/` 아래에 `DoneCard.svelte` 를 신설한다.
+`src/lib/ui/session/` 아래에 `DoneCard.svelte` 를 신설한다.
+(세션 관련 Svelte 컴포넌트는 `ui/session/` 에, 순수 파생 함수는 `ui/today/` 에 — W4)
 
 **Props**:
 ```ts
@@ -133,10 +128,13 @@ applySync(actions: SyncAction[]): void
 }
 ```
 
+**루트 엘리먼트**: `data-card-done` 속성을 붙인다.
+
 **헤더**: 마지막 기록(`records.at(-1)`)의 `step` / `performedStep` / 단계명을 사용한다.
 계획의 값을 사용하지 않는다 (R-12).
+`data-done-step` 속성에 마지막 기록의 `performedStep` 값을 설정한다.
 
-**기록 목록**: 시간 순으로 각 기록에 대해:
+**기록 목록**: 시간 순으로 각 기록 그룹에 `data-done-record={index}` 를 붙이고, 그룹 내부에:
 1. 사실 결과 줄 (`doneResultLabel(progName, record)`, `data-done-result`).
 2. 세트 행 읽기 전용: 값, 단계 대비 미달 문구(`doneSetShortfall`), RPE.
    (`data-done-set-row`, `data-done-set-short`)
@@ -170,7 +168,7 @@ applySync(actions: SyncAction[]): void
 #### 4-2. `recordLine` → `doneResultLabel` 교체
 
 `+page.svelte:182` 의 `recordLine` 함수를 제거하고 `doneResultLabel` 을 `$lib/ui/today/done`
-에서 import 해 기록 결과 표시에 쓴다.
+에서, `DoneCard` 를 `$lib/ui/session/DoneCard` 에서 import 해 쓴다.
 
 호출부는 `recordLine(r)` → `doneResultLabel(progressionName(catalog, r.progressionId), r)` 로 바꾼다.
 
@@ -225,7 +223,7 @@ applySync(actions: SyncAction[]): void
 
 - [ ] `src/lib/ui/today/done.ts` 신설 — `recordedToday` · `doneResultLabel` · `doneSetShortfall` · `syncDoneDrafts` 포함
 - [ ] `InProgressStore.applySync` 추가
-- [ ] `src/lib/ui/today/DoneCard.svelte` 신설
+- [ ] `src/lib/ui/session/DoneCard.svelte` 신설
 - [ ] `+page.svelte` — ExerciseCard/DoneCard CSS 전환 구현
 - [ ] `+page.svelte` — `recordLine` → `doneResultLabel` 교체
 - [ ] `+page.svelte` — `syncDoneDrafts` `$effect` 호출 추가
@@ -233,6 +231,7 @@ applySync(actions: SyncAction[]): void
 - [ ] `CHANGELOG.md` Changed 항목 · Known Limitations 추가
 - [ ] `CLAUDE.md` SPEC5 블록에 DoneCard 훅 추가
 - [ ] `tests/unit/today/done.test.ts` 작성 및 전부 통과
+- [ ] `tests/unit/session/inprogress.test.ts` 에 `applySync` 케이스 추가 및 전부 통과
 - [ ] 숨겨진 ExerciseCard 가 `display: none` 상태에서 `beginWork` 를 실행할 수 없음을 수동 확인
 - [ ] `pnpm check` 오류 0
 - [ ] `pnpm test` 전부 통과

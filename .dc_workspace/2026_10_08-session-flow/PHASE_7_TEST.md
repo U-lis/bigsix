@@ -59,6 +59,28 @@
 
 ---
 
+### `InProgressStore.applySync`
+
+테스트 파일: `tests/unit/session/inprogress.test.ts`
+
+- **동작**: `actions` 가 빈 배열이면 즉시 반환하고 `persist` 를 호출하지 않는다 | **계층**: unit
+- **동작**: `remove-draft` 액션이 있으면 해당 키의 draft 가 `drafts` 에서 제거된다 | **계층**: unit
+- **동작**: `move-sets` 액션에서 자유 운동 칸이 없으면 새로 생성하고 세트를 추가한다 | **계층**: unit
+- **동작**: `move-sets` 액션에서 같은 단계의 자유 운동 칸이 이미 있으면 기존 칸에 세트를 추가한다 | **계층**: unit
+- **동작**: `report` 액션만 있을 때 `drafts` 가 변경되지 않는다 | **계층**: unit
+- **동작**: 여러 액션(`move-sets` + `remove-draft`)을 단 한 번의 `persist` 호출로 저장한다 | **계층**: unit
+- **동작**: 세트는 잃지 않는다 — `move-sets` 적용 후 자유 운동 칸의 세트 목록이 원래 draft 의 `workSets` 와 동일하다 | **계층**: unit
+
+---
+
+### `planFinish` 연동 (FR-46.3)
+
+테스트 파일: `tests/unit/today/done.test.ts`
+
+- **동작**: `syncDoneDrafts`/`applySync` 가 생성한 자유 운동 칸에 대해 `planFinish` 를 실행하면 해당 칸이 기록의 `performedStep` 과 동일한 단계의 `free` op 를 포함한다 | **계층**: unit
+
+---
+
 ## 이 페이즈에 실제로 해당하는 엣지 케이스
 
 - EC-102: 마치기 뒤 같은 날 같은 종목 — 카드가 「완료」로 전환되고 추가 세트는 자유 운동 칸에 쌓인다.
