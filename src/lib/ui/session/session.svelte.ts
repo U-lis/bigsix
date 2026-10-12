@@ -37,6 +37,7 @@ import {
   type SessionDraft,
   type SetEntry,
 } from '$lib/ui/state/storage';
+import type { SyncAction } from '$lib/ui/today/done';
 
 type DraftKind = SessionDraft['kind'];
 
@@ -257,6 +258,69 @@ class InProgressStore {
     }
 
     return result;
+  }
+
+  /**
+   * `syncDoneDrafts(…)` 가 돌려준 액션 목록을 한 번의 persist 로 적용한다
+   * (ADR-51 / R-10). 빈 배열이면 즉시 반환해 저장도 하지 않는다 — 멱등 수렴 조건.
+   *
+   * - `remove-draft`: 해당 키의 draft 를 drafts 맵에서 제거.
+   * - `move-sets`: 자유 운동 칸이 없으면 `beginFree` 로 열고, 세트를 이어 붙인다.
+   *   같은 종목에 이미 같은 단계의 자유 운동 칸이 있으면 그 칸에 세트를 추가한다.
+   * - `report`: drafts 를 변경하지 않는다. UI 가 결과를 표시에 활용한다.
+   */
+  applySync(actions: readonly SyncAction[]): void {
+    if (actions.length === 0) return;
+
+    let next = this.#drafts;
+    let changed = false;
+
+    for (const action of actions) {
+      if (action.kind === 'remove-draft') {
+        if (!(action.key in next)) continue;
+        const { [action.key]: _dropped, ...rest } = next;
+        next = rest;
+        changed = true;
+        continue;
+      }
+
+      if (action.kind === 'move-sets') {
+        // from 쪽은 remove-draft 가 따로 들어온다 — 여기서 지우지 않는다.
+        // 세트를 이전 받을 종목을 from draft 에서 유도한다 (from 이 사라져도 복사된 데이터로 재구성할 수 있도록).
+        const fromDraft = next[action.fromKey];
+        if (fromDraft === undefined) continue;
+        const progressionId = fromDraft.progressionId;
+        const freeKey = draftKey(progressionId, 'free');
+        const existing = next[freeKey];
+        if (existing === undefined) {
+          // 새 자유 운동 칸 생성 — target 없음 (자유 운동 관례).
+          const newFree: SessionDraft = {
+            startedAt: fromDraft.startedAt,
+            progressionId,
+            step: action.toStep,
+            performedStep: action.toStep,
+            kind: 'free',
+            workSets: [...action.sets],
+          };
+          next = { ...next, [freeKey]: newFree };
+        } else {
+          // 기존 자유 운동 칸에 이어 붙인다 — 호출자가 toStep 일치를 보장한다.
+          const merged: SessionDraft = {
+            ...existing,
+            workSets: [...existing.workSets, ...action.sets],
+          };
+          next = { ...next, [freeKey]: merged };
+        }
+        changed = true;
+        continue;
+      }
+
+      // 'report' — drafts 변경 없음. UI 가 사용 사유를 담아 표시한다.
+    }
+
+    if (!changed) return;
+    this.#drafts = next;
+    this.persist();
   }
 
   /** 저장은 drafts 가 비면 키를 지우고(옛 세션 모델과 같은 결과), 아니면 봉투를 쓴다. */

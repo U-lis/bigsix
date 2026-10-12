@@ -15,12 +15,14 @@
 - "Impossible" button renamed to "Abandon this step" (`data-abandon-mark`) with toggle behavior; the record is written at finish time, not immediately on press
 - Free exercise form opens a per-exercise draft instead of recording immediately
 - Storage schema: in-progress envelope bumped to v5; AppState envelope remains v4 so records survive a rollback to v0.3.0
+- Exercises already recorded today show a read-only DoneCard; additional sets are recorded as free exercises — a regular session is not created twice on the same day
 
 ### Removed
 - Per-exercise "Record session" button (`data-finalize`) — all exercises are recorded together via "Finish today's workout"
 
 ### Known limitations
 - `src/lib/ui/history/ImportDialog.svelte:95` — `ImportDialog` hides the import `<label>` with `{#if hasInProgress}` when drafts exist. This was inherited from main. `CLAUDE.md` prefers CSS folding (`opacity`/`pointer-events`/`aria-hidden`) over DOM removal. The behavior is correct but the implementation deviates from the convention.
+- Duplicate regular records on the same day (possible in pre-0.4.0 branch builds) are not removed automatically; they are all displayed in the DoneCard in time order
 
 ## [0.3.0] - 2026-10-06
 

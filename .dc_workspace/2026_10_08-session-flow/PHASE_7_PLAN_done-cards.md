@@ -221,21 +221,21 @@ applySync(actions: SyncAction[]): void
 
 ## 완료 체크리스트
 
-- [ ] `src/lib/ui/today/done.ts` 신설 — `recordedToday` · `doneResultLabel` · `doneSetShortfall` · `syncDoneDrafts` 포함
-- [ ] `InProgressStore.applySync` 추가
-- [ ] `src/lib/ui/session/DoneCard.svelte` 신설
-- [ ] `+page.svelte` — ExerciseCard/DoneCard CSS 전환 구현
-- [ ] `+page.svelte` — `recordLine` → `doneResultLabel` 교체
-- [ ] `+page.svelte` — `syncDoneDrafts` `$effect` 호출 추가
-- [ ] `README.md` DoneCard 한 줄 추가
-- [ ] `CHANGELOG.md` Changed 항목 · Known Limitations 추가
-- [ ] `CLAUDE.md` SPEC5 블록에 DoneCard 훅 추가
-- [ ] `tests/unit/today/done.test.ts` 작성 및 전부 통과
-- [ ] `tests/unit/session/inprogress.test.ts` 에 `applySync` 케이스 추가 및 전부 통과
-- [ ] 숨겨진 ExerciseCard 가 `display: none` 상태에서 `beginWork` 를 실행할 수 없음을 수동 확인
-- [ ] `pnpm check` 오류 0
-- [ ] `pnpm test` 전부 통과
-- [ ] 폰 체크리스트 (아래)
+- [x] `src/lib/ui/today/done.ts` 신설 — `recordedToday` · `doneResultLabel` · `doneSetShortfall` · `syncDoneDrafts` 포함: Verified in `src/lib/ui/today/done.ts:32,58,77,117`
+- [x] `InProgressStore.applySync` 추가: Verified in `src/lib/ui/session/session.svelte.ts:272`
+- [x] `src/lib/ui/session/DoneCard.svelte` 신설: Verified in `src/lib/ui/session/DoneCard.svelte:166`
+- [x] `+page.svelte` — ExerciseCard/DoneCard CSS 전환 구현: Verified in `src/routes/+page.svelte:285–291`, CSS at `:488–491`
+- [x] `+page.svelte` — `recordLine` → `doneResultLabel` 교체: Verified in `src/routes/+page.svelte:388`
+- [x] `+page.svelte` — `syncDoneDrafts` `$effect` 호출 추가: Verified in `src/routes/+page.svelte:209–224`
+- [x] `README.md` DoneCard 한 줄 추가: Verified in `README.md:122`
+- [x] `CHANGELOG.md` Changed 항목 · Known Limitations 추가: Verified in `CHANGELOG.md:18,25`
+- [x] `CLAUDE.md` SPEC5 블록에 DoneCard 훅 추가: Verified in `CLAUDE.md:116–127`
+- [x] `tests/unit/today/done.test.ts` 작성 및 전부 통과: 1013/1013 passed (`pnpm test`)
+- [x] `tests/unit/session/inprogress.test.ts` 에 `applySync` 케이스 추가 및 전부 통과: Verified in `tests/unit/session/inprogress.test.ts:357`
+- [x] 숨겨진 ExerciseCard 가 `display: none` 상태에서 `beginWork` 를 실행할 수 없음을 수동 확인: ExerciseCard 의 `beginWork` 는 사용자 이벤트 핸들러에서만 호출되며 `$effect`/`onMount` 없음. CSS `.switch.done .only-pending { display: none }` 으로 포인터 이벤트 차단.
+- [x] `pnpm check` 오류 0: 0 errors, 0 warnings (541 files)
+- [x] `pnpm test` 전부 통과: 1013 tests, 58 files
+- [ ] 폰 체크리스트 (아래) — 수동 확인 필요
 
 ## 폰 체크리스트
 

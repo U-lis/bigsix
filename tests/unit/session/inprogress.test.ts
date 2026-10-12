@@ -348,6 +348,138 @@ describe('finish — 플래너·실행기 결선', () => {
   });
 });
 
+// ── applySync (ADR-51 / Phase 7) ─────────────────────────────────────────
+//
+// syncDoneDrafts 가 돌려주는 액션 목록을 스토어에 적용하는 메서드. 빈 배열이면
+// 즉시 반환해 persist 를 호출하지 않는다 (R-10 멱등 수렴). report 액션만 있을 때도
+// drafts 를 바꾸지 않는다. 여러 액션을 단 한 번의 persist 로 저장한다.
+
+describe('applySync — Phase 7 (ADR-51)', () => {
+  it('actions 가 빈 배열이면 즉시 반환하고 persist 를 호출하지 않는다', () => {
+    window.localStorage.clear();
+    inProgress.applySync([]);
+    // persist 가 호출되지 않았으므로 봉투가 없다.
+    assert.equal(window.localStorage.getItem('bigsix.session.inprogress'), null);
+  });
+
+  it('remove-draft 액션이 있으면 해당 키의 draft 가 drafts 에서 제거된다', () => {
+    const key = draftKey('pushup', 'work');
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    inProgress.pushSet(key, { value: 10 });
+    inProgress.applySync([{ kind: 'remove-draft', key }]);
+    assert.equal(inProgress.getDraft('pushup', 'work'), undefined);
+  });
+
+  it('move-sets 액션에서 자유 운동 칸이 없으면 새로 생성하고 세트를 추가한다', () => {
+    const fromKey = draftKey('pushup', 'work');
+    const freeKey = draftKey('pushup', 'free');
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    inProgress.pushSet(fromKey, { value: 15, rpe: 7 });
+    inProgress.pushSet(fromKey, { value: 15 });
+
+    inProgress.applySync([
+      {
+        kind: 'move-sets',
+        fromKey,
+        toStep: 3,
+        sets: [{ value: 15, rpe: 7 }, { value: 15 }],
+      },
+      { kind: 'remove-draft', key: fromKey },
+    ]);
+
+    assert.equal(inProgress.getDraft('pushup', 'work'), undefined);
+    const free = inProgress.drafts[freeKey];
+    assert.ok(free !== undefined);
+    assert.equal(free!.kind, 'free');
+    assert.equal(free!.step, 3);
+    assert.equal(free!.performedStep, 3);
+    assert.equal(free!.workSets.length, 2);
+    assert.equal(free!.workSets[0].value, 15);
+    assert.equal(free!.workSets[0].rpe, 7);
+  });
+
+  it('move-sets 액션에서 같은 단계의 자유 운동 칸이 이미 있으면 기존 칸에 세트를 추가한다', () => {
+    const fromKey = draftKey('pushup', 'work');
+    const freeKey = draftKey('pushup', 'free');
+    // 기존 free 를 먼저 열고 세트를 쌓는다.
+    inProgress.beginFree('2026-10-12', 'pushup', 3);
+    inProgress.pushSet(freeKey, { value: 10 });
+
+    // 이제 work 쪽에 세트를 쌓고 그걸 이전한다.
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    inProgress.pushSet(fromKey, { value: 15 });
+
+    inProgress.applySync([
+      {
+        kind: 'move-sets',
+        fromKey,
+        toStep: 3,
+        sets: [{ value: 15 }],
+      },
+      { kind: 'remove-draft', key: fromKey },
+    ]);
+
+    const free = inProgress.drafts[freeKey];
+    assert.ok(free !== undefined);
+    // 기존 세트가 보존되고 새 세트가 뒤에 붙었다.
+    assert.deepEqual(free!.workSets.map((s) => s.value), [10, 15]);
+  });
+
+  it('report 액션만 있을 때 drafts 가 변경되지 않는다', () => {
+    const key = draftKey('pushup', 'work');
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    inProgress.pushSet(key, { value: 15 });
+    const before = JSON.parse(JSON.stringify(inProgress.drafts));
+    inProgress.applySync([{ kind: 'report', key, reason: 'step-mismatch' }]);
+    assert.deepEqual(JSON.parse(JSON.stringify(inProgress.drafts)), before);
+  });
+
+  it('여러 액션(move-sets + remove-draft)을 단 한 번의 persist 호출로 저장한다', () => {
+    const fromKey = draftKey('pushup', 'work');
+    const freeKey = draftKey('pushup', 'free');
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    inProgress.pushSet(fromKey, { value: 20 });
+
+    // 적용 전 storage 상태를 캡처.
+    const beforeRaw = window.localStorage.getItem('bigsix.session.inprogress');
+
+    inProgress.applySync([
+      {
+        kind: 'move-sets',
+        fromKey,
+        toStep: 3,
+        sets: [{ value: 20 }],
+      },
+      { kind: 'remove-draft', key: fromKey },
+    ]);
+
+    const afterRaw = window.localStorage.getItem('bigsix.session.inprogress');
+    assert.notEqual(beforeRaw, afterRaw, '한 번 이상 저장은 됐다');
+    // 결과 상태 확인 — 두 액션이 모두 반영되어 있어야 한다 (한 번의 저장으로).
+    assert.equal(inProgress.drafts[fromKey], undefined);
+    assert.ok(inProgress.drafts[freeKey] !== undefined);
+    assert.deepEqual(inProgress.drafts[freeKey]!.workSets.map((s) => s.value), [20]);
+  });
+
+  it('세트는 잃지 않는다 — move-sets 적용 후 자유 운동 칸의 세트 목록이 원래 draft 의 workSets 와 동일하다', () => {
+    const fromKey = draftKey('pushup', 'work');
+    const freeKey = draftKey('pushup', 'free');
+    inProgress.beginWork('2026-10-12', plan('pushup', 3));
+    const originalSets = [{ value: 20, rpe: 7 }, { value: 18, rpe: 8 }, { value: 16 }];
+    for (const s of originalSets) inProgress.pushSet(fromKey, s);
+    const captured = inProgress.getDraft('pushup', 'work')!.workSets.slice();
+
+    inProgress.applySync([
+      { kind: 'move-sets', fromKey, toStep: 3, sets: captured },
+      { kind: 'remove-draft', key: fromKey },
+    ]);
+
+    const free = inProgress.drafts[freeKey];
+    assert.ok(free !== undefined);
+    assert.deepEqual(free!.workSets, captured);
+  });
+});
+
 // ── FR-39.2 / EC-102 — finish 로 칸이 지워진 뒤 같은 종목 재개 ────────────
 //
 // finish 는 성공한 칸만 drafts 에서 지운다. 그 뒤 같은 progressionId 로 다시

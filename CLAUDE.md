@@ -112,6 +112,19 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-stale-discard-confirm`(버리기 2단 확인), `data-stale-discard-cancel`(버리기 2단 취소),
   `data-stale-result`(값: `YYYY-MM-DD`, 기록 결과 안내),
   `data-stale-fail`(값: 칸 키, 기록 실패 안내).
+  **완료 카드 (Phase 7)**:
+  `data-card-done`(DoneCard 루트),
+  `data-done-step`(값: 단계 번호),
+  `data-done-record`(기록 행, 값: 인덱스),
+  `data-done-result`(결과 문구),
+  `data-done-set-row`(세트 행, 값: 인덱스),
+  `data-done-set-short`(미달 문구),
+  `data-done-completed-at`(완료 시각),
+  `data-done-extras`(추가 세트 섹션),
+  `data-done-extra-row`(추가 세트 행, 값: 인덱스),
+  `data-done-add-input`(새 세트 입력),
+  `data-done-add-error`(오류 문구),
+  `data-done-extra-blocked`(값: `'stale'` | `'step-mismatch'`).
 - UI 문구는 사실만 적는다. 백분율·격려·게이미피케이션 금지
 - 문자열은 도메인이 준 것을 가공 없이 노출한다 (NFR-2). 시스템 시각을 UI 에서 부르지
   않는다 — 오늘 날짜는 `todayClock.today` 하나가 근원 (FR-4.4)

@@ -90,3 +90,12 @@
 ## 자동화 회귀
 
 - **동작**: `pnpm test` 전부 통과 (기존 베이스라인 920 이상) | **계층**: unit
+
+## 검증 결과 (2026-10-12)
+
+- `pnpm check`: 0 errors, 0 warnings (541 files)
+- `pnpm test`: 1013 tests passed, 58 files (all behaviors confirmed)
+- `pnpm build`: success
+- hex grep: clean (no hardcoded colors in `.svelte` files outside `<meta name="theme-color">`)
+
+All behaviors listed above are covered by `tests/unit/today/done.test.ts` and `tests/unit/session/inprogress.test.ts`.

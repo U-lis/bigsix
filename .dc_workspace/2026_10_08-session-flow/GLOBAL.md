@@ -304,7 +304,7 @@ DoneCard 에서 세트를 추가하면 그 종목의 **자유 운동 칸(`free` 
 | 4 | ui-cards | 카드 개선·FinishBar·FinishDialog (ADR-46/47) | Complete | 3 |
 | 5 | stale-and-boot | StaleBanner·부팅·초기화 (ADR-48) | Complete | 4 |
 | 6 | docs-and-deploy | README·CHANGELOG·CLAUDE.md·배포 | In Progress (배포·폰 확인 대기) | 5 |
-| 7 | done-cards | DoneCard·syncDoneDrafts (ADR-49/50/51) | Pending | Phase 5 코드. Phase 6 의 배포·폰 확인과 병행 — 두 페이즈가 임시 배포를 공유한다 |
+| 7 | done-cards | DoneCard·syncDoneDrafts (ADR-49/50/51) | Complete | Phase 5 코드. Phase 6 의 배포·폰 확인과 병행 — 두 페이즈가 임시 배포를 공유한다 |
 
 ---
 
