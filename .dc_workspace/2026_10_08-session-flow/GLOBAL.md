@@ -194,6 +194,64 @@ class InProgressStore {
 
 ---
 
+### ADR-49: DoneCard — 오늘 이미 기록한 종목 (FR-46)
+
+오늘 날짜로 정규 기록(`kind: 'work'` 또는 `'consolidation'`, `outcome: 'abandoned'` 포함; `kind: 'free'` 제외)이
+하나라도 있는 계획 종목(`paired` 포함)은 **DoneCard** 를 렌더링한다.
+
+「기록되었는지」 신호는 `state.history` 에서 읽는다 — 진행 중 칸(draft)이 아니다(EC-102).
+
+**CSS 가시성 전환 (Correction 1 적용)**: CLAUDE.md 는 「접기는 CSS 로 한다. `{#if}` 로 DOM 에서 빼지 않는다」를
+강제한다. 따라서 각 계획 종목에 대해 ExerciseCard 와 DoneCard **둘 다** 렌더링하고,
+`recordedToday(...).length > 0` 결과에 따라 CSS 클래스(`display: none`)로 가시성을 전환한다.
+
+숨겨진 ExerciseCard 는 비활성(inert) 이어야 한다. ExerciseCard 는 사용자 입력 시점에만
+`beginWork` 를 호출하므로, 버튼이 DOM 에 있어도 `display: none` 상태에서는 포인터 이벤트가
+차단되어 트리거될 수 없다. PLAN 은 이 전제를 명시하고, 숨겨진 카드가 `beginWork` 를 실행할 수
+없음을 완료 체크리스트에 포함한다.
+
+### ADR-50: DoneCard 추가 세트 처리
+
+DoneCard 에서 세트를 추가하면 그 종목의 **자유 운동 칸(`free` draft)**에 쌓인다.
+단계는 그날 마지막 정규 기록의 `performedStep` 을 쓴다(EC-103).
+
+`beginFree(startedAt, progressionId, step)` 를 호출한다.
+`beginFree` 는 키 충돌 시 `false` 를 반환하므로 아래 규칙으로 분기한다.
+
+- 오늘 같은 단계의 자유 운동 칸이 이미 열려 있으면 → `pushSet` 으로 세트를 추가한다.
+- 오늘 **다른 단계**의 자유 운동 칸이 열려 있으면 → 사실 문구
+  「같은 종목의 자유 운동 칸이 {기존 단계}단계로 열려 있습니다 — 먼저 기록하거나 버리세요」를 표시하고
+  아무것도 덮어쓰지 않는다(`data-done-extra-blocked="step-mismatch"`).
+- **오래된(stale) 자유 운동 칸**이 있으면 ExerciseCard 의 stale 안내와 동일한 문구를 표시하고
+  입력을 비활성으로 둔다(`data-done-extra-blocked="stale"`).
+
+`finish.ts` 와 `session.svelte.ts` 는 자유 운동 칸을 이미 정상 처리하므로 변경하지 않는다.
+단, Correction 2 에 따른 `syncDoneDrafts` 스토어 메서드가 추가된다(ADR-51 참조).
+
+### ADR-51: syncDoneDrafts — 진행 중 칸 정합성 유지 (Correction 2)
+
+오늘 정규 기록이 이미 있는 종목의 `work` / `consolidation` draft 를 조용히 버리지 않는다.
+사용자가 입력한 세트를 잃지 않도록 아래 이전 규칙을 따르는 **순수 함수**
+`syncDoneDrafts(drafts, history, today)` 를 `src/lib/ui/today/done.ts` 에 정의한다.
+
+반환값은 `SyncAction[]` — 이 목록을 스토어 메서드 `applySync(actions)` 가 한 번의 persist 로 적용한다.
+
+**이전 규칙**:
+
+| 조건 | 처리 |
+|------|------|
+| 오늘 정규 기록이 있는 종목의 `work`/`consolidation` draft, 세트 있음 | `workSets` 를 마지막 정규 기록의 `performedStep` 으로 자유 운동 칸에 합산. 자유 운동 칸이 없으면 생성; 같은 단계이면 세트 추가; 다른 단계이면 손대지 않고 `step-mismatch` 리포트 |
+| 위 조건, 세트 0개, `abandoned` 아님 | draft 삭제 |
+| 위 조건, `abandoned: true`, 세트 0개 | draft 삭제 |
+| 위 조건, `abandoned: true`, 세트 있음 | 세트를 자유 운동 칸으로 이전 (세트 있음 규칙과 동일) |
+
+**호출 시점**: 부팅 시 한 번, 그 이후 `history` 또는 `drafts` 가 변경될 때마다.
+함수는 멱등(idempotent)하므로 두 번 호출해도 두 번째는 액션이 0개다.
+
+스키마 변경 없음 — v5 롤백 안전성은 ADR-43 과 동일하게 유지된다.
+
+---
+
 ## 파일 배치
 
 ### 신설 파일
@@ -206,9 +264,12 @@ class InProgressStore {
 | `src/lib/ui/session/FinishBar.svelte` | 「오늘 운동 마치기」 버튼 영역 (Phase 4) |
 | `src/lib/ui/session/FinishDialog.svelte` | 기록 확인 다이얼로그 (Phase 4) |
 | `src/lib/ui/session/StaleBanner.svelte` | 날 넘긴 칸 안내 (Phase 5) |
+| `src/lib/ui/today/done.ts` | `recordedToday` · `doneResultLabel` · `doneSetShortfall` · `syncDoneDrafts` 순수 함수 (Phase 7) |
+| `src/lib/ui/today/DoneCard.svelte` | 오늘 기록 완료 종목 카드 (Phase 7) |
 | `tests/unit/session/storage-v5.test.ts` | storage v5 단위 테스트 (Phase 1) |
 | `tests/unit/session/inprogress.test.ts` | 스토어 단위 테스트 (Phase 2) |
 | `tests/unit/session/finish.test.ts` | planFinish · executeFinish 단위 테스트 (Phase 3) |
+| `tests/unit/today/done.test.ts` | done.ts 순수 함수 단위 테스트 (Phase 7) |
 
 ### 수정 파일
 
@@ -218,16 +279,16 @@ class InProgressStore {
 | `src/lib/ui/session/session.svelte.ts` | 전면 재작성 — 칸 목록 스토어 (Phase 2) |
 | `src/lib/ui/session/ExerciseCard.svelte` | 칸 바인딩, 미달·추가 표시, 「이 단계 중단」 토글 (Phase 4) |
 | `src/lib/ui/session/FreeExerciseForm.svelte` | 즉시 기록 제거, `beginFree` 만 호출 (Phase 4) |
-| `src/routes/+page.svelte` | StaleBanner · FinishBar · FinishDialog 연결, 다지기 제안 연동 (Phase 4/5) |
+| `src/routes/+page.svelte` | StaleBanner · FinishBar · FinishDialog 연결, 다지기 제안 연동 (Phase 4/5); DoneCard 카드 전환 · `syncDoneDrafts` 호출 (Phase 7) |
 | `src/lib/ui/state/boot.ts` | `InProgressSession` → `drafts` 맵 복원 (Phase 2) |
 | `src/lib/ui/history/ExportBar.svelte` | `hasInProgress` → drafts 비어 있는지 검사 (Phase 5) |
 | `src/lib/ui/state/reset.ts` | `inProgress.discard()` → `inProgress.discardAll()` (Phase 5) |
 | `tests/unit/inprogress.test.ts` | 기존 테스트를 새 API 에 맞게 갱신 (Phase 2) |
 | `tests/unit/boot.test.ts` | 복원 경로 갱신 (Phase 2) |
 | `tests/unit/structure.test.ts` | `UI_UNDER` 에 `'history'` 추가 (phase 4 시 확인) |
-| `README.md` | 세션 흐름 설명 추가 (Phase 6) |
-| `CHANGELOG.md` | `[Unreleased]` 항목 추가 (Phase 6) |
-| `CLAUDE.md` | 훅 목록 · 문서 지도 갱신 (Phase 6) |
+| `README.md` | 세션 흐름 설명 추가 (Phase 6); DoneCard 한 줄 추가 (Phase 7) |
+| `CHANGELOG.md` | `[Unreleased]` 항목 추가 (Phase 6); DoneCard Changed 항목 추가 (Phase 7) |
+| `CLAUDE.md` | 훅 목록 · 문서 지도 갱신 (Phase 6); SPEC5 블록에 DoneCard 훅 추가 (Phase 7) |
 
 ---
 
@@ -243,6 +304,7 @@ class InProgressStore {
 | 4 | ui-cards | 카드 개선·FinishBar·FinishDialog (ADR-46/47) | Complete | 3 |
 | 5 | stale-and-boot | StaleBanner·부팅·초기화 (ADR-48) | Complete | 4 |
 | 6 | docs-and-deploy | README·CHANGELOG·CLAUDE.md·배포 | In Progress (배포·폰 확인 대기) | 5 |
+| 7 | done-cards | DoneCard·syncDoneDrafts (ADR-49/50/51) | Pending | Phase 5 코드. Phase 6 의 배포·폰 확인과 병행 — 두 페이즈가 임시 배포를 공유한다 |
 
 ---
 
@@ -257,3 +319,9 @@ class InProgressStore {
 | R-5 | ExerciseCard 등 컴포넌트에 DOM 테스트 인프라가 없어 UI 로직을 직접 테스트할 수 없다 | 기록 규칙(`planFinish`/`executeFinish`)·레이블 생성(`summarizeDraft`) 을 순수 함수로 분리해 단위 테스트한다 |
 | R-6 | 기존 `sw-importscripts` · `precache-parity` 빌드 테스트가 이미 알려진 flaky 상태다 | 이 개정 범위 밖. 테스트 결과에서 제외하거나 skip 처리된 상태를 그대로 유지한다 |
 | R-7 | v5 in-progress 봉투가 기록된 기기에서 v0.3.0(main)으로 롤백하면 in-progress 칸이 읽히지 않는다 | v0.3.0 의 `readInProgress()`(`storage.ts:348`)가 `future-version` 을 반환하고, `boot.ts:120` 이 `null` 로 조용히 처리한다 — 차단 없음. 기록(AppState)은 `APP_STATE_SCHEMA_VERSION = 4` 그대로여서 안전하다 |
+| R-8 | DoneCard 가 정규 기록이 많을 때 길어진다 | 세트 행은 단순 나열. 긴 카드는 스크롤로 해결한다. 별도 접기 UI 없음 |
+| R-9 | 자유 운동 칸이 다른 단계(`step-mismatch`)로 열려 있으면 DoneCard 에서 세트를 추가할 수 없다 | 사실 문구(`data-done-extra-blocked="step-mismatch"`)를 표시해 사용자가 직접 처리하도록 안내한다 |
+| R-10 | `$effect` 로 `syncDoneDrafts` 를 호출할 때 history 또는 drafts 갱신 → sync 액션 → drafts 재갱신 → 루프가 생길 수 있다 | `syncDoneDrafts` 가 멱등하므로 두 번째 호출은 액션이 0개이다. `applySync(actions)` 는 actions 가 빈 배열이면 즉시 반환하므로 루프가 수렴한다 |
+| R-11 | 이미 배포된 버전(0.4.0 이전 브랜치 빌드)에서 같은 날 두 번 정규 기록이 쌓인 히스토리가 있을 수 있다 | `syncDoneDrafts` 는 이미 있는 기록을 삭제하거나 수정하지 않는다. CHANGELOG 알려진 한계에 명시한다 |
+| R-12 | DoneCard 헤더가 계획의 `step` 을 쓰면 실제 수행 단계와 다를 수 있다(예: 다지기) | DoneCard 헤더는 마지막 정규 기록의 `step` / `performedStep` / 단계명을 쓴다 — 계획의 값을 쓰지 않는다 |
+| R-13 | Phase 7 는 스키마를 변경하지 않으므로 롤백 시 기록이 안전하다 | 스키마 버전은 ADR-43 에서 정한 값 그대로다. DoneCard 는 표시 계층 변경만이다 |
