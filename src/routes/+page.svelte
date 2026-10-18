@@ -34,7 +34,9 @@
   import { progressionName, formatKoDate, weekdayKoOf } from '$lib/ui/session/labels';
   import Confirm from '$lib/ui/common/Confirm.svelte';
   import { planHeader } from '$lib/ui/session/labels';
-  import { doneResultLabel, recordedToday, syncDoneDrafts } from '$lib/ui/today/done';
+  import {
+    doneResultLabel, recordedToday, standaloneFreeDrafts, syncDoneDrafts,
+  } from '$lib/ui/today/done';
 
   const catalog = loadCatalog();
 
@@ -96,6 +98,11 @@
   }
 
   let finishPlan = $derived(planFinish(todayDrafts, agendaOrder));
+
+  // 독립 카드로 세울 자유 운동 칸 — 4상태 모두에서 보인다 (FR-18.1).
+  let freeCards = $derived(
+    standaloneFreeDrafts(inProgress.drafts, appState.value.history, todayClock.today, agendaOrder),
+  );
 
   // 다지기 제안 — ExerciseCard 가 올려 보낸 abandon on/off 콜백에서 호출.
   function onAbandonMark(progressionId: string, on: boolean): void {
@@ -349,34 +356,38 @@
           <p>잠김: {l.reason}</p>
         </article>
       {/each}
-      <!-- 자유 운동 칸은 작업 카드 바깥에 독립 카드로 보인다.
-           단, DoneCard 가 이미 그 종목의 추가 세트 섹션을 흡수하면 중복 렌더링을 피한다 (FR-46.2). -->
-      {#each Object.values(todayDrafts).filter((d) => d.kind === 'free' && !hasRecordToday(d.progressionId)) as free (draftKey(free.progressionId, 'free'))}
-        {@const fstep = getStep(catalog, free.progressionId, free.performedStep)}
-        <ExerciseCard
-          plan={{
-            progressionId: free.progressionId,
-            step: free.step,
-            performedStep: free.performedStep,
-            stepName: fstep.name,
-            unit: fstep.unit,
-            perSide: fstep.perSide === true,
-            work: [],
-            goal: { label: 'beginner', sets: 0, value: 0 },
-            kind: 'consolidation',
-            reason: '자유 운동 칸 — 세트를 쌓고 「오늘 운동 마치기」로 기록합니다.',
-          }}
-          draftKind="free"
-          today={todayClock.today}
-          {catalog}
-          {onAbandonMark}
-        />
-      {/each}
     </div>
     <!-- FR-20.5: 워밍업 규칙을 없앤 자리. 수치도 종목별 지시도 없는 사실 한 줄이며,
          세션마다 반복하지 않고 오늘 화면에 한 번만 둔다. -->
     <p class="stretch">운동 전후로 스트레칭을 한다.</p>
   {/if}
+
+  <!-- 자유 운동 칸은 화면 상태와 무관하게 독립 카드로 보인다 (FR-18.1) — 휴식일 ·
+       할 게 없음 · 미선택에서도 연 칸이 보여야 세트를 쌓을 수 있다. DoneCard 가 그
+       종목의 추가 세트 섹션을 흡수하면 중복 렌더링을 피한다 (FR-46.2). -->
+  <div class="cards free-cards" class:filled={freeCards.length > 0}>
+    {#each freeCards as free (draftKey(free.progressionId, 'free'))}
+      {@const fstep = getStep(catalog, free.progressionId, free.performedStep)}
+      <ExerciseCard
+        plan={{
+          progressionId: free.progressionId,
+          step: free.step,
+          performedStep: free.performedStep,
+          stepName: fstep.name,
+          unit: fstep.unit,
+          perSide: fstep.perSide === true,
+          work: [],
+          goal: { label: 'beginner', sets: 0, value: 0 },
+          kind: 'consolidation',
+          reason: '자유 운동 칸 — 세트를 쌓고 「오늘 운동 마치기」로 기록합니다.',
+        }}
+        draftKind="free"
+        today={todayClock.today}
+        {catalog}
+        {onAbandonMark}
+      />
+    {/each}
+  </div>
 
   <!-- FR-42.1 · UI-18 — 「자유 운동 기록」 폼 열기 버튼 바로 위, 페이지 흐름 안. -->
   <FinishBar enabled={finishEnabled} onOpen={openFinish} />
@@ -481,6 +492,7 @@
     gap: 1rem;
   }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
+  .free-cards.filled { margin-top: 1rem; }
   /* ADR-49: ExerciseCard 와 DoneCard 가 같은 자리에 모두 렌더링되고 CSS 로 전환된다.
      DOM 에서 빼지 않는 이유는 CLAUDE.md 「접기는 CSS 로 한다」 — 하이드레이션·포커스
      흔들림 방지. 숨겨진 ExerciseCard 는 `display: none` 이라 beginWork 가 트리거되지

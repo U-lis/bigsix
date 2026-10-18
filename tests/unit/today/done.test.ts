@@ -8,6 +8,7 @@ import {
   doneResultLabel,
   doneSetShortfall,
   recordedToday,
+  standaloneFreeDrafts,
   syncDoneDrafts,
   type SyncAction,
 } from '../../../src/lib/ui/today/done.ts';
@@ -450,3 +451,34 @@ describe('planFinish 연동 (FR-46.3)', () => {
 // 미사용 타입 참조 방지용 (TS6133 회피).
 const _never: SyncAction[] = [];
 void _never;
+
+// ── standaloneFreeDrafts (휴식일 자유 운동 카드) ──────────────────────────
+
+describe('standaloneFreeDrafts', () => {
+  it('휴식일(agenda 없음) 에도 오늘 자 자유 운동 칸을 돌려준다', () => {
+    const f = freeDraftFor('pushup');
+    const drafts = { [draftKey('pushup', 'free')]: f };
+    assert.deepEqual(standaloneFreeDrafts(drafts, [], TODAY, []), [f]);
+  });
+
+  it('날 넘긴 칸 · free 아닌 칸은 제외한다', () => {
+    const drafts = {
+      [draftKey('pushup', 'free')]: freeDraftFor('pushup', { startedAt: '2026-10-11' }),
+      [draftKey('squat', 'work')]: workDraftFor('squat'),
+    };
+    assert.deepEqual(standaloneFreeDrafts(drafts, [], TODAY, ['squat']), []);
+  });
+
+  it('agenda 에 있고 오늘 정규 기록이 있으면 DoneCard 가 흡수하므로 제외한다', () => {
+    const drafts = { [draftKey('pushup', 'free')]: freeDraftFor('pushup') };
+    const history = [rec('pushup', 3)];
+    assert.deepEqual(standaloneFreeDrafts(drafts, history, TODAY, ['pushup']), []);
+  });
+
+  it('agenda 밖 종목은 오늘 정규 기록이 있어도 독립 카드로 남긴다', () => {
+    const f = freeDraftFor('pushup');
+    const drafts = { [draftKey('pushup', 'free')]: f };
+    const history = [rec('pushup', 3)];
+    assert.deepEqual(standaloneFreeDrafts(drafts, history, TODAY, []), [f]);
+  });
+});

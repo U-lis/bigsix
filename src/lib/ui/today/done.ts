@@ -163,3 +163,33 @@ export function syncDoneDrafts(
   }
   return actions;
 }
+
+// ── standaloneFreeDrafts (FR-18.1 · FR-46.2) ──────────────────────────────
+
+/**
+ * 오늘 화면에 독립 카드로 세울 오늘 자 자유 운동 칸을 돌려준다.
+ *
+ * 화면 상태(운동일 · 휴식일 · 할 게 없음 · 미선택) 와 무관하다 — 자유 운동은 언제든
+ * 열 수 있으므로 (FR-18.1) 카드도 언제든 보여야 한다. 제외하는 것은 DoneCard 가
+ * 「추가 세트」 섹션으로 흡수하는 칸뿐이다: 오늘 agenda 에 있고 오늘 정규 기록이
+ * 있는 종목 (FR-46.2). agenda 밖 종목은 DoneCard 가 없으므로 기록 여부와 무관하게
+ * 독립 카드로 남긴다.
+ */
+export function standaloneFreeDrafts(
+  drafts: Record<string, SessionDraft>,
+  history: readonly SessionRecord[],
+  today: IsoDate,
+  agendaOrder: readonly ProgressionId[],
+): SessionDraft[] {
+  const out: SessionDraft[] = [];
+  for (const d of Object.values(drafts)) {
+    if (d.kind !== 'free') continue;
+    if (d.startedAt !== today) continue;
+    const absorbed =
+      agendaOrder.includes(d.progressionId) &&
+      recordedToday(history, today, d.progressionId).length > 0;
+    if (absorbed) continue;
+    out.push(d);
+  }
+  return out;
+}
