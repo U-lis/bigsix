@@ -104,6 +104,7 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-set-row`(값: 세트 1-based 번호), `data-set-short`(미달 세트), `data-set-extra`(추가 세트),
   `data-set-edit`, `data-set-delete`,
   `data-abandon-mark`(값: `'on'|'off'`), `data-abandoned`(중단 표시된 카드),
+  `data-free-discard`(자유 운동 칸 버리기 버튼),
   `data-draft-blocked`(값: `'true'`, 날짜 지난 칸으로 인한 입력 차단),
   `data-draft-blocked-reason`(차단 사유 문구),
   `data-stale-banner`(StaleBanner 루트),
