@@ -189,11 +189,18 @@
 >
   <!-- FR-21: 목표가 시선의 첫 지점이다. 종목명은 부제로 내린다. -->
   <header>
-    <p class="eyebrow">{exerciseTitle(plan)} · {kindLabel(plan.kind)}</p>
-    <h3 class="goal">
-      {plan.goal.sets}×{plan.goal.value}{unit(plan.unit)}
-      <span class="std">{standardLabel(plan.goal.label)}</span>
-    </h3>
+    <!-- 자유 운동 칸은 목표·기준이 없다 — 목표 자리에 종목명을 세운다. 카드 종류는
+         인스턴스가 사는 동안 바뀌지 않으므로 접기가 아니라 분기다. -->
+    {#if isFree}
+      <p class="eyebrow">{kindLabel(kind)} · 승급 판정 없음</p>
+      <h3 class="goal">{exerciseTitle(plan)}</h3>
+    {:else}
+      <p class="eyebrow">{exerciseTitle(plan)} · {kindLabel(plan.kind)}</p>
+      <h3 class="goal">
+        {plan.goal.sets}×{plan.goal.value}{unit(plan.unit)}
+        <span class="std">{standardLabel(plan.goal.label)}</span>
+      </h3>
+    {/if}
     {#if plan.streak !== undefined}
       <p class="streak">{plan.streak}/{PROMOTION_STREAK}회 연속</p>
     {/if}
@@ -215,11 +222,11 @@
   {/if}
 
   <section class="work" class:folded={abandoned}>
-    <h4>본 세트 ({workDone}/{planLen})</h4>
+    <h4>{isFree ? `세트 (${workDone})` : `본 세트 (${workDone}/${planLen})`}</h4>
     <ol class="sets">
       {#each todayDraft?.workSets ?? [] as entry, i (i)}
         {@const oneBased = i + 1}
-        {@const isExtra = i >= planLen}
+        {@const isExtra = !isFree && i >= planLen}
         {@const planned = i < planLen ? plan.work[i] : null}
         {@const shortfall = planned !== null && entry.value < planned.target}
         <li
@@ -273,6 +280,8 @@
       <p class="hint">
         {#if workDone < planLen}
           다음 세트: {setTargetLabel(nextTarget, nextMode, plan.unit)}
+        {:else if isFree}
+          다음 세트: 자유 입력
         {:else}
           추가 세트: 자유 입력
         {/if}
