@@ -92,6 +92,8 @@
   let deleteRow = $state<number | null>(null);
   // 세트 편집 상태 (1-based index).
   let editingRow = $state<number | null>(null);
+  // 자유 운동 칸 버리기 확인 상태.
+  let showDiscardConfirm = $state(false);
 
   function ensureOpen(): boolean {
     if (draft !== undefined && draft.startedAt === today) return true;
@@ -163,6 +165,14 @@
     const idx = deleteRow - 1;
     inProgress.removeSet(key, idx);
     deleteRow = null;
+  }
+
+  // 자유 운동 칸은 계획이 아니라 사용자가 연 칸이다 — 잘못 열었으면 통째로 버린다.
+  // 아직 기록 전이므로 history 는 건드리지 않는다.
+  function doDiscard() {
+    showDiscardConfirm = false;
+    if (todayDraft === undefined) return;
+    inProgress.discardDraft(key);
   }
 
   function unit(u: Unit): string { return unitLabel(u); }
@@ -293,6 +303,14 @@
         disabled={staleBlocked}
         onclick={toggleAbandon}
       >{abandoned ? '중단 취소' : '이 단계 중단'}</button>
+    {:else}
+      <button
+        type="button"
+        class="abandon"
+        data-free-discard
+        disabled={todayDraft === undefined}
+        onclick={() => showDiscardConfirm = true}
+      >자유 운동 칸 버리기</button>
     {/if}
   </footer>
 </article>
@@ -328,6 +346,20 @@
     confirmLabel="삭제"
     onConfirm={doDelete}
     onCancel={() => deleteRow = null}
+  />
+{/if}
+
+{#if showDiscardConfirm}
+  <Confirm
+    title="자유 운동 칸을 버리시겠습니까?"
+    body={
+      workDone > 0
+        ? `확정한 ${workDone}세트가 기록되지 않고 사라집니다. 이 작업은 되돌릴 수 없습니다.`
+        : '빈 칸을 닫습니다.'
+    }
+    confirmLabel="버리기"
+    onConfirm={doDiscard}
+    onCancel={() => showDiscardConfirm = false}
   />
 {/if}
 
