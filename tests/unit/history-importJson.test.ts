@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 
 import { parseImport } from '../../src/lib/ui/history/importJson.ts';
 import { CURRENT_SCHEMA_VERSION } from '../../src/lib/ui/state/storage.ts';
+import type { SessionDraft } from '../../src/lib/ui/state/storage.ts';
+import { hasAnyDraft } from '../../src/lib/ui/session/stale.ts';
 import type { AppState, SessionRecord } from '../../src/lib/domain/types.ts';
 import { ALL_UNLOCKED_STEPS, stateAt } from './helpers.ts';
 
@@ -132,17 +134,6 @@ describe('parseImport — future-version (EC-63)', () => {
       assert.fail('reason: future-version 이어야 한다');
     }
   });
-
-  it('meta.schemaVersion === 5 → detail === "5"', () => {
-    const text = fileText(stateWithHistory(), 5);
-    const r = parseImport(text, stateWithHistory());
-    assert.equal(r.ok, false);
-    if (!r.ok && r.reason === 'future-version') {
-      assert.equal(r.detail, '5');
-    } else {
-      assert.fail();
-    }
-  });
 });
 
 // ── 5) v1~v3 파일 (EC-65) ────────────────────────────────────────────────
@@ -220,5 +211,31 @@ describe('parseImport — 정상 파일과 counts', () => {
     const r = parseImport(fileText(incoming), stateWithHistory());
     assert.equal(r.ok, true);
     if (r.ok) assert.deepEqual(r.appState, incoming);
+  });
+});
+
+// ── SPEC5 FR-45.4 — drafts 맵에 하나라도 있으면 가져오기 차단 ───────────
+//
+// ExportBar.svelte 의 derived 식(`hasAnyDraft(inProgress.drafts)`) 을 쓰는
+// 순수 함수 `hasAnyDraft` 를 그대로 호출해 검증한다. 다중 칸 모델에서
+// 「진행 중이 있는가」는 drafts 맵이 비어 있지 않다는 사실 하나다.
+// ImportDialog 쪽 `hasInProgress` 분기는 이 bool 하나를 받아
+// `data-import-block="inprogress"` 을 켠다.
+
+describe('hasAnyDraft — 가져오기 차단 조건 (SPEC5 FR-45.4 / EC-62)', () => {
+  it('drafts 가 빈 맵이면 false', () => {
+    assert.equal(hasAnyDraft({}), false);
+  });
+
+  it('work 칸이 하나 있으면 true', () => {
+    const draft: SessionDraft = {
+      startedAt: '2026-10-08',
+      progressionId: 'pushup',
+      step: 3,
+      performedStep: 3,
+      kind: 'work',
+      workSets: [],
+    };
+    assert.equal(hasAnyDraft({ 'pushup:work': draft }), true);
   });
 });

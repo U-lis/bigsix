@@ -1,36 +1,33 @@
 <script lang="ts">
   /**
-   * 자유 운동 입력 폼 (FR-18.1 ~ FR-18.3 / FR-18.9).
+   * 자유 운동 열기 폼 (SPEC5 FR-43.1 · ADR-46).
    *
-   * 사용자가 계획 밖에서 임의로 기록하는 세션. 승급·유지·강등·다음 목표
-   * 계산 어디에도 영향을 주지 않는다 (FR-18.6 / ADR-16). 완료 시 applySession 이
-   * kind='free' 로 조기 반환해 state.steps 를 손대지 않는다 (FR-18.4 / EC-40).
+   * SPEC5 변경 — 즉시 `applySession` 하지 않는다. `inProgress.beginFree(today, id, step)`
+   * 로 자유 운동 칸만 연다. 세트·RPE 입력은 열린 칸에 붙은 ExerciseCard 가 담당하고,
+   * 기록은 「오늘 운동 마치기」(FinishBar) 가 모든 칸을 한 번에 처리한다.
    *
-   * 잠긴 종목은 저장 버튼이 비활성 상태로 남아 저장 자체가 불가능하다
-   * (FR-18.3 / EC-42). 도메인은 free 를 걸러 내지 않으므로 이 가드가 유일한 방어다.
+   * 잠긴 종목은 열기 자체가 비활성 상태로 남는다 (FR-18.3 / FR-43.2 / EC-42) —
+   * 도메인의 `checkGate` 결과만 믿는다.
    *
-   * 이 폼은 inProgress 스토어를 쓰지 않는다 — 자유 운동은 짧은 한 화면의
-   * 즉시 입력·저장이다. 폼을 닫으면 세트 값은 사라진다.
+   * 같은 종목에 free 칸이 이미 있으면 `beginFree` 가 false 를 돌려준다 — 사용자에게
+   * 사실을 알리고 폼은 열어 둔다 (입력을 조용히 버리지 않는다).
    */
 
   import {
-    applySession, checkGate, MAX_STEP, MIN_STEP, PROMOTION_STREAK,
-    valueOf, getProgression, getStep, topLabel, topStandard,
+    checkGate, MAX_STEP, MIN_STEP, getStep,
   } from '$lib/domain';
   import type {
-    AppState, Catalog, IsoDate, ProgressionId, SessionInput,
-    Standard, StandardLabel, Step,
+    AppState, Catalog, IsoDate, ProgressionId, Step,
   } from '$lib/domain/types';
   import { appState } from '$lib/ui/state/state.svelte';
-  import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
+  import { inProgress } from './session.svelte';
   import Howto from './Howto.svelte';
-  import { progressionName, standardLabel, unitLabel } from './labels';
-
-  const RPES: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  import { progressionName, unitLabel } from './labels';
 
   interface Props {
     today: IsoDate;
     catalog: Catalog;
+    /** 자유 운동 칸이 열린 뒤 상위 페이지가 폼을 닫을 때 호출. */
     onDone: () => void;
     onCancel: () => void;
   }
@@ -38,88 +35,34 @@
 
   const IDS: ProgressionId[] = ['pushup', 'squat', 'pullup', 'legraise', 'bridge', 'hspu'];
 
-  // ── 선택 상태 ─────────────────────────────────────────────────────────────
   let progressionId = $state<ProgressionId>('pushup');
   let step = $state<number>(2);
-  let tier = $state<StandardLabel>('beginner');
-  let setValues = $state<string[]>([]);
-  let rpe = $state<number | undefined>(undefined);
-  let saveError = $state<string | null>(null);
+  let openError = $state<string | null>(null);
 
-  // ── 파생: 카탈로그·게이트·기준 ────────────────────────────────────────────
   let currentState: AppState = $derived(appState.value);
   let gate = $derived(checkGate(currentState, catalog, progressionId));
   let stepData = $derived<Step>(getStep(catalog, progressionId, step));
-  let availableTiers = $derived.by<StandardLabel[]>(() => {
-    const tiers: StandardLabel[] = ['beginner', 'intermediate'];
-    tiers.push(topLabel(stepData));
-    return tiers;
-  });
-  let selectedStandard = $derived<Standard>(standardOf(stepData, tier));
-  let stdVal = $derived(valueOf(selectedStandard));
 
-  // ── 종목/단계 바뀌면 tier 를 유효 범위로 되돌린다 ──────────────────────────
-  $effect(() => {
-    // stepData 가 바뀌면 tier 를 유효한 값으로 강제 조정
-    const tiers = availableTiers;
-    if (!tiers.includes(tier)) tier = 'beginner';
-  });
-
-  // ── 기준이 바뀌면 세트 초기값을 채운다 ────────────────────────────────────
-  $effect(() => {
-    const std = selectedStandard;
-    const v = valueOf(std);
-    setValues = Array.from({ length: std.sets }, () => String(v));
-  });
-
-  // 진행 표시용
   let progressionOptions = IDS.map((id) => ({
     id,
     label: progressionName(catalog, id),
   }));
   let stepOptions = Array.from({ length: MAX_STEP - MIN_STEP + 1 }, (_, i) => MIN_STEP + i);
 
-  // ── 저장 가능 조건 ────────────────────────────────────────────────────────
-  let parsedSets = $derived(setValues.map((s) => Number(s)));
-  let setsValid = $derived(
-    parsedSets.length > 0
-      && parsedSets.every((n) => Number.isInteger(n) && n >= 1),
-  );
-  let canSave = $derived(gate.unlocked && setsValid);
+  let canOpen = $derived(gate.unlocked);
 
-  function save() {
-    saveError = null;
+  function open() {
+    openError = null;
     if (!gate.unlocked) {
-      saveError = '잠긴 종목은 자유 운동으로도 기록할 수 없다.';
+      openError = '잠긴 종목은 자유 운동으로도 기록할 수 없다.';
       return;
     }
-    if (!setsValid) {
-      saveError = '세트 값은 1 이상의 정수만 입력한다.';
-      return;
-    }
-    const input: SessionInput = {
-      date: today,
-      progressionId,
-      step,
-      performedStep: step,
-      sets: parsedSets,
-      kind: 'free',
-    };
-    if (rpe !== undefined) input.rpe = rpe;
-    try {
-      const result = applySession(currentState, catalog, input);
-      appState.apply(result.state);
-    } catch (e) {
-      saveError = e instanceof Error ? e.message : String(e);
+    const started = inProgress.beginFree(today, progressionId, step);
+    if (!started) {
+      openError = '같은 종목의 자유 운동 칸이 이미 열려 있다. 그 카드에서 세트를 쌓는다.';
       return;
     }
     onDone();
-  }
-
-  function standardOf(step: Step, t: StandardLabel): Standard {
-    if (t === 'beginner') return step.beginner;
-    if (t === 'intermediate') return step.intermediate;
-    return topStandard(step);
   }
 </script>
 
@@ -138,7 +81,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="dialog" role="document" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-    <h2 id="free-title">자유 운동 기록</h2>
+    <h2 id="free-title">자유 운동 열기</h2>
 
     <label class="row">
       <span>종목</span>
@@ -158,63 +101,33 @@
       </select>
     </label>
 
-    <label class="row">
-      <span>기준</span>
-      <select bind:value={tier} data-free-tier>
-        {#each availableTiers as t (t)}
-          <option value={t}>{standardLabel(t)} — {standardOf(stepData, t).sets}×{valueOf(standardOf(stepData, t))}{unitLabel(stepData.unit)}</option>
-        {/each}
-      </select>
-    </label>
-
     <!-- FR-30 · UI-11: 사용자가 고른 단계의 동작 설명. 접힌 채로 자리를 지킨다. -->
     <Howto {catalog} {progressionId} performedStep={step} />
 
+    <p class="unit-hint">단위: {unitLabel(stepData.unit)}</p>
+
     {#if !gate.unlocked}
       <p class="locked" data-lock-reason>잠김: {gate.reason}</p>
-    {:else}
-      <fieldset>
-        <legend>세트</legend>
-        {#each setValues as _val, i (i)}
-          <label class="set-row">
-            <span>{i + 1}세트</span>
-            <input
-              type="number"
-              inputmode="numeric"
-              step="1"
-              min="1"
-              bind:value={setValues[i]}
-              aria-label="{i + 1}세트 수치"
-            />
-            <span class="unit">{unitLabel(stepData.unit)}</span>
-          </label>
-        {/each}
-      </fieldset>
-
-      <fieldset>
-        <legend>RPE (선택)</legend>
-        <ChipGroup
-          options={RPES}
-          value={rpe}
-          onSelect={(v) => (rpe = rpe === v ? undefined : v)}
-          ariaLabel="RPE 선택"
-          name="free-rpe"
-        />
-      </fieldset>
     {/if}
 
-    {#if saveError !== null}
-      <p class="error">{saveError}</p>
+    {#if openError !== null}
+      <p class="error" data-free-error>{openError}</p>
     {/if}
 
     <div class="actions">
       <button type="button" data-free-cancel onclick={onCancel}>취소</button>
-      <button type="button" class="save" data-free-save disabled={!canSave} onclick={save}>저장</button>
+      <button
+        type="button"
+        class="save"
+        data-free-save
+        disabled={!canOpen}
+        onclick={open}
+      >칸 열기</button>
     </div>
 
     <p class="note">
-      자유 운동은 승급·유지·강등·다음 목표 계산에 영향을 주지 않는다.
-      기록은 이력에만 남는다.
+      자유 운동 칸이 열리면 오늘 화면의 카드에서 세트를 쌓는다. 기록은
+      「오늘 운동 마치기」 가 모든 종목을 한 번에 처리한다.
     </p>
   </div>
 </div>
@@ -259,31 +172,7 @@
     border-radius: 6px;
     font-size: 0.95rem;
   }
-  fieldset {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    margin: 0.75rem 0;
-  }
-  legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.25rem; }
-  .set-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.35rem 0;
-  }
-  .set-row > span { min-width: 3rem; color: var(--muted); font-size: 0.9rem; }
-  input[type="number"] {
-    width: 6rem;
-    min-height: 44px;
-    padding: 0.5rem;
-    background: var(--bg);
-    color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 1rem;
-  }
-  .unit { color: var(--muted); font-size: 0.85rem; }
+  .unit-hint { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0; }
   .locked {
     background: var(--danger-bg);
     color: var(--danger);
@@ -324,6 +213,7 @@
     border-color: var(--border);
     color: var(--muted);
     cursor: not-allowed;
+    opacity: 0.6;
   }
   .note {
     margin: 0.75rem 0 0;

@@ -15,9 +15,9 @@ import { deletePushRecord } from '$lib/ui/push/storage';
 export function performReset(): void {
   appState.resetToInitial();
   try {
-    inProgress.discard();
+    inProgress.discardAll();
   } catch {
-    // discard 는 이미 clearInProgress 내부에서 try/catch 를 감싸지만 방어.
+    // discardAll 은 persist 내부에서 try/catch 를 감싸지만 방어.
   }
   deletePushRecord();
 }

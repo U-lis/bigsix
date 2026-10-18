@@ -11,8 +11,10 @@ import {
   APP_STATE_KEY,
   CURRENT_SCHEMA_VERSION,
   IN_PROGRESS_KEY,
+  draftKey,
   writeAppState,
   writeInProgress,
+  type SessionDraft,
 } from '../../src/lib/ui/state/storage.ts';
 import { initialState } from '../../src/lib/domain/index.ts';
 
@@ -94,27 +96,124 @@ describe('boot — 미래 버전 감지 시 덮어쓰지 않는다 (EC-3)', () =
   });
 });
 
-// ── 진행 중 세션 복원 (FR-2.4 / EC-17) ────────────────────────────────────
+// ── 진행 중 drafts 복원 (FR-2.4 / FR-45 / EC-17) ─────────────────────────
 
-describe('boot — 진행 중 세션 복원 (FR-2.4)', () => {
-  it('저장된 진행 중 세션이 있으면 inProgress 로 돌려준다', () => {
-    writeInProgress({
+describe('boot — 진행 중 drafts 복원 (FR-2.4 / FR-45)', () => {
+  it('저장된 진행 중 drafts 가 있으면 그 맵을 inProgress 로 돌려준다', () => {
+    const draft: SessionDraft = {
       startedAt: '2026-09-05',
       progressionId: 'pushup',
       step: 3,
       performedStep: 3,
       kind: 'work',
       workSets: [{ value: 8 }],
+    };
+    const key = draftKey('pushup', 'work');
+    writeInProgress({ [key]: draft });
+    const r = boot('2026-09-05');
+    assert.ok(r.inProgress !== null);
+    assert.deepEqual(Object.keys(r.inProgress!), [key]);
+    assert.equal(r.inProgress![key].progressionId, 'pushup');
+    assert.equal(r.inProgress![key].workSets.length, 1);
+  });
+
+  it('두 종목이 각자의 칸을 가지면 복원 결과도 두 칸이다 (FR-39.2)', () => {
+    const d1: SessionDraft = {
+      startedAt: '2026-09-05',
+      progressionId: 'pushup',
+      step: 3,
+      performedStep: 3,
+      kind: 'work',
+      workSets: [{ value: 20 }],
+    };
+    const d2: SessionDraft = {
+      startedAt: '2026-09-05',
+      progressionId: 'squat',
+      step: 4,
+      performedStep: 4,
+      kind: 'work',
+      workSets: [{ value: 15 }],
+    };
+    writeInProgress({
+      [draftKey('pushup', 'work')]: d1,
+      [draftKey('squat', 'work')]: d2,
     });
     const r = boot('2026-09-05');
     assert.ok(r.inProgress !== null);
-    assert.equal(r.inProgress?.progressionId, 'pushup');
-    assert.equal(r.inProgress?.workSets.length, 1);
+    assert.deepEqual(
+      Object.keys(r.inProgress!).sort(),
+      [draftKey('pushup', 'work'), draftKey('squat', 'work')].sort(),
+    );
   });
 
   it('없으면 null', () => {
     const r = boot('2026-09-05');
     assert.equal(r.inProgress, null);
+  });
+
+  it('v5 미래 봉투는 조용히 null 로 떨어진다 (R-7 롤백 안전)', () => {
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({ schemaVersion: 999, drafts: {} }),
+    );
+    const r = boot('2026-09-05');
+    assert.equal(r.inProgress, null);
+    // AppState 쪽에는 영향 없다 — storageStatus 는 그대로.
+    assert.ok(r.storageStatus === 'empty' || r.storageStatus === 'ok');
+  });
+
+  // ── SPEC5 EC-98 — v4 진행 중 봉투가 v5 drafts 맵으로 올라온다 ───────────
+  it('v4 진행 중 봉투는 drafts 맵의 한 원소로 복원된다 (EC-98 · R-1 target 보존)', () => {
+    // v4 는 단일 `inProgress` 세션. target · setRpes · completedAt 는 선택.
+    const v4Envelope = {
+      schemaVersion: 4,
+      inProgress: {
+        startedAt: '2026-09-05',
+        progressionId: 'pushup',
+        step: 3,
+        performedStep: 3,
+        kind: 'work',
+        workSets: [{ value: 10 }, { value: 12, rpe: 7 }],
+        target: {
+          goal: { label: 'intermediate', sets: 2, value: 10 },
+          work: [
+            { target: 10, mode: 'fixed' },
+            { target: 10, mode: 'fixed' },
+          ],
+        },
+      },
+    };
+    window.localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(v4Envelope));
+
+    const r = boot('2026-09-05');
+    // 마이그레이션 결과 — drafts 맵이 null 이 아니고 pushup:work 하나가 있다.
+    assert.ok(r.inProgress !== null);
+    const key = draftKey('pushup', 'work');
+    assert.deepEqual(Object.keys(r.inProgress!), [key]);
+    const d = r.inProgress![key];
+    // 세트 수가 보존된다 (EC-98).
+    assert.equal(d.workSets.length, 2);
+    assert.equal(d.workSets[0].value, 10);
+    assert.equal(d.workSets[1].value, 12);
+    assert.equal(d.workSets[1].rpe, 7);
+    // target 도 그대로 복사된다 (R-1).
+    assert.deepEqual(d.target?.goal, { label: 'intermediate', sets: 2, value: 10 });
+    assert.equal(d.target?.work.length, 2);
+    // 다른 필드도 그대로.
+    assert.equal(d.progressionId, 'pushup');
+    assert.equal(d.step, 3);
+    assert.equal(d.kind, 'work');
+  });
+
+  it('v4 inProgress 가 null 이면 drafts 는 빈 맵으로 복원된다', () => {
+    // 세션 없이 봉투만 있는 상태 — 마이그레이션은 빈 맵을 돌려줘야 한다.
+    window.localStorage.setItem(
+      IN_PROGRESS_KEY,
+      JSON.stringify({ schemaVersion: 4, inProgress: null }),
+    );
+    const r = boot('2026-09-05');
+    assert.ok(r.inProgress !== null);
+    assert.deepEqual(r.inProgress, {});
   });
 });
 
@@ -160,18 +259,6 @@ describe('boot — v1 데이터를 CURRENT 로 정상 복원 (FR-1.4)', () => {
     assert.equal(env.schemaVersion, 1);
     // FR-28 이 세션 스냅샷 세 필드를 얹으며 v4 로 올렸다.
     assert.equal(CURRENT_SCHEMA_VERSION, 4);
-  });
-});
-
-// ── EC-19 부팅당 1회 (도메인 계약 재확인) ─────────────────────────────────
-
-describe('boot — EC-19 부팅당 1회 (도메인이 idempotent 보장)', () => {
-  it('같은 오늘 날짜로 두 번 부팅해도 결과가 같다', () => {
-    // stints 가 비어 있으면 advanceProposals 는 no-op 이라 이 케이스는 사소하다.
-    // 도메인 쪽 proposal.test.ts 가 활성 프로그램에서의 idempotent 를 이미 검증.
-    const r1 = boot('2026-09-05');
-    const r2 = boot('2026-09-05');
-    assert.deepEqual(r1.state, r2.state);
   });
 });
 
