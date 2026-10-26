@@ -5,6 +5,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Push notifications send a monochrome "b6" badge (`/badge-96.png`) for the Android status bar instead of Chromium's default bell
+
 ## [0.4.0] - 2026-10-18
 
 ### Added
