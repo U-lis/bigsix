@@ -5,6 +5,11 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-28
+
+### Changed
+- Push notifications send a monochrome "b6" badge (`/badge-96.png`) for the Android status bar instead of Chromium's default bell
+
 ## [0.4.0] - 2026-10-18
 
 ### Added
@@ -206,6 +211,8 @@
 - 테스트 474개 통과. 커버리지 line 100% / branch 94.95% / funcs 100%.
 - 외부 의존성 0. Node 24 내장 타입 스트리핑과 내장 테스트 러너만 쓴다.
 
+[0.4.1]: https://github.com/U-lis/bigsix/releases/tag/v0.4.1
+[0.4.0]: https://github.com/U-lis/bigsix/releases/tag/v0.4.0
 [0.3.0]: https://github.com/U-lis/bigsix/releases/tag/v0.3.0
 [0.2.0]: https://github.com/U-lis/bigsix/releases/tag/v0.2.0
 [0.1.0]: https://github.com/U-lis/bigsix/releases/tag/v0.1.0

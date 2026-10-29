@@ -20,7 +20,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"gen": "python3 tools/gen_movements.py",
-		"gen:icons": "python3 tools/gen_icons.py"
+		"gen:icons": "python3 tools/gen_icons.py && python3 tools/gen_badge.py"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-static": "^3.0.10",

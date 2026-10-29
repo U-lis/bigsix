@@ -258,7 +258,7 @@ describe('run — 발송 요청 본문이 릴레이 스키마에 맞는다 (push
     assert.ok(sendCall);
     const body = JSON.parse(sendCall!.body!) as {
       requestId: string;
-      messages: Array<{ to: string; notification: { title: string; body: string; url: string; tag: string; icon: string }; dedupKey: string }>;
+      messages: Array<{ to: string; notification: { title: string; body: string; url: string; tag: string; icon: string; badge: string }; dedupKey: string }>;
     };
     assert.match(body.requestId, /^bigsix-\d{4}-\d{2}-\d{2}T\d{2}:\d{2}-[0-9a-f]{4,}$/);
     assert.equal(body.messages.length, 1);

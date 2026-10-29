@@ -18,6 +18,7 @@ export interface CronMessage {
     url: string;
     tag: string;
     icon: string;
+    badge: string;
   };
   dedupKey: string;
 }
@@ -81,6 +82,7 @@ function regularBody(meta: ValidMeta, weekday: string): string {
  * - `url`: `'/'`
  * - `tag`: `'bigsix-workday'`
  * - `icon`: `${appBaseUrl}/icon-192.png` — 절대 URL (IR-6 상대 경로 모호성 우회)
+ * - `badge`: `${appBaseUrl}/badge-96.png` — Android 상태바 단색 'b6'. 없으면 Chromium 이 종 모양을 띄운다
  * - `dedupKey`: 현지 날짜 `YYYY-MM-DD` — 창 안에서 매 분 돌아도 하루 한 번 (ADR-38)
  */
 export function buildMessage(result: DecideResult, appBaseUrl: string, nowUtc: Date): CronMessage {
@@ -94,6 +96,7 @@ export function buildMessage(result: DecideResult, appBaseUrl: string, nowUtc: D
       url: '/',
       tag: 'bigsix-workday',
       icon: `${appBaseUrl}/icon-192.png`,
+      badge: `${appBaseUrl}/badge-96.png`,
     },
     dedupKey: localDateString(nowUtc, meta.tz),
   };
@@ -104,7 +107,7 @@ export function buildMessage(result: DecideResult, appBaseUrl: string, nowUtc: D
  *
  * - `body`: `'테스트 · <HH:MM> · <정규 본문>'`. HH:MM 은 `meta.test` 를 `meta.tz`
  *   현지 시각으로 변환한 값. 오늘이 휴식일이면 정규 본문 자리에 `'<program> · 오늘 휴식일'`.
- * - `url` · `tag` · `icon`: 정규와 같음.
+ * - `url` · `tag` · `icon` · `badge`: 정규와 같음.
  * - `dedupKey`: `'test-' + YYYYMMDDHHMMSS` (UTC, `meta.test` 기준, 초 단위).
  *   같은 초에 두 번 누르면 릴레이 dedup 으로 1건만 보내진다.
  *
@@ -135,6 +138,7 @@ export function buildTestMessage(result: DecideResult, appBaseUrl: string, nowUt
       url: '/',
       tag: 'bigsix-workday',
       icon: `${appBaseUrl}/icon-192.png`,
+      badge: `${appBaseUrl}/badge-96.png`,
     },
     dedupKey,
   };

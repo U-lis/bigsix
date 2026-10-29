@@ -126,6 +126,7 @@ describe('프리캐시 매니페스트 등가성 (RISK-1)', { timeout: 60_000 },
       'icon-512.png',
       'icon-maskable.png',
       'icon.svg',
+      'badge-96.png',
       '_app/version.json',
     ];
     for (const rel of required) {
