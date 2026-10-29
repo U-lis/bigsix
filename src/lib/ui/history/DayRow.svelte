@@ -114,6 +114,12 @@
     </p>
   {/if}
 
+  {#each row.adjustments as a, i (i)}
+    <p class="note" data-day-note="step-adjusted" data-day-adjust={a.progressionId}>
+      단계 조정: {progKo(a.progressionId)} {a.from}단계 → {a.to}단계
+    </p>
+  {/each}
+
   {#if row.review.status === 'missed'}
     <!--
       미수행일: 계획됐던 종목명만 노출. 목표 수치는 노출하지 않는다 (FR-24.6) —

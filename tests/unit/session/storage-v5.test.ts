@@ -33,8 +33,8 @@ afterEach(() => {
 // ── 버전 상수 분리 ────────────────────────────────────────────────────────
 
 describe('스키마 버전 상수 분리 (ADR-43)', () => {
-  it('APP_STATE_SCHEMA_VERSION 은 4', () => {
-    assert.equal(APP_STATE_SCHEMA_VERSION, 4);
+  it('APP_STATE_SCHEMA_VERSION 은 5 (0.5.0 — customPrograms · stepAdjustments)', () => {
+    assert.equal(APP_STATE_SCHEMA_VERSION, 5);
   });
 
   it('IN_PROGRESS_SCHEMA_VERSION 은 5', () => {
@@ -289,8 +289,8 @@ describe('readInProgress — 손상된 v5 봉투', () => {
 
 // ── AppState 봉투는 v4 그대로 — v5 는 future-version 처리 ─────────────────
 
-describe('readAppState — APP_STATE_SCHEMA_VERSION 기준 (4)', () => {
-  it('v4 AppState 봉투는 정상 복원된다', () => {
+describe('readAppState — APP_STATE_SCHEMA_VERSION 기준 (5)', () => {
+  it('현재 버전 AppState 봉투는 정상 복원된다', () => {
     const s = initialState();
     window.localStorage.setItem(
       APP_STATE_KEY,
@@ -300,14 +300,14 @@ describe('readAppState — APP_STATE_SCHEMA_VERSION 기준 (4)', () => {
     assert.equal(r.status, 'ok');
   });
 
-  it('v5 AppState 봉투는 future-version 으로 거절된다', () => {
+  it('v6 AppState 봉투는 future-version 으로 거절된다', () => {
     const s = initialState();
     window.localStorage.setItem(
       APP_STATE_KEY,
-      JSON.stringify({ schemaVersion: 5, appState: s }),
+      JSON.stringify({ schemaVersion: 6, appState: s }),
     );
     const r = readAppState();
     assert.equal(r.status, 'future-version');
-    if (r.status === 'future-version') assert.equal(r.version, 5);
+    if (r.status === 'future-version') assert.equal(r.version, 6);
   });
 });

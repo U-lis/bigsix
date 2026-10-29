@@ -20,7 +20,7 @@
   import { appState } from '$lib/ui/state/state.svelte';
   import { inProgress } from '$lib/ui/session/session.svelte';
   import { todayClock } from '$lib/ui/state/today.svelte';
-  import { loadCatalog } from '$lib/data/catalog';
+  import { catalogFor } from '$lib/data/catalog';
   import { deriveTodayScreen, type TodayScreenState } from '$lib/ui/today/todayScreen';
   import { draftKey } from '$lib/ui/state/storage';
   import { planFinish, type FinishResult } from '$lib/ui/session/finish';
@@ -38,7 +38,8 @@
     doneResultLabel, recordedToday, standaloneFreeDrafts, syncDoneDrafts,
   } from '$lib/ui/today/done';
 
-  const catalog = loadCatalog();
+  // 커스텀 프로그램(#13)까지 합친 카탈로그. 프로그램을 만들거나 지우면 다시 계산된다.
+  let catalog = $derived(catalogFor(appState.value));
 
   // 4상태 파생. 순수 함수이며 매 렌더마다 재계산된다 (NFR-18).
   let screen = $derived<TodayScreenState>(

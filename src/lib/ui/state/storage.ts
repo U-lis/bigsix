@@ -16,6 +16,7 @@
  * 경로는 만들지 않는다.
  */
 
+import { isCustomProgramId, WEEKDAYS } from '$lib/domain';
 import type { AppState, ProgressionId, SessionTarget } from '$lib/domain/types';
 
 // ── 키 & 버전 ──────────────────────────────────────────────────────────────
@@ -37,8 +38,12 @@ export const IN_PROGRESS_KEY = 'bigsix.session.inprogress';
  * SPEC5 (FR-45 / ADR-43): 진행 중 봉투만 v5 로 올렸다. AppState 봉투는 v4 그대로다.
  * 분리하지 않으면 v0.3.0 롤백 시 `readAppState` 가 future-version 을 돌려주고 기록
  * 전체가 열리지 않는다.
+ * v4 → v5 (0.5.0): `AppState.customPrograms` · `stepAdjustments` 신설 (#13 · #4). 둘 다
+ *   선택 필드라 마이그레이션은 no-op. 이번에는 버전을 올린다 — 0.4.x 앱은 커스텀
+ *   프로그램 id 를 몰라 `getProgram` 이 예외를 던지므로, 그대로 읽히는 것보다
+ *   future-version 으로 멈추고 데이터를 덮어쓰지 않는 쪽이 안전하다.
  */
-export const APP_STATE_SCHEMA_VERSION = 4;
+export const APP_STATE_SCHEMA_VERSION = 5;
 
 /**
  * 진행 중 봉투 스키마 버전 (ADR-43).
@@ -168,7 +173,30 @@ function isAppStateShape(value: unknown): value is AppState {
   if (!Array.isArray(v.history)) return false;
   if (!Array.isArray(v.stints)) return false;
   if (!Array.isArray(v.proposals)) return false;
+  if (v.stepAdjustments !== undefined && !Array.isArray(v.stepAdjustments)) return false;
+  if (v.customPrograms !== undefined && !isCustomProgramsShape(v.customPrograms)) return false;
+  // 구간이 가리키는 커스텀 프로그램이 빠져 있으면 계획을 세울 수 없다 — 부분 손상이다.
+  const customIds = new Set(
+    ((v.customPrograms ?? []) as { id: string }[]).map((p) => p.id),
+  );
+  for (const st of v.stints as unknown[]) {
+    const pid = (st as { programId?: unknown } | null)?.programId;
+    if (typeof pid === 'string' && isCustomProgramId(pid) && !customIds.has(pid)) return false;
+  }
   return true;
+}
+
+/** `customPrograms` 원소가 `Program` 모양인지 얕게 확인한다 (id · name · schedule). */
+function isCustomProgramsShape(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((p) => {
+    if (p === null || typeof p !== 'object') return false;
+    const q = p as Record<string, unknown>;
+    if (typeof q.id !== 'string' || !isCustomProgramId(q.id)) return false;
+    if (q.name === null || typeof q.name !== 'object') return false;
+    if (q.schedule === null || typeof q.schedule !== 'object') return false;
+    return WEEKDAYS.every((w) => Array.isArray((q.schedule as Record<string, unknown>)[w]));
+  });
 }
 
 /** 한 draft 가 `SessionDraft` 형태를 만족하는지 얕게 확인한다. */
@@ -234,10 +262,14 @@ const migrateV2toV3: Migrator = (envelope) => ({ ...envelope, schemaVersion: 3 }
  */
 const migrateV3toV4: Migrator = (envelope) => ({ ...envelope, schemaVersion: 4 });
 
+/** v4 → v5: `customPrograms` · `stepAdjustments` 신설 (#13 · #4). 선택 필드라 no-op. */
+const migrateV4toV5: Migrator = (envelope) => ({ ...envelope, schemaVersion: 5 });
+
 const APP_STATE_MIGRATIONS: Record<number, Migrator> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
   3: migrateV3toV4,
+  4: migrateV4toV5,
 };
 
 /**
@@ -505,8 +537,8 @@ export type EnvelopeValidation =
  * 새 검증 경로를 만들지 않고 기존 `migrateAppStateEnvelope` + `isAppStateShape` 를
  * 그대로 재사용한다 — 진짜 검증 규칙은 `readAppState` 와 하나여야 하기 때문이다.
  *
- * SPEC5 (ADR-43): AppState 봉투 버전은 `APP_STATE_SCHEMA_VERSION`(4) 그대로다.
- * 진행 중 봉투의 v5 분리와 무관하다.
+ * AppState 봉투 버전은 `APP_STATE_SCHEMA_VERSION` 이다 (0.5.0 부터 5).
+ * 진행 중 봉투 버전(`IN_PROGRESS_SCHEMA_VERSION`)과 따로 센다.
  */
 export function validateAndMigrateAppStateEnvelope(
   envelope: { schemaVersion: number; appState: unknown },

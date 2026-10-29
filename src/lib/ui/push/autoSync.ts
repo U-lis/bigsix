@@ -17,7 +17,7 @@
  *   `enable` 을 호출해도 `requestPermission` 을 다시 띄우지 않는다 (ADR-35 근거).
  */
 
-import { loadCatalog } from '$lib/data/catalog';
+import { catalogFor } from '$lib/data/catalog';
 import { appState } from '$lib/ui/state/state.svelte';
 
 import { buildMeta } from './meta';
@@ -44,7 +44,7 @@ export async function pushAutoSync(): Promise<void> {
     if ((await relay.state()) !== 'on') return;
 
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const meta = buildMeta(appState.value, loadCatalog(), tz, record.notifyAt);
+    const meta = buildMeta(appState.value, catalogFor(appState.value), tz, record.notifyAt);
     if (meta === null) return;
 
     const newMeta = JSON.stringify(meta);

@@ -20,7 +20,7 @@
   import { onMount } from 'svelte';
 
   import { appState } from '$lib/ui/state/state.svelte';
-  import { loadCatalog } from '$lib/data/catalog';
+  import { catalogFor } from '$lib/data/catalog';
   import { currentStint } from '$lib/domain';
 
   import { pushRecord } from '$lib/ui/push/push.svelte';
@@ -45,7 +45,7 @@
   // 켜기·끄기·시각 변경·테스트 발송 중 비동기 호출 중복을 막는다.
   let busy = $state(false);
 
-  const catalog = loadCatalog();
+  let catalog = $derived(catalogFor(appState.value));
   const showTest = isDevRelay(PUBLIC_PUSH_RELAY_URL);
 
   // 프로그램 선택 여부. meta 조립 전에 쓰는 판정이므로 `$derived` 로 뽑는다.

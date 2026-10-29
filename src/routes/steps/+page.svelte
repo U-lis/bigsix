@@ -7,10 +7,11 @@
    */
   import { goto } from '$app/navigation';
   import {
-    checkGate, getStep, setStep, topStandard, valueOf, MIN_STEP, MAX_STEP,
+    checkGate, getProgression, getStep, setStep, topStandard, valueOf, MIN_STEP, MAX_STEP,
     type ProgressionId,
   } from '$lib/domain';
   import { appState } from '$lib/ui/state/state.svelte';
+  import { todayClock } from '$lib/ui/state/today.svelte';
   import { loadCatalog } from '$lib/data/catalog';
   import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
   import Confirm from '$lib/ui/common/Confirm.svelte';
@@ -33,13 +34,16 @@
   );
 
   function tryAdjust(id: ProgressionId, step: number) {
+    // 지금 단계를 다시 고르면 바뀌는 것이 없다 — 유지 횟수를 리셋하지 않도록 묻지도 않는다.
+    if (step === appState.value.steps[id]) return;
     pending = { id, step };
   }
 
   function confirmAdjust() {
     if (pending === null) return;
     try {
-      const next = setStep(appState.value, catalog, pending.id, pending.step);
+      // 오늘 날짜를 넘겨 조정 이력을 남긴다 (#4). 기록 탭이 보여준다.
+      const next = setStep(appState.value, catalog, pending.id, pending.step, todayClock.today);
       appState.apply(next);
       errorMsg = null;
     } catch (e) {
@@ -122,8 +126,8 @@
 
 {#if pending !== null}
   <Confirm
-    title="{pending.id} 를 {pending.step}단계로 조정합니다"
-    body="되돌릴 수 없습니다. 조정 시점부터 유지 횟수가 다시 세어져 그 뒤 3회의 유지 세션이 다시 필요합니다. history 는 바뀌지 않습니다."
+    title="{getProgression(catalog, pending.id).name.ko}: {appState.value.steps[pending.id]}단계 → {pending.step}단계로 조정합니다"
+    body="되돌릴 수 없습니다. 조정 시점부터 유지 횟수가 다시 세어져 그 뒤 3회의 유지 세션이 다시 필요합니다. 지난 운동 기록은 바뀌지 않고, 조정한 날짜와 단계는 기록 탭에 남습니다."
     confirmLabel="조정"
     onConfirm={confirmAdjust}
     onCancel={() => pending = null}

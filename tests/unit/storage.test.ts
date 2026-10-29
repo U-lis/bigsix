@@ -383,9 +383,9 @@ const sampleTarget: SessionTarget = {
   ],
 };
 
-describe('FR-28.6 CURRENT_SCHEMA_VERSION === 4', () => {
-  it('상수가 4다', () => {
-    assert.equal(CURRENT_SCHEMA_VERSION, 4);
+describe('CURRENT_SCHEMA_VERSION === 5 (0.5.0)', () => {
+  it('상수가 5다', () => {
+    assert.equal(CURRENT_SCHEMA_VERSION, 5);
   });
 });
 

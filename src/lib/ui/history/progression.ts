@@ -12,7 +12,7 @@
 
 import { meetsStandard } from '$lib/domain';
 import type {
-  AppState, IsoDate, ProgressionId, SessionRecord, StandardLabel,
+  AppState, IsoDate, ProgressionId, SessionRecord, StandardLabel, StepAdjustment,
 } from '$lib/domain/types';
 
 export interface ProgressionRow {
@@ -86,4 +86,9 @@ export function buildProgressionRows(
   // 최근 세션부터.
   rows.reverse();
   return rows;
+}
+
+/** 종목 하나의 수동 단계 조정 이력 (#4). 최근 것부터. */
+export function adjustmentsOf(state: AppState, id: ProgressionId): StepAdjustment[] {
+  return (state.stepAdjustments ?? []).filter((a) => a.progressionId === id).reverse();
 }

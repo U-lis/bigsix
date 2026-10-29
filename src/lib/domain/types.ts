@@ -208,6 +208,39 @@ export interface AppState {
    * 때문이다. 없으면 "조정한 적 없음" 과 같다.
    */
   adjustedAtSessionIndex?: Partial<Record<ProgressionId, number>>;
+  /**
+   * 수동 단계 조정 이력 (#4). 시간순. 판정에 쓰지 않는다 — 기록 탭 표시 전용이다.
+   * 판정 범위는 위의 `adjustedAtSessionIndex` 가 정한다.
+   *
+   * 선택 필드인 이유는 `adjustedAtSessionIndex` 와 같다. 없으면 빈 이력과 같다.
+   */
+  stepAdjustments?: StepAdjustment[];
+  /**
+   * 사용자가 만든 프로그램 (#13). 카탈로그의 5종과 같은 `Program` 모양이다.
+   * id 는 `custom-` 으로 시작한다. `withCustomPrograms` 가 카탈로그에 합친다.
+   *
+   * 선택 필드. 없으면 커스텀 프로그램이 없는 것과 같다.
+   */
+  customPrograms?: Program[];
+}
+
+/** 수동 단계 조정 한 건 (#4). `setStep` 이 `onDate` 를 받았을 때만 쌓는다. */
+export interface StepAdjustment {
+  date: IsoDate;
+  progressionId: ProgressionId;
+  /** 조정 직전 단계. */
+  from: number;
+  /** 조정 후 단계. */
+  to: number;
+}
+
+/**
+ * 커스텀 프로그램 입력 (#13). 요일 → 그날 할 종목 id 목록.
+ * 빠진 요일은 휴식일이다.
+ */
+export interface CustomProgramInput {
+  name: string;
+  days: Partial<Record<Weekday, ProgressionId[]>>;
 }
 
 export type SetMode = 'fixed' | 'max';

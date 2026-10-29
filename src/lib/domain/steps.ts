@@ -1,5 +1,5 @@
 import { checkGate } from './gate.ts';
-import type { AppState, Catalog, ProgressionId } from './types.ts';
+import type { AppState, Catalog, IsoDate, ProgressionId } from './types.ts';
 
 /** 훈련 단계의 허용 범위 (FR-13.2). */
 export const MIN_STEP = 1;
@@ -21,9 +21,12 @@ export const MAX_STEP = 10;
  *
  * 무리하게 높은 단계로 올리는 것은 막지 않는다 (FR-13.6). '불가능' → 다지기 → 강등
  * 경로로 스스로 내려온다는 것이 사용자 결정이다.
+ *
+ * `onDate` 를 주면 `stepAdjustments` 에 이력 한 건을 남긴다 (#4). 판정에는 쓰지 않는
+ * 표시 전용 이력이다. 화면은 항상 넘긴다.
  */
 export function setStep(
-  state: AppState, catalog: Catalog, id: ProgressionId, step: number,
+  state: AppState, catalog: Catalog, id: ProgressionId, step: number, onDate?: IsoDate,
 ): AppState {
   if (!Number.isInteger(step) || step < MIN_STEP || step > MAX_STEP) {
     throw new Error(`단계는 ${MIN_STEP}~${MAX_STEP} 의 정수여야 한다: ${step}`);
@@ -32,7 +35,7 @@ export function setStep(
   if (!gate.unlocked) {
     throw new Error(`잠긴 종목은 단계를 조정할 수 없다: ${id} — ${gate.reason}`);
   }
-  return {
+  const next: AppState = {
     ...state,
     steps: { ...state.steps, [id]: step },
     adjustedAtSessionIndex: {
@@ -40,4 +43,11 @@ export function setStep(
       [id]: state.history.length,
     },
   };
+  if (onDate !== undefined) {
+    next.stepAdjustments = [
+      ...(state.stepAdjustments ?? []),
+      { date: onDate, progressionId: id, from: state.steps[id], to: step },
+    ];
+  }
+  return next;
 }
