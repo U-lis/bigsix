@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### Added
+- Custom programs (#13): build your own weekly program by picking exercises for each weekday on the Programs screen (any number per day, the same exercise on several days). Custom programs drive the Today screen, history and daily push notifications exactly like the five book programs; they never produce automatic switch proposals
+- Custom programs can be edited or deleted until they are first used; after that they are locked to keep past days' plans stable and can be duplicated instead. Book programs can also be duplicated as a starting point
+- Manual step adjustments are now logged (#4): the date and from → to step appear in History, both on that day's row and in the per-exercise view, and are included in JSON export
+
+### Changed
+- AppState storage schema bumped to v5 (`customPrograms`, `stepAdjustments`); v4 data migrates without changes. Rolling back to 0.4.x shows the "newer version" notice instead of overwriting data
+- Step adjustment confirmation names the exercise in Korean and shows the current → new step; re-selecting the current step no longer asks for confirmation
+
 ## [0.4.1] - 2026-10-28
 
 ### Changed
