@@ -151,9 +151,10 @@
               options={STEP_OPTIONS}
               value={d.step}
               onSelect={(n) => pick(id, { step: n })}
+              label={(n) => `${n}. ${getStep(catalog, id, n).name.ko}`}
               ariaLabel="단계"
               name="step-{id}"
-              cols={5}
+              cols={2}
             />
             <p class="pick-label">시작 기준</p>
             <ChipGroup
@@ -171,7 +172,7 @@
               data-adjust-apply={id}
               disabled={unchanged(id)}
               onclick={() => tryAdjust(id)}
-            >{d.step}단계 {TIER_KO[d.tier]}로 조정</button>
+            >{d.step}단계 {getStep(catalog, id, d.step).name.ko} · {TIER_KO[d.tier]}로 조정</button>
           </details>
         {/if}
       </article>

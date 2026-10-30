@@ -13,7 +13,7 @@
 
 ### Changed
 - AppState storage schema bumped to v5 (`customPrograms`, `stepAdjustments`, `adjustedTier`); v4 data migrates without changes. Rolling back to 0.4.x shows the "newer version" notice instead of overwriting data
-- Step adjustment on the Steps screen is now pick-then-apply: choose a step and a starting standard, then press the apply button. The confirmation names the exercise in Korean and shows current → new step and standard. Each card shows the current standard and streak
+- Step adjustment on the Steps screen is now pick-then-apply: choose a step and a starting standard, then press the apply button. The confirmation names the exercise in Korean and shows current → new step and standard. Each card shows the current standard and streak. Step choices show the exercise name (e.g. "3. 도움 스쿼트")
 - The Programs screen shows the program you are currently on at the top, so "오늘 세션으로" is reachable without scrolling
 
 ## [0.4.1] - 2026-10-28
