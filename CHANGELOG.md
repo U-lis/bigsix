@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-30
+
 ### Added
 - Custom programs (#13): build your own weekly program by picking exercises for each weekday on the Programs screen (any number per day, the same exercise on several days). Custom programs drive the Today screen, history and daily push notifications exactly like the five book programs; they never produce automatic switch proposals
 - Custom programs can be edited or deleted until they are first used; after that they are locked to keep past days' plans stable and can be duplicated instead. Book programs can also be duplicated as a starting point
