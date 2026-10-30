@@ -134,9 +134,10 @@ describe('기록 탭 — 단계 조정 이력 (#4)', () => {
   it('그날 행에 조정이 붙는다', () => {
     const rows = buildDayRows(adjusted, catalog, { from: '2026-10-20', to: '2026-10-22' });
     const byDate = Object.fromEntries(rows.map((r) => [r.review.date, r.adjustments]));
-    assert.deepEqual(byDate['2026-10-20'], [{ date: '2026-10-20', progressionId: 'pushup', from: 2, to: 5 }]);
+    const tiers = { fromTier: 'beginner', toTier: 'beginner' };
+    assert.deepEqual(byDate['2026-10-20'], [{ date: '2026-10-20', progressionId: 'pushup', from: 2, to: 5, ...tiers }]);
     assert.deepEqual(byDate['2026-10-21'], []);
-    assert.deepEqual(byDate['2026-10-22'], [{ date: '2026-10-22', progressionId: 'pushup', from: 5, to: 3 }]);
+    assert.deepEqual(byDate['2026-10-22'], [{ date: '2026-10-22', progressionId: 'pushup', from: 5, to: 3, ...tiers }]);
   });
 
   it('종목별 이력은 최근 것부터, 다른 종목은 빠진다', () => {

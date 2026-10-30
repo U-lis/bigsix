@@ -14,7 +14,7 @@
   import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
   import type { AppState } from '$lib/domain/types';
   import {
-    adjustmentsOf, buildProgressionRows, defaultProgressionId, type ProgressionRow,
+    adjustmentText, adjustmentsOf, buildProgressionRows, defaultProgressionId, type ProgressionRow,
   } from './progression';
 
   interface Props {
@@ -169,7 +169,7 @@
       <ul>
         {#each adjustments as a, i (a.date + ':' + i)}
           <li data-prog-adjust={a.date}>
-            <span class="date">{a.date}</span> {a.from}단계 → {a.to}단계
+            <span class="date">{a.date}</span> {adjustmentText(a)}
           </li>
         {/each}
       </ul>

@@ -125,6 +125,10 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   **단계 조정 이력 (0.5.0, 기록 탭)**:
   `data-day-note="step-adjusted"` + `data-day-adjust`(값: 종목 id),
   `data-prog-adjustments`(종목별 이력 영역), `data-prog-adjust`(값: `YYYY-MM-DD`).
+  **단계 화면 · 프로그램 화면 (0.5.0)**:
+  `data-current-tier`(값: `StandardLabel`, 지금 기준과 연속 문구),
+  `data-chips="tier-{종목 id}"`(시작 기준 고르기), `data-adjust-apply`(값: 종목 id, 조정 버튼),
+  `data-current-program`(값: 프로그램 id, 맨 위에 따로 선 현재 프로그램).
   **완료 카드 (Phase 7)**:
   `data-card-done`(DoneCard 루트),
   `data-done-step`(값: 단계 번호),

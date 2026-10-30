@@ -10,6 +10,7 @@
   } from '$lib/domain/types';
   import { getProgram, getProgression, getStep } from '$lib/domain';
   import type { DayRow } from './dayList';
+  import { adjustmentText } from './progression';
 
   interface Props {
     row: DayRow;
@@ -116,7 +117,7 @@
 
   {#each row.adjustments as a, i (i)}
     <p class="note" data-day-note="step-adjusted" data-day-adjust={a.progressionId}>
-      단계 조정: {progKo(a.progressionId)} {a.from}단계 → {a.to}단계
+      단계 조정: {progKo(a.progressionId)} {adjustmentText(a)}
     </p>
   {/each}
 

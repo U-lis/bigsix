@@ -252,8 +252,8 @@ describe('setStep — 조정 이력 (#4)', () => {
     const s1 = setStep(s0, catalog, 'pushup', 3, '2026-10-29');
     const s2 = setStep(s1, catalog, 'squat', 4, '2026-10-30');
     assert.deepEqual(s2.stepAdjustments, [
-      { date: '2026-10-29', progressionId: 'pushup', from: 5, to: 3 },
-      { date: '2026-10-30', progressionId: 'squat', from: 2, to: 4 },
+      { date: '2026-10-29', progressionId: 'pushup', from: 5, to: 3, fromTier: 'beginner', toTier: 'beginner' },
+      { date: '2026-10-30', progressionId: 'squat', from: 2, to: 4, fromTier: 'beginner', toTier: 'beginner' },
     ]);
   });
 

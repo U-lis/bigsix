@@ -38,7 +38,7 @@ export const IN_PROGRESS_KEY = 'bigsix.session.inprogress';
  * SPEC5 (FR-45 / ADR-43): 진행 중 봉투만 v5 로 올렸다. AppState 봉투는 v4 그대로다.
  * 분리하지 않으면 v0.3.0 롤백 시 `readAppState` 가 future-version 을 돌려주고 기록
  * 전체가 열리지 않는다.
- * v4 → v5 (0.5.0): `AppState.customPrograms` · `stepAdjustments` 신설 (#13 · #4). 둘 다
+ * v4 → v5 (0.5.0): `AppState.customPrograms` · `stepAdjustments` · `adjustedTier` 신설 (#13 · #4). 모두
  *   선택 필드라 마이그레이션은 no-op. 이번에는 버전을 올린다 — 0.4.x 앱은 커스텀
  *   프로그램 id 를 몰라 `getProgram` 이 예외를 던지므로, 그대로 읽히는 것보다
  *   future-version 으로 멈추고 데이터를 덮어쓰지 않는 쪽이 안전하다.
@@ -161,6 +161,14 @@ export type ReadResult<T> =
   | { status: 'future-version'; version: number }
   | { status: 'read-blocked'; error: Error };
 
+const TIER_LABELS: readonly string[] = ['beginner', 'intermediate', 'progression', 'elite'];
+
+/** `adjustedTier` — 값이 전부 기준 이름인 객체. */
+function isTierMap(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.values(value).every((t) => typeof t === 'string' && TIER_LABELS.includes(t));
+}
+
 /**
  * `AppState` 로 안전하게 좁혀지는 최소 형태 검증.
  * 필수: `steps` (객체) · `history` (배열) · `stints` (배열) · `proposals` (배열).
@@ -174,6 +182,7 @@ function isAppStateShape(value: unknown): value is AppState {
   if (!Array.isArray(v.stints)) return false;
   if (!Array.isArray(v.proposals)) return false;
   if (v.stepAdjustments !== undefined && !Array.isArray(v.stepAdjustments)) return false;
+  if (v.adjustedTier !== undefined && !isTierMap(v.adjustedTier)) return false;
   if (v.customPrograms !== undefined && !isCustomProgramsShape(v.customPrograms)) return false;
   // 구간이 가리키는 커스텀 프로그램이 빠져 있으면 계획을 세울 수 없다 — 부분 손상이다.
   const customIds = new Set(

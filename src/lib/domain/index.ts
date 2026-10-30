@@ -7,7 +7,7 @@ export {
   CUSTOM_PREFIX, CUSTOM_NAME_MAX, isCustomProgramId, withCustomPrograms, isProgramUsed,
   validateCustomProgram, addCustomProgram, updateCustomProgram, removeCustomProgram, programToInput,
 } from './custom.ts';
-export { stepStreak, streakComplete, standardOf, type StepStreak } from './progress.ts';
+export { stepStreak, streakComplete, standardOf, startTier, TIER_KO, type StepStreak } from './progress.ts';
 export {
   sessionsAt, lastSession, mean, meetsStandard, judgingHistory, judgingState,
 } from './history.ts';

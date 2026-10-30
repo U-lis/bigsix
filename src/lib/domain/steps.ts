@@ -1,5 +1,7 @@
+import { getStep } from './catalog.ts';
 import { checkGate } from './gate.ts';
-import type { AppState, Catalog, IsoDate, ProgressionId } from './types.ts';
+import { startTier, stepStreak } from './progress.ts';
+import type { AppState, Catalog, IsoDate, ProgressionId, StandardLabel } from './types.ts';
 
 /** 훈련 단계의 허용 범위 (FR-13.2). */
 export const MIN_STEP = 1;
@@ -24,9 +26,13 @@ export const MAX_STEP = 10;
  *
  * `onDate` 를 주면 `stepAdjustments` 에 이력 한 건을 남긴다 (#4). 판정에는 쓰지 않는
  * 표시 전용 이력이다. 화면은 항상 넘긴다.
+ *
+ * `tier` 는 조정 후 연속 판정을 시작할 기준이다 (0.5.0). 없으면 초보자. 상급자 · 최상급자는
+ * 그 단계의 마지막 기준으로 맞춘다. 연속 횟수는 항상 0 에서 다시 센다.
  */
 export function setStep(
   state: AppState, catalog: Catalog, id: ProgressionId, step: number, onDate?: IsoDate,
+  tier?: StandardLabel,
 ): AppState {
   if (!Number.isInteger(step) || step < MIN_STEP || step > MAX_STEP) {
     throw new Error(`단계는 ${MIN_STEP}~${MAX_STEP} 의 정수여야 한다: ${step}`);
@@ -35,6 +41,8 @@ export function setStep(
   if (!gate.unlocked) {
     throw new Error(`잠긴 종목은 단계를 조정할 수 없다: ${id} — ${gate.reason}`);
   }
+  const toTier = startTier(getStep(catalog, id, step), tier);
+  const { [id]: _dropped, ...otherTiers } = state.adjustedTier ?? {};
   const next: AppState = {
     ...state,
     steps: { ...state.steps, [id]: step },
@@ -43,10 +51,17 @@ export function setStep(
       [id]: state.history.length,
     },
   };
+  // 초보자 시작은 키를 두지 않는다 — 필드가 없던 때와 같은 모양을 유지한다.
+  if (toTier === 'beginner') {
+    if (state.adjustedTier !== undefined) next.adjustedTier = otherTiers;
+  } else {
+    next.adjustedTier = { ...otherTiers, [id]: toTier };
+  }
   if (onDate !== undefined) {
+    const fromTier = stepStreak(state, catalog, id).tier;
     next.stepAdjustments = [
       ...(state.stepAdjustments ?? []),
-      { date: onDate, progressionId: id, from: state.steps[id], to: step },
+      { date: onDate, progressionId: id, from: state.steps[id], to: step, fromTier, toTier },
     ];
   }
   return next;

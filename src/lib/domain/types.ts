@@ -209,6 +209,13 @@ export interface AppState {
    */
   adjustedAtSessionIndex?: Partial<Record<ProgressionId, number>>;
   /**
+   * 수동 조정 때 고른 시작 기준 (0.5.0). 앵커(`adjustedAtSessionIndex`) 이후 그 단계의
+   * 연속 판정을 초보자가 아니라 이 기준에서 시작한다. 승급하면 다시 초보자부터다.
+   *
+   * 선택 필드. 키가 없으면 초보자에서 시작한다 — 이 필드가 없던 때와 같다.
+   */
+  adjustedTier?: Partial<Record<ProgressionId, StandardLabel>>;
+  /**
    * 수동 단계 조정 이력 (#4). 시간순. 판정에 쓰지 않는다 — 기록 탭 표시 전용이다.
    * 판정 범위는 위의 `adjustedAtSessionIndex` 가 정한다.
    *
@@ -232,6 +239,10 @@ export interface StepAdjustment {
   from: number;
   /** 조정 후 단계. */
   to: number;
+  /** 조정 직전 기준. 0.5.0 이전 개발판 기록에는 없다. */
+  fromTier?: StandardLabel;
+  /** 조정 후 시작 기준. */
+  toTier?: StandardLabel;
 }
 
 /**

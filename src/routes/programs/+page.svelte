@@ -7,11 +7,13 @@
    *
    * 「내 프로그램」(#13) — 사용자가 만든 프로그램이 5종 아래에 같은 카드로 선다.
    * 한 번이라도 쓴 프로그램은 고치거나 지울 수 없고 복제만 된다 (지난 기록 보호).
+   *
+   * 지금 수행 중인 프로그램은 목록 맨 위에 따로 선다. 아래 목록에서는 빠진다.
    */
   import { goto } from '$app/navigation';
   import {
     describePrograms, describeProgram, selectProgram, switchProgram, currentStint,
-    firstTrainingDay, getProgram, isProgramUsed, programToInput, removeCustomProgram,
+    firstTrainingDay, getProgram, isCustomProgramId, isProgramUsed, programToInput, removeCustomProgram,
   } from '$lib/domain';
   import type { CustomProgramInput } from '$lib/domain/types';
   import type { ProgramDescription } from '$lib/domain';
@@ -54,6 +56,13 @@
   }
 
   let currentProgramId = $derived(currentStint(appState.value)?.programId ?? null);
+  let current = $derived(
+    currentProgramId === null
+      ? null
+      : (customs.find((p) => p.id === currentProgramId) ?? programs.find((p) => p.id === currentProgramId) ?? null),
+  );
+  let otherBooks = $derived(programs.filter((p) => p.id !== currentProgramId));
+  let otherCustoms = $derived(customs.filter((p) => p.id !== currentProgramId));
   let pending = $state<string | null>(null); // 확인 대기 중인 프로그램 id
 
   function onSelect(id: string) {
@@ -148,8 +157,14 @@
     </article>
   {/snippet}
 
+  {#if current !== null}
+    <div class="cards top" data-current-program={current.id}>
+      {@render card(current, isCustomProgramId(current.id))}
+    </div>
+  {/if}
+
   <div class="cards">
-    {#each programs as p (p.id)}
+    {#each otherBooks as p (p.id)}
       {@render card(p, false)}
     {/each}
   </div>
@@ -163,7 +178,7 @@
       </p>
     {/if}
     <div class="cards">
-      {#each customs as p (p.id)}
+      {#each otherCustoms as p (p.id)}
         {@render card(p, true)}
       {/each}
     </div>
@@ -206,6 +221,7 @@
   header h2 { margin: 0; font-size: 1.25rem; }
   .today { color: var(--muted); margin: 0.25rem 0 1rem; font-size: 0.9rem; }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
+  .cards.top { margin-bottom: 1rem; }
   .card {
     border: 1px solid var(--border);
     background: var(--surface);
