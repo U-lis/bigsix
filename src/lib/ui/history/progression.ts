@@ -10,9 +10,9 @@
  *          세션에 붙는다. 승급 · 다지기 · 강등 모두 이 신호로 화면에서 구분된다.
  */
 
-import { meetsStandard } from '$lib/domain';
+import { meetsStandard, TIER_KO } from '$lib/domain';
 import type {
-  AppState, IsoDate, ProgressionId, SessionRecord, StandardLabel,
+  AppState, IsoDate, ProgressionId, SessionRecord, StandardLabel, StepAdjustment,
 } from '$lib/domain/types';
 
 export interface ProgressionRow {
@@ -86,4 +86,18 @@ export function buildProgressionRows(
   // 최근 세션부터.
   rows.reverse();
   return rows;
+}
+
+/** 종목 하나의 수동 단계 조정 이력 (#4). 최근 것부터. */
+export function adjustmentsOf(state: AppState, id: ProgressionId): StepAdjustment[] {
+  return (state.stepAdjustments ?? []).filter((a) => a.progressionId === id).reverse();
+}
+
+/**
+ * 조정 한 건의 문구 — "5단계 중급자 → 3단계 초보자". 기준을 함께 고르기 전의 이력에는
+ * 기준이 없어 단계만 적는다.
+ */
+export function adjustmentText(a: StepAdjustment): string {
+  const side = (n: number, t: StepAdjustment['toTier']) => (t === undefined ? `${n}단계` : `${n}단계 ${TIER_KO[t]}`);
+  return `${side(a.from, a.fromTier)} → ${side(a.to, a.toTier)}`;
 }

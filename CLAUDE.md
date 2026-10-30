@@ -17,8 +17,9 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | `.dc_workspace/2026_09_18-history-export/GLOBAL.md` | SPEC3 ADR·데이터 모델·페이즈 — 이력 |
 | `.dc_workspace/2026_09_25-push-notification/SPEC.md` | SPEC4 푸시 알림 요구·ADR — 이력 |
 | `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | SPEC4 ADR·데이터 모델·페이즈 — 이력 |
-| `.dc_workspace/2026_10_08-session-flow/SPEC.md` | **이번 개정 (SPEC5)** 세션 흐름 요구·수용 기준 |
-| `.dc_workspace/2026_10_08-session-flow/GLOBAL.md` | **이번 개정 (SPEC5)** ADR·데이터 모델·페이즈 |
+| `.dc_workspace/2026_10_08-session-flow/SPEC.md` | SPEC5 세션 흐름 요구·수용 기준 — 이력 |
+| `.dc_workspace/2026_10_08-session-flow/GLOBAL.md` | SPEC5 ADR·데이터 모델·페이즈 — 이력 |
+| `.dc_workspace/2026_10_29-custom-program/SPEC.md` | **이번 개정 (0.5.0)** 커스텀 프로그램(#13) · 단계 조정 이력(#4) 결정·데이터 모델 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 
@@ -113,6 +114,21 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   `data-stale-discard-confirm`(버리기 2단 확인), `data-stale-discard-cancel`(버리기 2단 취소),
   `data-stale-result`(값: `YYYY-MM-DD`, 기록 결과 안내),
   `data-stale-fail`(값: 칸 키, 기록 실패 안내).
+  **커스텀 프로그램 (0.5.0, 프로그램 화면)**:
+  `data-custom-list`(내 프로그램 영역), `data-custom-empty`(없음 안내),
+  `data-custom-program`(값: 프로그램 id, 커스텀 카드), `data-custom-schedule`(요일표 문구),
+  `data-custom-new`, `data-custom-edit`·`data-custom-copy`·`data-custom-delete`(값: 프로그램 id),
+  `data-custom-used`(쓴 프로그램이라 잠김 사유),
+  `data-custom-form`(값: 프로그램 id 또는 `'new'`, 폼 루트), `data-custom-name`,
+  `data-custom-day`(값: 요일), `data-custom-pick`(값: 종목 id), `data-custom-summary`,
+  `data-custom-locked`(잠긴 종목 안내), `data-custom-error`, `data-custom-cancel`, `data-custom-save`.
+  **단계 조정 이력 (0.5.0, 기록 탭)**:
+  `data-day-note="step-adjusted"` + `data-day-adjust`(값: 종목 id),
+  `data-prog-adjustments`(종목별 이력 영역), `data-prog-adjust`(값: `YYYY-MM-DD`).
+  **단계 화면 · 프로그램 화면 (0.5.0)**:
+  `data-current-tier`(값: `StandardLabel`, 지금 기준과 연속 문구),
+  `data-chips="tier-{종목 id}"`(시작 기준 고르기), `data-adjust-apply`(값: 종목 id, 조정 버튼),
+  `data-current-program`(값: 프로그램 id, 맨 위에 따로 선 현재 프로그램).
   **완료 카드 (Phase 7)**:
   `data-card-done`(DoneCard 루트),
   `data-done-step`(값: 단계 번호),
@@ -135,8 +151,13 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - **룬만 쓴다.** `export let` · `$:` · `on:click` · `<slot>` · `svelte/store` 금지.
   파생은 `$derived`, 외부 세계와 맞물릴 때만 `$effect`
 - **SvelteKit 서버 기능은 없다. 홈서버 cron(`cron/`) 하나가 있다.** `+page.server` · `+server` · form actions · 서버 훅 · 비공개 환경변수는 없다. 클라이언트 데이터는 정적 JSON 과 `localStorage` 뿐. `cron/` 는 서버에서 Node 로 직접 실행하는 스크립트로, SvelteKit 과 무관하다
-- **도메인 계층 불가침.** `src/lib/domain/**` 은 이번 UI 작업에서 손대지 않는다.
-  UI 는 도메인이 노출한 순수 함수를 부를 뿐이다
+- **도메인 계층 불가침.** `src/lib/domain/**` 은 UI 작업에서 손대지 않는다.
+  UI 는 도메인이 노출한 순수 함수를 부를 뿐이다. 예외는 범위를 SPEC 에 적은 개정뿐이다 —
+  0.5.0 은 `custom.ts` 신설 · `setStep` 의 `onDate` 이력 · `AppState` 선택 필드 둘
+  (`customPrograms` · `stepAdjustments`) 만 더했다
+- **프로그램을 id 로 찾는 자리는 `catalogFor(appState.value)`** (`$lib/data/catalog`) 를 쓴다.
+  `loadCatalog()` 는 카탈로그 5종만 알아서 커스텀 프로그램 구간에서 `getProgram` 이 예외를 던진다.
+  종목 · 단계만 보는 자리는 `loadCatalog()` 로 충분하다
 - **도메인 참조는 `$lib/domain`(값) · `$lib/domain/types`(타입) 로만.**
   `$lib/domain/schedule` · `../domain/date` 식으로 내부 파일을 직접 부르지 않는다.
   필요한 함수가 index 에 없으면 index 에 export 를 더한다 (FR-29.1 / ADR-21)
@@ -149,8 +170,9 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   현재 폴더: `shell` (앱 껍데기 — 상단 바 · About · sw), `state` (storage · state ·
   boot · today · reset), `common` (재사용 폼), `today` (오늘 화면 파생),
   `session` (진행 중 세션 · 타이머 · 알림 · 세션 컴포넌트), `history`
-  (기록 탭, Phase 4 에서 추가), 그리고 `push`
-  (알림 켜기·끄기·자동 동기화, SPEC4 에서 추가) (FR-29.3 / ADR-26, ADR-30)
+  (기록 탭, Phase 4 에서 추가), `push`
+  (알림 켜기·끄기·자동 동기화, SPEC4 에서 추가), 그리고 `program`
+  (커스텀 프로그램 폼, 0.5.0 에서 추가) (FR-29.3 / ADR-26, ADR-30)
 - 순수 로직은 룬을 쓰지 않는 순수 함수로 뺀다 (`ui/shell/nav.ts`, `ui/today/todayScreen.ts`).
   `localStorage` 나 브라우저 상태에 닿지 않으므로 SSR/하이드레이션이 어긋나지 않는다
 - `{화면}/+page.svelte` 는 `padding: 1rem 0` 만. 좌우 padding · `max-width` · `margin`

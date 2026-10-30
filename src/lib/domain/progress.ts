@@ -77,7 +77,8 @@ function advance(cur: StepStreak, step: Step, record: SessionRecord): StepStreak
  * 이 종목의 현재 단계에서 어느 기준을 몇 회 연속 통과했는가 (FR-22).
  *
  * 훑는 범위를 좁히는 하한이 둘 있다. 둘 다 "판정 범위 축소" 이며 기록을 지우지 않는다.
- * - **수동 단계 조정 앵커** (FR-13.3) — 조정 이후의 세션만 본다.
+ * - **수동 단계 조정 앵커** (FR-13.3) — 조정 이후의 세션만 본다. 조정 때 기준도
+ *   골랐다면(`adjustedTier`) 그 기준의 0회 연속에서 시작한다.
  * - **마지막 승급** — 승급하면 새 단계의 초보자 구간부터 다시 시작한다.
  *
  * 현재 단계와 다른 단계의 기록은 애초에 대상이 아니다.
@@ -92,7 +93,8 @@ export function stepStreak(
   // 자유 운동을 지나칠 때는 별도 조건으로 처리해 인덱스 일치를 유지한다.
   const anchor = state.adjustedAtSessionIndex?.[id] ?? 0;
 
-  let cur: StepStreak = { tier: 'beginner', streak: 0 };
+  // 조정 때 고른 기준에서 시작한다. 그 단계에 없는 기준이면(상급자 ↔ 최상급자) 마지막 기준으로 본다.
+  let cur: StepStreak = { tier: startTier(step, state.adjustedTier?.[id]), streak: 0 };
   for (let i = anchor; i < state.history.length; i += 1) {
     const r = state.history[i];
     if (r.kind === 'free') continue;
@@ -106,6 +108,12 @@ export function stepStreak(
     cur = advance(cur, step, r);
   }
   return cur;
+}
+
+/** 조정 때 고른 시작 기준을 이 단계에 맞춘다. 없으면 초보자. */
+export function startTier(step: Step, tier: StandardLabel | undefined): StandardLabel {
+  if (tier === undefined || tier === 'beginner' || tier === 'intermediate') return tier ?? 'beginner';
+  return finalTier(step);
 }
 
 /** 이 종목이 지금 승급 조건을 채웠는가 — 마지막 기준을 3회 연속 통과했는가. */

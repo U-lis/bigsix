@@ -3,8 +3,8 @@
  *
  * 룬 없는 순수 함수만. `localStorage` 나 브라우저 상태에 닿지 않는다.
  *
- * 범위(`historyRange`)의 시작일은 **첫 구간 `selectedAt`** 과 **첫 기록 `date`** 중
- * 이른 쪽. 둘 다 없으면 표시할 것이 없다 → null.
+ * 범위(`historyRange`)의 시작일은 **첫 구간 `selectedAt`** · **첫 기록 `date`** ·
+ * **첫 단계 조정 `date`**(#4) 중 가장 이른 쪽. 셋 다 없으면 표시할 것이 없다 → null.
  *
  * 30일 창(`windowsBack`)은 최신부터 과거로 세는 창 목록이다. 첫 창은
  * `[to - 29, to]` 이고 다음 창은 `[to - 59, to - 30]` — 30일 페이지네이션 (FR-24.7).
@@ -38,12 +38,13 @@ export interface DateWindow {
 export function historyRange(state: AppState, today: IsoDate): HistoryRange | null {
   const firstStintDate = state.stints.length > 0 ? state.stints[0].selectedAt : null;
   const firstRecordDate = state.history.length > 0 ? state.history[0].date : null;
-
-  if (firstStintDate === null && firstRecordDate === null) return null;
+  const firstAdjustDate = state.stepAdjustments?.[0]?.date ?? null;
 
   const candidates: IsoDate[] = [];
   if (firstStintDate !== null) candidates.push(firstStintDate);
   if (firstRecordDate !== null) candidates.push(firstRecordDate);
+  if (firstAdjustDate !== null) candidates.push(firstAdjustDate);
+  if (candidates.length === 0) return null;
   // `IsoDate` 는 'YYYY-MM-DD' 라 문자열 사전순이 곧 시간순이다 (도메인 규약 A-5).
   const from = candidates.reduce((a, b) => (a < b ? a : b));
   return { from, to: today };

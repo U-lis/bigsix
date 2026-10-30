@@ -11,11 +11,11 @@
 <script lang="ts">
   import { appState } from '$lib/ui/state/state.svelte';
   import { todayClock } from '$lib/ui/state/today.svelte';
-  import { loadCatalog } from '$lib/data/catalog';
+  import { catalogFor } from '$lib/data/catalog';
   import HistoryView from '$lib/ui/history/HistoryView.svelte';
   import { onMount } from 'svelte';
 
-  const catalog = loadCatalog();
+  let catalog = $derived(catalogFor(appState.value));
   // `todayClock.today` 는 boot 전에도 프리렌더용 기본값(에폭 0 하루)이 있다.
   // 실제 부팅 완료 여부는 storageStatus 로 판별한다 — appState.storageStatus 는
   // boot 이 initFromBoot 을 부른 뒤에만 'empty' 이외의 값을 가진다.

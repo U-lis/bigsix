@@ -38,10 +38,11 @@ const LAYER_ROOTS = [
   'lib/ui/session',
   'lib/ui/history',
   'lib/ui/push',
+  'lib/ui/program',
   'routes',
 ] as const;
 
-const UI_UNDER = new Set(['shell', 'state', 'common', 'today', 'session', 'push']);
+const UI_UNDER = new Set(['shell', 'state', 'common', 'today', 'session', 'push', 'program']);
 
 // ── 파일 순회 ────────────────────────────────────────────────────────────────
 
@@ -120,8 +121,8 @@ function resolveRelativeLayer(fromFile: string, spec: string): typeof LAYER_ROOT
 describe('구조 규약 재발 방지 (FR-29.4)', () => {
   const files = srcFiles();
 
-  it('(0) LAYER_ROOTS 자체 자체 검사: 정확히 10개, 각 항목이 src/ 안 실제 경로 접두사', () => {
-    assert.equal(LAYER_ROOTS.length, 10);
+  it('(0) LAYER_ROOTS 자체 자체 검사: 정확히 11개, 각 항목이 src/ 안 실제 경로 접두사', () => {
+    assert.equal(LAYER_ROOTS.length, 11);
     // history 는 미래 추가 예정이지만 나머지 8개는 지금 존재해야 한다.
     for (const root of LAYER_ROOTS) {
       if (root === 'lib/ui/history') continue;

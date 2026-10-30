@@ -17,6 +17,7 @@ import {
   advanceProposals,
   initialState,
   planOn,
+  withCustomPrograms,
   type AppState,
   type Catalog,
   type DayAgenda,
@@ -102,8 +103,11 @@ export function boot(today: IsoDate): BootResult {
       break;
   }
 
+  // 커스텀 프로그램(#13)을 합친 카탈로그. 구간이 커스텀 프로그램을 가리킬 수 있다.
+  const merged = withCustomPrograms(catalog, initial);
+
   // 제안 생성의 단일 진입점 (FR-3.2 / ADR-6). 부팅당 1회.
-  const state = advanceProposals(initial, catalog, today);
+  const state = advanceProposals(initial, merged, today);
 
   // 상태가 실제로 바뀌었으면 저장한다 (FR-3.4).
   // corrupt · future-version · read-blocked 상태에서는 저장하지 않는다 —
@@ -116,7 +120,7 @@ export function boot(today: IsoDate): BootResult {
     }
   }
 
-  const agenda = planOn(state, catalog, today); // FR-3.1 (4)
+  const agenda = planOn(state, merged, today); // FR-3.1 (4)
 
   // 진행 중 drafts 맵 복원 (FR-2.4 / FR-45). 손상·미래 버전·접근 차단이면 null 로
   // 둔다 — AppState 처럼 확인 UI 로 다루기에는 무겁다. 사용자는 세션을 다시
@@ -128,7 +132,7 @@ export function boot(today: IsoDate): BootResult {
 
   const result: BootResult = {
     state,
-    catalog,
+    catalog: merged,
     today,
     agenda,
     inProgress,

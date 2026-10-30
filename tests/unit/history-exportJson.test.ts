@@ -26,13 +26,13 @@ function stateWithHistory(history: SessionRecord[] = []): AppState {
 }
 
 describe('buildExportJson — meta', () => {
-  it('meta.schemaVersion === 4 · meta.app === "bigsix"', () => {
+  it('meta.schemaVersion === 5 · meta.app === "bigsix"', () => {
     const file = buildExportJson({
       state: stateWithHistory(),
       catalog,
       meta: baseMeta(),
     });
-    assert.equal(file.meta.schemaVersion, 4);
+    assert.equal(file.meta.schemaVersion, 5);
     assert.equal(file.meta.app, 'bigsix');
   });
 

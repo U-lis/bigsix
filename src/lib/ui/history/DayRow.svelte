@@ -10,6 +10,7 @@
   } from '$lib/domain/types';
   import { getProgram, getProgression, getStep } from '$lib/domain';
   import type { DayRow } from './dayList';
+  import { adjustmentText } from './progression';
 
   interface Props {
     row: DayRow;
@@ -113,6 +114,12 @@
       루틴 갈아탐: {programKo(row.proposalAcceptedOn.fromProgramId)} → {programKo(row.proposalAcceptedOn.toProgramId)}
     </p>
   {/if}
+
+  {#each row.adjustments as a, i (i)}
+    <p class="note" data-day-note="step-adjusted" data-day-adjust={a.progressionId}>
+      단계 조정: {progKo(a.progressionId)} {adjustmentText(a)}
+    </p>
+  {/each}
 
   {#if row.review.status === 'missed'}
     <!--

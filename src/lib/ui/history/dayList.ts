@@ -11,7 +11,8 @@
 
 import { dateRange, reviewDay, weekdayOf } from '$lib/domain';
 import type {
-  AppState, Catalog, DayReview, ProgramStint, SessionRecord, SwitchProposal, Weekday,
+  AppState, Catalog, DayReview, ProgramStint, SessionRecord, StepAdjustment, SwitchProposal,
+  Weekday,
 } from '$lib/domain/types';
 import type { DateWindow } from './range';
 
@@ -29,6 +30,8 @@ export interface DayRow {
    * 승인일(`resolvedAt`) 기준이다 — 제안 생성일이 아니다.
    */
   proposalAcceptedOn: SwitchProposal | null;
+  /** 그날의 수동 단계 조정 (#4). 조정 순서대로. 없으면 빈 배열. */
+  adjustments: StepAdjustment[];
 }
 
 /**
@@ -50,11 +53,13 @@ export function buildDayRows(
     const proposalAcceptedOn = state.proposals.find(
       (p) => p.status === 'accepted' && p.resolvedAt === date,
     ) ?? null;
+    const adjustments = (state.stepAdjustments ?? []).filter((a) => a.date === date);
     rows.push({
       review,
       weekday: weekdayOf(date),
       stintStartedOn,
       proposalAcceptedOn,
+      adjustments,
     });
   }
   // 최근 날짜부터. `dateRange` 는 오름차순이므로 뒤집는다.

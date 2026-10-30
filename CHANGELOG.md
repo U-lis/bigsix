@@ -5,6 +5,17 @@
 
 ## [Unreleased]
 
+### Added
+- Custom programs (#13): build your own weekly program by picking exercises for each weekday on the Programs screen (any number per day, the same exercise on several days). Custom programs drive the Today screen, history and daily push notifications exactly like the five book programs; they never produce automatic switch proposals
+- Custom programs can be edited or deleted until they are first used; after that they are locked to keep past days' plans stable and can be duplicated instead. Book programs can also be duplicated as a starting point
+- Manual step adjustments are now logged (#4): the date and from → to step appear in History, both on that day's row and in the per-exercise view, and are included in JSON export
+- Step adjustments can also set the starting standard (beginner / intermediate / advanced): the streak after the adjustment is counted from that standard instead of always restarting at beginner. The standard can be changed on its own without changing the step. History shows it, e.g. "2단계 초보자 → 3단계 중급자"
+
+### Changed
+- AppState storage schema bumped to v5 (`customPrograms`, `stepAdjustments`, `adjustedTier`); v4 data migrates without changes. Rolling back to 0.4.x shows the "newer version" notice instead of overwriting data
+- Step adjustment on the Steps screen is now pick-then-apply: choose a step and a starting standard, then press the apply button. The confirmation names the exercise in Korean and shows current → new step and standard. Each card shows the current standard and streak. Step choices show the exercise name (e.g. "3. 도움 스쿼트")
+- The Programs screen shows the program you are currently on at the top, so "오늘 세션으로" is reachable without scrolling
+
 ## [0.4.1] - 2026-10-28
 
 ### Changed

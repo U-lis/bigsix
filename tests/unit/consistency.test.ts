@@ -121,8 +121,8 @@ describe('perSide 데이터 (FR-1)', () => {
 // ── FR-28.6: 스키마 버전 상수 ────────────────────────────────────────────
 
 describe('CURRENT_SCHEMA_VERSION — 저장 스키마 상수 (FR-28.6 / ADR-22)', () => {
-  test('상수가 4다', () => {
-    assert.equal(CURRENT_SCHEMA_VERSION, 4);
+  test('상수가 5다', () => {
+    assert.equal(CURRENT_SCHEMA_VERSION, 5);
   });
 });
 

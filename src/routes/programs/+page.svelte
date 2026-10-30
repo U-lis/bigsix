@@ -4,19 +4,65 @@
    *
    * describePrograms(catalog) 5종을 표시. 미선택이면 selectProgram, 진행 중이면
    * switchProgram. 오늘 날짜는 todayClock 에서 주입한다.
+   *
+   * 「내 프로그램」(#13) — 사용자가 만든 프로그램이 5종 아래에 같은 카드로 선다.
+   * 한 번이라도 쓴 프로그램은 고치거나 지울 수 없고 복제만 된다 (지난 기록 보호).
+   *
+   * 지금 수행 중인 프로그램은 목록 맨 위에 따로 선다. 아래 목록에서는 빠진다.
    */
   import { goto } from '$app/navigation';
-  import { describePrograms, selectProgram, switchProgram, currentStint, firstTrainingDay } from '$lib/domain';
+  import {
+    describePrograms, describeProgram, selectProgram, switchProgram, currentStint,
+    firstTrainingDay, getProgram, isCustomProgramId, isProgramUsed, programToInput, removeCustomProgram,
+  } from '$lib/domain';
+  import type { CustomProgramInput } from '$lib/domain/types';
+  import type { ProgramDescription } from '$lib/domain';
   import { appState } from '$lib/ui/state/state.svelte';
   import { todayClock } from '$lib/ui/state/today.svelte';
-  import { loadCatalog } from '$lib/data/catalog';
+  import { catalogFor, loadCatalog } from '$lib/data/catalog';
   import Confirm from '$lib/ui/common/Confirm.svelte';
   import { progressionName } from '$lib/ui/session/labels';
+  import CustomProgramForm from '$lib/ui/program/CustomProgramForm.svelte';
+  import { copyName, emptyInput, scheduleLine } from '$lib/ui/program/customForm';
 
-  const catalog = loadCatalog();
-  const programs = describePrograms(catalog);
+  const programs = describePrograms(loadCatalog());
+  let catalog = $derived(catalogFor(appState.value));
+  let customs = $derived(
+    (appState.value.customPrograms ?? []).map((p) => describeProgram(catalog, p.id)),
+  );
+
+  /** 열린 폼. null 이면 닫힘. */
+  let form = $state<{ initial: CustomProgramInput; editId?: string } | null>(null);
+  let deleting = $state<string | null>(null);
+
+  function openNew() {
+    form = { initial: emptyInput() };
+  }
+
+  function openEdit(id: string) {
+    form = { initial: programToInput(catalog, getProgram(catalog, id)), editId: id };
+  }
+
+  function openCopy(id: string) {
+    const base = programToInput(catalog, getProgram(catalog, id));
+    const taken = catalog.programs.map((p) => p.name.ko);
+    form = { initial: { ...base, name: copyName(base.name, taken) } };
+  }
+
+  function confirmDelete() {
+    if (deleting === null) return;
+    appState.apply(removeCustomProgram(appState.value, deleting));
+    deleting = null;
+  }
 
   let currentProgramId = $derived(currentStint(appState.value)?.programId ?? null);
+  let current = $derived(
+    currentProgramId === null
+      ? null
+      : (customs.find((p) => p.id === currentProgramId) ?? programs.find((p) => p.id === currentProgramId) ?? null),
+  );
+  let otherBooks = $derived(programs.filter((p) => p.id !== currentProgramId));
+  let otherCustoms = $derived(customs.filter((p) => p.id !== currentProgramId));
   let pending = $state<string | null>(null); // 확인 대기 중인 프로그램 id
 
   function onSelect(id: string) {
@@ -57,34 +103,87 @@
     <p class="today">오늘 {todayClock.today}</p>
   </header>
 
-  <div class="cards">
-    {#each programs as p (p.id)}
-      {@const isCurrent = p.id === currentProgramId}
-      {@const restDaySelect = isRestOnSelectDay(p.id)}
-      <article class="card" class:current={isCurrent} data-program={p.id} data-current={isCurrent}>
-        <header>
-          <h3>{p.name.ko}</h3>
-          {#if isCurrent}<span class="badge">현재</span>{/if}
-        </header>
-        <dl>
-          <div><dt>빈도</dt><dd>{p.frequency}</dd></div>
-          <div><dt>운동일</dt><dd>{p.trainingDays}일 / 7</dd></div>
-          <div><dt>휴식일</dt><dd>{p.restDays}일 / 7</dd></div>
-          <div><dt>종목</dt><dd>{p.progressionIds.map((id) => progressionName(catalog, id)).join(', ')}</dd></div>
-          {#if p.note !== undefined}<div><dt>비고</dt><dd>{p.note}</dd></div>{/if}
-        </dl>
-        {#if !isCurrent && restDaySelect}
-          <p class="rest-note" data-rest-note>
-            오늘 {todayClock.today} 은 이 루틴의 휴식일입니다. 다음 첫 운동일
-            {firstDayPreview(p.id)} 이 1일차가 됩니다.
-          </p>
+  {#snippet card(p: ProgramDescription, custom: boolean)}
+    {@const isCurrent = p.id === currentProgramId}
+    {@const restDaySelect = isRestOnSelectDay(p.id)}
+    {@const used = custom && isProgramUsed(appState.value, p.id)}
+    <article
+      class="card"
+      class:current={isCurrent}
+      data-program={p.id}
+      data-current={isCurrent}
+      data-custom-program={custom ? p.id : undefined}
+    >
+      <header>
+        <h3>{p.name.ko}</h3>
+        {#if isCurrent}<span class="badge">현재</span>{/if}
+      </header>
+      <dl>
+        <div><dt>빈도</dt><dd>{p.frequency}</dd></div>
+        <div><dt>운동일</dt><dd>{p.trainingDays}일 / 7</dd></div>
+        <div><dt>휴식일</dt><dd>{p.restDays}일 / 7</dd></div>
+        <div><dt>종목</dt><dd>{p.progressionIds.map((id) => progressionName(catalog, id)).join(', ')}</dd></div>
+        {#if custom}
+          <div><dt>요일표</dt><dd data-custom-schedule>{scheduleLine(catalog, getProgram(catalog, p.id))}</dd></div>
         {/if}
-        <button type="button" data-program-select={p.id} onclick={() => onSelect(p.id)}>
-          {isCurrent ? '오늘 세션으로' : (currentProgramId === null ? '선택' : '이 프로그램으로 전환')}
+        {#if p.note !== undefined}<div><dt>비고</dt><dd>{p.note}</dd></div>{/if}
+      </dl>
+      {#if !isCurrent && restDaySelect}
+        <p class="rest-note" data-rest-note>
+          오늘 {todayClock.today} 은 이 루틴의 휴식일입니다. 다음 첫 운동일
+          {firstDayPreview(p.id)} 이 1일차가 됩니다.
+        </p>
+      {/if}
+      <button type="button" data-program-select={p.id} onclick={() => onSelect(p.id)}>
+        {isCurrent ? '오늘 세션으로' : (currentProgramId === null ? '선택' : '이 프로그램으로 전환')}
+      </button>
+      <div class="sub-actions">
+        {#if custom}
+          <button type="button" data-custom-edit={p.id} disabled={used} onclick={() => openEdit(p.id)}>고치기</button>
+        {/if}
+        <button type="button" data-custom-copy={p.id} onclick={() => openCopy(p.id)}>
+          {custom ? '복제' : '복제해서 내 프로그램 만들기'}
         </button>
-      </article>
+        {#if custom}
+          <button type="button" data-custom-delete={p.id} disabled={used} onclick={() => (deleting = p.id)}>지우기</button>
+        {/if}
+      </div>
+      {#if used}
+        <p class="used" data-custom-used>
+          이 프로그램으로 운동한 기록이 있어 고치거나 지울 수 없습니다. 지난 날의 계획이 바뀌지
+          않도록 하기 위해서입니다. 바꾸려면 복제해서 고치세요.
+        </p>
+      {/if}
+    </article>
+  {/snippet}
+
+  {#if current !== null}
+    <div class="cards top" data-current-program={current.id}>
+      {@render card(current, isCustomProgramId(current.id))}
+    </div>
+  {/if}
+
+  <div class="cards">
+    {#each otherBooks as p (p.id)}
+      {@render card(p, false)}
     {/each}
   </div>
+
+  <section class="mine" data-custom-list>
+    <h2>내 프로그램</h2>
+    {#if customs.length === 0}
+      <p class="today" data-custom-empty>
+        아직 만든 프로그램이 없습니다. 요일마다 할 종목을 직접 골라 주간 프로그램을 만들 수 있습니다.
+        만든 프로그램도 알림과 기록에 똑같이 쓰입니다. 자동 전환 제안은 나오지 않습니다.
+      </p>
+    {/if}
+    <div class="cards">
+      {#each otherCustoms as p (p.id)}
+        {@render card(p, true)}
+      {/each}
+    </div>
+    <button type="button" class="new" data-custom-new onclick={openNew}>새 프로그램 만들기</button>
+  </section>
 </section>
 
 {#if pending !== null}
@@ -97,11 +196,32 @@
   />
 {/if}
 
+{#if deleting !== null}
+  <Confirm
+    title="프로그램 지우기: {getProgram(catalog, deleting).name.ko}"
+    body="아직 한 번도 쓰지 않은 프로그램이라 지워도 기록에는 영향이 없습니다. 되돌릴 수 없습니다."
+    confirmLabel="지우기"
+    onConfirm={confirmDelete}
+    onCancel={() => deleting = null}
+  />
+{/if}
+
+{#if form !== null}
+  <CustomProgramForm
+    {catalog}
+    initial={form.initial}
+    editId={form.editId}
+    onDone={() => (form = null)}
+    onCancel={() => (form = null)}
+  />
+{/if}
+
 <style>
   section { padding: 1rem 0; }
   header h2 { margin: 0; font-size: 1.25rem; }
   .today { color: var(--muted); margin: 0.25rem 0 1rem; font-size: 0.9rem; }
   .cards { display: flex; flex-direction: column; gap: 1rem; }
+  .cards.top { margin-bottom: 1rem; }
   .card {
     border: 1px solid var(--border);
     background: var(--surface);
@@ -112,6 +232,14 @@
      있으니 색은 부가 신호다. 그래도 카드가 여러 장 쌓인 목록에서 테두리 색 하나
      로는 약해 배경도 한 겹 준다 — 배지가 --ok 계열이라 카드도 그쪽으로 맞춘다. */
   .card.current { border-color: var(--ok); background: var(--ok-bg); }
+  .mine { margin-top: 1.5rem; }
+  .mine h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  .sub-actions { display: flex; gap: 0.5rem; }
+  .sub-actions button { flex: 1; font-size: 0.9rem; padding: 0.5rem; }
+  /* 잠금은 색 하나가 아니라 투명도 + 커서 + disabled. 사유는 아래 문구가 맡는다. */
+  .sub-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .used { color: var(--muted); font-size: 0.85rem; margin: 0.5rem 0 0; }
+  .new { margin-top: 1rem; border-color: var(--accent); color: var(--accent); }
   .card header { display: flex; align-items: center; justify-content: space-between; }
   .card h3 { margin: 0; font-size: 1.05rem; }
   .badge {

@@ -14,7 +14,7 @@
   import ChipGroup from '$lib/ui/common/ChipGroup.svelte';
   import type { AppState } from '$lib/domain/types';
   import {
-    buildProgressionRows, defaultProgressionId, type ProgressionRow,
+    adjustmentText, adjustmentsOf, buildProgressionRows, defaultProgressionId, type ProgressionRow,
   } from './progression';
 
   interface Props {
@@ -34,6 +34,7 @@
   // svelte-ignore state_referenced_locally
   let selected: ProgressionId = $state(defaultProgressionId(appState));
   let rows: ProgressionRow[] = $derived(buildProgressionRows(appState, selected));
+  let adjustments = $derived(adjustmentsOf(appState, selected));
 
   function progKo(id: ProgressionId): string {
     return getProgression(catalog, id).name.ko;
@@ -160,6 +161,20 @@
       {progKo(selected)} · 최근 {rows[0].performedStep}단계 · {stepKo(selected, rows[0].performedStep)}
     </p>
   {/if}
+
+  {#if adjustments.length > 0}
+    <!-- 수동 단계 조정 이력 (#4). 세션이 아니라서 표와 따로 적는다. -->
+    <div class="adjustments" data-prog-adjustments>
+      <h2>단계 조정 이력</h2>
+      <ul>
+        {#each adjustments as a, i (a.date + ':' + i)}
+          <li data-prog-adjust={a.date}>
+            <span class="date">{a.date}</span> {adjustmentText(a)}
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -216,6 +231,25 @@
     background: var(--bg);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+  }
+  .adjustments h2 {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .adjustments ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .adjustments li + li {
+    margin-top: 0.2rem;
+  }
+  .adjustments .date {
+    font-family: var(--mono);
   }
   .step-legend {
     margin: 0.25rem 0 0;
