@@ -32,6 +32,11 @@ export interface DayRow {
   proposalAcceptedOn: SwitchProposal | null;
   /** 그날의 수동 단계 조정 (#4). 조정 순서대로. 없으면 빈 배열. */
   adjustments: StepAdjustment[];
+  /**
+   * `review.performed` 와 같은 순서의 `history` 인덱스 (AD-6).
+   * 여기서 계산해 화면이 프록시 동일성에 기대지 않게 하고, 단위 테스트로 고정할 수 있게 한다.
+   */
+  recordIndices: number[];
 }
 
 /**
@@ -54,12 +59,14 @@ export function buildDayRows(
       (p) => p.status === 'accepted' && p.resolvedAt === date,
     ) ?? null;
     const adjustments = (state.stepAdjustments ?? []).filter((a) => a.date === date);
+    const recordIndices = state.history.flatMap((r, k) => (r.date === date ? [k] : []));
     rows.push({
       review,
       weekday: weekdayOf(date),
       stintStartedOn,
       proposalAcceptedOn,
       adjustments,
+      recordIndices,
     });
   }
   // 최근 날짜부터. `dateRange` 는 오름차순이므로 뒤집는다.

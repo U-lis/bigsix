@@ -19,7 +19,8 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | SPEC4 ADR·데이터 모델·페이즈 — 이력 |
 | `.dc_workspace/2026_10_08-session-flow/SPEC.md` | SPEC5 세션 흐름 요구·수용 기준 — 이력 |
 | `.dc_workspace/2026_10_08-session-flow/GLOBAL.md` | SPEC5 ADR·데이터 모델·페이즈 — 이력 |
-| `.dc_workspace/2026_10_29-custom-program/SPEC.md` | **이번 개정 (0.5.0)** 커스텀 프로그램(#13) · 단계 조정 이력(#4) 결정·데이터 모델 |
+| `.dc_workspace/2026_10_29-custom-program/SPEC.md` | 0.5.0 커스텀 프로그램(#13) · 단계 조정 이력(#4) 결정·데이터 모델 |
+| `.dc_workspace/2026_11_04-move-record-date/SPEC.md` | **이번 개정 (0.5.1)** 기록 날짜 옮기기 요구·수용 기준 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 
@@ -125,6 +126,11 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
   **단계 조정 이력 (0.5.0, 기록 탭)**:
   `data-day-note="step-adjusted"` + `data-day-adjust`(값: 종목 id),
   `data-prog-adjustments`(종목별 이력 영역), `data-prog-adjust`(값: `YYYY-MM-DD`).
+  **기록 날짜 옮기기 (0.5.1, 기록 탭)**:
+  `data-record-move`(「날짜 옮기기」 버튼),
+  `data-record-move-form`(값: `'open'|'closed'`, 폼 루트), `data-record-move-date`(날짜 입력),
+  `data-record-move-apply`(옮기기), `data-record-move-cancel`(취소),
+  `data-record-move-error`(값: 거부 사유).
   **단계 화면 · 프로그램 화면 (0.5.0)**:
   `data-current-tier`(값: `StandardLabel`, 지금 기준과 연속 문구),
   `data-chips="tier-{종목 id}"`(시작 기준 고르기), `data-adjust-apply`(값: 종목 id, 조정 버튼),
@@ -154,7 +160,8 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - **도메인 계층 불가침.** `src/lib/domain/**` 은 UI 작업에서 손대지 않는다.
   UI 는 도메인이 노출한 순수 함수를 부를 뿐이다. 예외는 범위를 SPEC 에 적은 개정뿐이다 —
   0.5.0 은 `custom.ts` 신설 · `setStep` 의 `onDate` 이력 · `AppState` 선택 필드 둘
-  (`customPrograms` · `stepAdjustments`) 만 더했다
+  (`customPrograms` · `stepAdjustments`) 만 더했다. 0.5.1 은 `records.ts` 신설과
+  `index.ts` 의 export 추가만 했고 기존 도메인 파일은 고치지 않았다
 - **프로그램을 id 로 찾는 자리는 `catalogFor(appState.value)`** (`$lib/data/catalog`) 를 쓴다.
   `loadCatalog()` 는 카탈로그 5종만 알아서 커스텀 프로그램 구간에서 `getProgram` 이 예외를 던진다.
   종목 · 단계만 보는 자리는 `loadCatalog()` 로 충분하다
