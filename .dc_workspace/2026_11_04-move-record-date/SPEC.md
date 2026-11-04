@@ -28,7 +28,7 @@ handoff: ""
 
 ### Core Features
 - [ ] FR-1: 기록 탭 날짜별 보기(`DayRow`)의 세션마다 「날짜 옮기기」 버튼을 둔다. 누르면 그 자리에 날짜 입력(`input type=date`, `max` = 오늘), 「옮기기」·「취소」 버튼이 열린다. 「취소」는 입력을 닫고 상태를 바꾸지 않는다. `DayRow` 는 표시 전용이므로 적용은 콜백 prop 으로 상위(`DayList` / `HistoryView`)에 올린다.
-- [ ] FR-2: 도메인 순수 함수 `moveRecordDate(state, recordIndex, toDate, today)` 를 `src/lib/domain/records.ts` 에 신설하고 `src/lib/domain/index.ts` 에서 export 한다. 성공하면 해당 기록의 `date` 를 `toDate` 로 바꾸고 `history` 를 날짜 오름차순으로 유지하도록 재배치한다. 같은 날짜의 기록들 사이에서는 옮겨 간 기록이 대상 날짜의 마지막 뒤에 선다. 이 함수만 `record.date` 를 바꾼다. `completedAt`·`promotedTo`·`blockedBy` 등 다른 필드는 그대로 둔다. 입력 `state` 는 바꾸지 않고 새 `AppState` 를 돌려준다.
+- [x] FR-2: 도메인 순수 함수 `moveRecordDate(state, recordIndex, toDate, today)` 를 `src/lib/domain/records.ts` 에 신설하고 `src/lib/domain/index.ts` 에서 export 한다. 성공하면 해당 기록의 `date` 를 `toDate` 로 바꾸고 `history` 를 날짜 오름차순으로 유지하도록 재배치한다. 같은 날짜의 기록들 사이에서는 옮겨 간 기록이 대상 날짜의 마지막 뒤에 선다. 이 함수만 `record.date` 를 바꾼다. `completedAt`·`promotedTo`·`blockedBy` 등 다른 필드는 그대로 둔다. 입력 `state` 는 바꾸지 않고 새 `AppState` 를 돌려준다.
 - [ ] FR-3: 다음 사유는 예외가 아니라 거부 결과로 돌려주고, 거부되면 `state` 는 그대로다.
   - `'future'`: `toDate > today`
   - `'same-date'`: `toDate` 가 기록의 현재 날짜와 같음
@@ -37,7 +37,7 @@ handoff: ""
   - 잘못된 `recordIndex`(범위 밖·정수 아님) 또는 `toDate` 형식 오류 (사유 코드는 설계 단계에서 정한다)
 
   자유 운동(`kind: 'free'`)은 승급·유지·강등 판정에 쓰이지 않으므로 같은 종목 기록을 건너뛰는 제한이 없다. UI 는 거부 사유를 사실 문구로 보인다 (`data-record-move-error`).
-- [ ] FR-4: 재배치로 인덱스가 밀리면 다른 종목의 `adjustedAtSessionIndex` 를 함께 보정해 각 종목의 판정 대상 기록 집합이 그대로이게 한다 (`src/lib/domain/progress.ts:94,98` 가 앵커 이후 배열 순서로 판정, `src/lib/domain/steps.ts:49-51` 이 앵커를 `history.length` 로 기록). 이동 전후 모든 종목의 `stepStreak` 와 `state.steps` 가 같아야 한다. 승급 기록(`promotedTo`)을 옮겨도 마찬가지다.
+- [x] FR-4: 재배치로 인덱스가 밀리면 다른 종목의 `adjustedAtSessionIndex` 를 함께 보정해 각 종목의 판정 대상 기록 집합이 그대로이게 한다 (`src/lib/domain/progress.ts:94,98` 가 앵커 이후 배열 순서로 판정, `src/lib/domain/steps.ts:49-51` 이 앵커를 `history.length` 로 기록). 이동 전후 모든 종목의 `stepStreak` 와 `state.steps` 가 같아야 한다. 승급 기록(`promotedTo`)을 옮겨도 마찬가지다.
 - [ ] FR-5: 이동이 성공하면 `appState.apply` 로 상태를 적용해 `localStorage` 에 저장한다 (`src/routes/steps/+page.svelte:81` 의 패턴). 그날과 옮겨 간 날의 표시(수행·미수행 등)는 `reviewDay` 로 자연히 갱신된다.
 
 ---
@@ -45,13 +45,13 @@ handoff: ""
 ## Non-Functional Requirements
 
 ### Compatibility
-- [ ] NFR-1: 저장 스키마를 바꾸지 않는다 (봉투 v5 유지). 가져오기가 요구하는 `history` 날짜 오름차순 엔진 계약(`src/lib/ui/history/importJson.ts:45`)을 이동 후에도 지킨다.
+- [x] NFR-1: 저장 스키마를 바꾸지 않는다 (봉투 v5 유지). 가져오기가 요구하는 `history` 날짜 오름차순 엔진 계약(`src/lib/ui/history/importJson.ts:45`)을 이동 후에도 지킨다.
 
 ### UI Conventions
 - [ ] NFR-2: CLAUDE.md 화면 규약을 따른다. 색은 `app.css` 토큰만, 터치 타깃 44px 이상, 아이콘만 있는 버튼 금지, 문구는 사실만(백분율·격려 금지), 오늘 날짜는 `todayClock.today`. 상태·정체는 `data-*` 훅으로 낸다: `data-record-move`(버튼), `data-record-move-form`(폼 루트), `data-record-move-date`(날짜 입력), `data-record-move-apply`(옮기기), `data-record-move-cancel`(취소), `data-record-move-error`(거부 사유). 훅을 추가한 뒤 CLAUDE.md 의 훅 목록을 갱신한다.
 
 ### Architecture
-- [ ] NFR-3: 도메인은 시스템 시각을 읽지 않고 `today` 를 인자로 받는다. 「도메인 계층 불가침」의 예외 범위는 `src/lib/domain/records.ts` 신설과 `src/lib/domain/index.ts` 의 export 추가뿐이다. 기존 도메인 파일은 고치지 않는다. CLAUDE.md 의 예외 문장(0.5.0 범위를 적은 곳)에 이 범위를 갱신해 적는다.
+- [x] NFR-3: 도메인은 시스템 시각을 읽지 않고 `today` 를 인자로 받는다. 「도메인 계층 불가침」의 예외 범위는 `src/lib/domain/records.ts` 신설과 `src/lib/domain/index.ts` 의 export 추가뿐이다. 기존 도메인 파일은 고치지 않는다. CLAUDE.md 의 예외 문장(0.5.0 범위를 적은 곳)에 이 범위를 갱신해 적는다.
 
 ### Quality
 - [ ] NFR-4: 단위 테스트는 고정 날짜를 쓴다. `pnpm test`, `pnpm check`, CLAUDE.md 의 hex grep 이 통과한다.

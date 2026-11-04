@@ -2,28 +2,28 @@
 
 | Behavior | FR | Partition | Layer | Test ref | Pinned line |
 |----------|----|-----------|-------|----------|-------------|
-| Moving a record to an earlier date (e.g. today to yesterday) changes only its `date`, keeps the array ascending, and leaves input unmutated | FR-2 | normal | unit | - | - |
-| Moving into a date that has records places the record after that date's last record, forward and backward | FR-2 | boundary | unit | - | - |
-| `i === j` changes the date only; order and anchors unchanged | FR-2 | boundary | unit | - | - |
-| `completedAt`, `promotedTo`, `blockedBy` and other state fields are preserved on success | FR-2 | normal | unit | - | - |
-| Inverted input `[d10,d9]`: moving d9 to d11 or d10 follows the position rule with no global sort | FR-2 | boundary | unit | - | - |
-| Out-of-range or non-integer index (-1, length, 1.5, NaN) returns `invalid-index`, state unchanged | FR-3 | invalid | unit | - | - |
-| Malformed date (`''`, `2026-2-3`, `2026-02-30`) returns `invalid-date`, state unchanged | FR-3 | invalid | unit | - | - |
-| `toDate` after `today` returns `future` | FR-3 | boundary | unit | - | - |
-| `toDate` equal to the record's date returns `same-date` | FR-3 | boundary | unit | - | - |
-| Crossing another non-free record of the same progression (incl. consolidation) returns `crosses-same-progression` | FR-3 | boundary | unit | - | - |
-| Crossing only a free record is allowed | FR-3 | boundary | unit | - | - |
-| Non-free record crossing a free record of its own progression is allowed | FR-3 | boundary | unit | - | - |
-| Crossing the moved record's own progression anchor returns `crosses-adjustment` | FR-3 | boundary | unit | - | - |
-| Check order: a case failing several checks returns the earliest reason | FR-3 | boundary | unit | - | - |
-| Crossing another progression's anchor shifts that anchor (a-1 forward, a+1 backward); its `stepStreak` is unchanged | FR-4 | boundary | unit | - | - |
-| Every AD-4 table row (a=0 with j=0, a=n, a=i, a=j, a=i+1, a=j+1) gives the stated new anchor and allow/reject | FR-4 | boundary | unit | - | - |
-| Free record crossing a same-progression record and its own anchor is allowed, anchor shifted, `stepStreak` equal | FR-4 | boundary | unit | - | - |
-| Absent `adjustedAtSessionIndex` stays absent after a move | FR-4 | boundary | unit | - | - |
-| Moving a `promotedTo` record leaves `steps` and `stepStreak` unchanged | FR-4 | normal | unit | - | - |
-| Exhaustive: for all records, anchors, i/j over a small fixture, every accepted move keeps `stepStreak` for all progressions, `steps`, and `maintenanceCount` equal | FR-4 | normal | unit | - | - |
-| Export then `parseImport` after moves returns `ok: true`, deep-equal; `CURRENT_SCHEMA_VERSION` unchanged | NFR-1 | normal | integration | - | - |
-| `records.ts` has relative `.ts` imports, no `$lib`, no system-time call | NFR-3 | normal | unit | - | - |
+| Moving a record to an earlier date (e.g. today to yesterday) changes only its `date`, keeps the array ascending, and leaves input unmutated | FR-2 | normal | unit | `records.test.ts:61` | `records.ts:72` |
+| Moving into a date that has records places the record after that date's last record, forward and backward | FR-2 | boundary | unit | `records.test.ts:81`, `records.test.ts:93` | `records.ts:26` |
+| `i === j` changes the date only; order and anchors unchanged | FR-2 | boundary | unit | `records.test.ts:104` | `records.ts:56` |
+| `completedAt`, `promotedTo`, `blockedBy` and other state fields are preserved on success | FR-2 | normal | unit | `records.test.ts:118` | `records.ts:72`, `records.ts:73` |
+| Inverted input `[d10,d9]`: moving d9 to d11 or d10 follows the position rule with no global sort | FR-2 | boundary | unit | `records.test.ts:154`, `records.test.ts:160`, `records.test.ts:166`, `records.test.ts:174` | `records.ts:26`, `records.ts:28`, `records.ts:72` |
+| Out-of-range or non-integer index (-1, length, 1.5, NaN) returns `invalid-index`, state unchanged | FR-3 | invalid | unit | `records.test.ts:186` | `records.ts:42` |
+| Malformed date (`''`, `2026-2-3`, `2026-02-30`) returns `invalid-date`, state unchanged | FR-3 | invalid | unit | `records.test.ts:195` | `records.ts:20`, `records.ts:45` |
+| `toDate` after `today` returns `future` | FR-3 | boundary | unit | `records.test.ts:203` | `records.ts:46` |
+| `toDate` equal to the record's date returns `same-date` | FR-3 | boundary | unit | `records.test.ts:209` | `records.ts:49` |
+| Crossing another non-free record of the same progression (incl. consolidation) returns `crosses-same-progression` | FR-3 | boundary | unit | `records.test.ts:213`, `records.test.ts:221`, `records.test.ts:232`, `records.test.ts:240` | `records.ts:61`, `records.ts:62`, `records.ts:64` |
+| Crossing only a free record is allowed | FR-3 | boundary | unit | `records.test.ts:248` | `records.ts:62` |
+| Non-free record crossing a free record of its own progression is allowed | FR-3 | boundary | unit | `records.test.ts:257` | `records.ts:62` |
+| Crossing the moved record's own progression anchor returns `crosses-adjustment` | FR-3 | boundary | unit | `records.test.ts:267` | `records.ts:67` |
+| Check order: a case failing several checks returns the earliest reason | FR-3 | boundary | unit | `records.test.ts:280`, `records.test.ts:283`, `records.test.ts:286`, `records.test.ts:290`, `records.test.ts:293` | `records.ts:42`, `records.ts:45`, `records.ts:46`, `records.ts:49`, `records.ts:64` |
+| Crossing another progression's anchor shifts that anchor (a-1 forward, a+1 backward); its `stepStreak` is unchanged | FR-4 | boundary | unit | `records.test.ts:337` | `records.ts:78`, `records.ts:81` |
+| Every AD-4 table row (a=0 with j=0, a=n, a=i, a=j, a=i+1, a=j+1) gives the stated new anchor and allow/reject | FR-4 | boundary | unit | `records.test.ts:337`, `records.test.ts:346` | `records.ts:56`, `records.ts:67`, `records.ts:81` |
+| Free record crossing a same-progression record and its own anchor is allowed, anchor shifted, `stepStreak` equal | FR-4 | boundary | unit | `records.test.ts:359`, `records.test.ts:368` | `records.ts:59`, `records.ts:81` |
+| Absent `adjustedAtSessionIndex` stays absent after a move | FR-4 | boundary | unit | `records.test.ts:383`, `records.test.ts:389` | `records.ts:76` |
+| Moving a `promotedTo` record leaves `steps` and `stepStreak` unchanged | FR-4 | normal | unit | `records.test.ts:408` | `records.ts:72` |
+| Exhaustive: for all records, anchors, i/j over a small fixture, every accepted move keeps `stepStreak` for all progressions, `steps`, and `maintenanceCount` equal | FR-4 | normal | unit | `records.test.ts:437` | `records.ts:64`, `records.ts:67`, `records.ts:81` |
+| Export then `parseImport` after moves returns `ok: true`, deep-equal; `CURRENT_SCHEMA_VERSION` unchanged | NFR-1 | normal | integration | `history-roundtrip.test.ts:70` | `records.ts:72`, `records.ts:56` |
+| `records.ts` has relative `.ts` imports, no `$lib`, no system-time call | NFR-3 | normal | unit | `records.test.ts:493`, `records.test.ts:503` | `records.ts:1`, `records.ts:46` |
 
 ---
 

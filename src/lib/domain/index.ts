@@ -33,6 +33,7 @@ export {
 } from './session.ts';
 /** 날짜 기반 진입점 (FR-5, FR-6). 조회는 상태를 바꾸지 않는다. */
 export { planOn, reviewDay, reviewRange } from './calendar.ts';
+export { moveRecordDate, type MoveRecordRejection, type MoveRecordResult } from './records.ts';
 
 import { RULES } from './rules.ts';
 import { switchProgram } from './program.ts';

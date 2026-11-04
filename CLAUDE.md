@@ -154,7 +154,8 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 - **도메인 계층 불가침.** `src/lib/domain/**` 은 UI 작업에서 손대지 않는다.
   UI 는 도메인이 노출한 순수 함수를 부를 뿐이다. 예외는 범위를 SPEC 에 적은 개정뿐이다 —
   0.5.0 은 `custom.ts` 신설 · `setStep` 의 `onDate` 이력 · `AppState` 선택 필드 둘
-  (`customPrograms` · `stepAdjustments`) 만 더했다
+  (`customPrograms` · `stepAdjustments`) 만 더했다. 0.5.1 은 `records.ts` 신설과
+  `index.ts` 의 export 추가만 했고 기존 도메인 파일은 고치지 않았다
 - **프로그램을 id 로 찾는 자리는 `catalogFor(appState.value)`** (`$lib/data/catalog`) 를 쓴다.
   `loadCatalog()` 는 카탈로그 5종만 알아서 커스텀 프로그램 구간에서 `getProgram` 이 예외를 던진다.
   종목 · 단계만 보는 자리는 `loadCatalog()` 로 충분하다

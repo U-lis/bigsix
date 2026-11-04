@@ -54,7 +54,7 @@ Remove the record at `i`. `j` = (last index in the remaining array whose `date <
 (Rows list representative boundary anchors; every anchor satisfying `lo < a <= hi` is crossed, every other is unchanged.)
 
 - Own anchor: rejected (`crosses-adjustment`) only when the moved record is non-free and its own progression's anchor is crossed. A free record never rejects; its progression's anchor shifts like any other.
-- Absent `adjustedAtSessionIndex` stays absent; an absent key stays absent (`steps.ts:54`).
+- Absent `adjustedAtSessionIndex` stays absent; an absent key stays absent (`steps.ts:49-51`).
 - `crosses-same-progression`: for a non-free moved record, any non-free record of the same progression at old indices `(i,j]` forward or `[j,i)` backward. Free records never block; consolidation records do.
 - FR-4 sufficiency: other progressions' judged order never changes; the moved progression's is unchanged because of rejection; setback+1 (`proposal.ts:101`) is recomputed from the array; `steps` is never written. Date-based `floorDate` counting changes only for a moved record crossing a stint boundary, accepted in SPEC Assumptions. `adjustedAtSessionIndex` is the only stored history index.
 - Evidence: brute force over 388,800 cases gave 0 FR-4 failures and 0 wrongful rejections with the exclusive `lo < a` form; the inclusive `j <= a` form wrongly rejected 13,765.
@@ -95,7 +95,7 @@ Stale-draft recording can itself produce an inverted `history` (`finish.ts:283,3
 ```
 AppState.history: SessionRecord[]       // date ascending (engine contract, importJson.ts:45)
 SessionRecord.date: IsoDate             // the only field moveRecordDate changes
-AppState.steps[progression].adjustedAtSessionIndex?: number   // history index anchor, shifted by AD-4
+AppState.adjustedAtSessionIndex?: Partial<Record<ProgressionId, number>>   // top-level, history index anchor, shifted by AD-4
 ```
 
 ### Entity: MoveRecordResult (new, see AD-1)
@@ -142,7 +142,7 @@ CLAUDE.md                                      # exception sentence (155-157), h
 
 | Phase | Description | Requirements | Status | Dependencies |
 |-------|-------------|--------------|--------|--------------|
-| 1 | Domain function `moveRecordDate` and its tests | FR-2, FR-4, NFR-1, NFR-3 | Not Started | - |
+| 1 | Domain function `moveRecordDate` and its tests | FR-2, FR-4, NFR-1, NFR-3 | Complete | - |
 | 2 | History tab UI, view model, wiring, docs hooks | FR-1, FR-3, FR-5, NFR-2, NFR-4 | Not Started | Phase 1 |
 
 FR-3 is split: the domain half (rejection reasons) is built and tested in Phase 1; the requirement is completed in Phase 2 (UI shows each reason, nothing applied on rejection).

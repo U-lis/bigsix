@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { buildExportJson, type ExportMeta } from '../../src/lib/ui/history/exportJson.ts';
 import { parseImport } from '../../src/lib/ui/history/importJson.ts';
 import { CURRENT_SCHEMA_VERSION } from '../../src/lib/ui/state/storage.ts';
+import { moveRecordDate } from '../../src/lib/domain/index.ts';
 import type { AppState, SessionRecord } from '../../src/lib/domain/types.ts';
 import { ALL_UNLOCKED_STEPS, catalog, stateAt } from './helpers.ts';
 
@@ -64,6 +65,38 @@ describe('왕복 (NFR-27) — 내보내기 → 가져오기 결과가 원본과 
       // 앵커도 그대로 실렸는지 명시적으로 확인.
       assert.deepEqual(r.appState.adjustedAtSessionIndex, { pushup: 0 });
     }
+  });
+
+  it('moves on ascending input keep the order and survive export then import (NFR-1)', () => {
+    const today = '2026-09-30';
+    const state: AppState = {
+      ...stateAt(ALL_UNLOCKED_STEPS, [
+        { date: '2026-09-01', progressionId: 'pushup', step: 3, sets: [10, 10], kind: 'work' },
+        { date: '2026-09-03', progressionId: 'squat', step: 4, sets: [10, 8], kind: 'work' },
+        { date: '2026-09-05', progressionId: 'pullup', step: 2, sets: [5], kind: 'free' },
+        {
+          date: '2026-09-07', progressionId: 'legraise', step: 2, sets: [9], kind: 'work',
+          completedAt: '2026-09-07T23:50:00+09:00', promotedTo: 3,
+        },
+      ]),
+      adjustedAtSessionIndex: { squat: 2 },
+    };
+    const backward = moveRecordDate(state, 3, '2026-09-02', today);
+    assert.equal(backward.ok, true);
+    if (!backward.ok) return;
+    const forward = moveRecordDate(backward.state, 0, '2026-09-06', today);
+    assert.equal(forward.ok, true);
+    if (!forward.ok) return;
+    const moved = forward.state;
+
+    const dates = moved.history.map((r) => r.date);
+    assert.deepEqual(dates, [...dates].sort());
+    assert.deepEqual(moved.adjustedAtSessionIndex, { squat: 2 });
+
+    const r = roundtrip(moved, stateAt(ALL_UNLOCKED_STEPS));
+    assert.equal(r.ok, true);
+    if (r.ok) assert.deepEqual(r.appState, moved);
+    assert.equal(CURRENT_SCHEMA_VERSION, 5);
   });
 
   it('FR-28 신설 필드(target · setRpes · completedAt) 가 붙은 기록도 왕복 후 동등', () => {
