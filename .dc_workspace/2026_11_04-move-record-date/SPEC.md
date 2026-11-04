@@ -7,8 +7,8 @@ doc_dir: 2026_11_04-move-record-date
 target_version: 0.5.1
 github_issue: 15
 stage: local_test
-approved_at: 2026-11-04T06:34:16Z
-approved_hash: 6e93be44408be4f24458d00a02c973926d2a92d4606c098083be562860f43d2d
+approved_at: 2026-11-04T07:10:30Z
+approved_hash: 4d212840b586aaaae25b07203ee7047b8c58bf7a8f37a6a42b66b96ae89a2b89
 decisions: ["user-go-through-release"]
 handoff: ""
 -->
@@ -28,12 +28,13 @@ handoff: ""
 
 ### Core Features
 - [x] FR-1: 기록 탭 날짜별 보기(`DayRow`)의 세션마다 「날짜 옮기기」 버튼을 둔다. 누르면 그 자리에 날짜 입력(`input type=date`, `max` = 오늘), 「옮기기」·「취소」 버튼이 열린다. 「취소」는 입력을 닫고 상태를 바꾸지 않는다. `DayRow` 는 표시 전용이므로 적용은 콜백 prop 으로 상위(`DayList` / `HistoryView`)에 올린다.
-- [x] FR-2: 도메인 순수 함수 `moveRecordDate(state, recordIndex, toDate, today)` 를 `src/lib/domain/records.ts` 에 신설하고 `src/lib/domain/index.ts` 에서 export 한다. 성공하면 해당 기록의 `date` 를 `toDate` 로 바꾸고 `history` 를 날짜 오름차순으로 유지하도록 재배치한다. 같은 날짜의 기록들 사이에서는 옮겨 간 기록이 대상 날짜의 마지막 뒤에 선다. 이 함수만 `record.date` 를 바꾼다. `completedAt`·`promotedTo`·`blockedBy` 등 다른 필드는 그대로 둔다. 입력 `state` 는 바꾸지 않고 새 `AppState` 를 돌려준다.
+- [x] FR-2: 도메인 순수 함수 `moveRecordDate(state, recordIndex, toDate, today)` 를 `src/lib/domain/records.ts` 에 신설하고 `src/lib/domain/index.ts` 에서 export 한다. 성공하면 해당 기록의 `date` 를 `toDate` 로 바꾸고 `history` 를 날짜 오름차순으로 유지하도록 재배치한다. 같은 날짜의 기록들 사이에서는, 비자유 기록이 `toDate > 원래 날짜` 로 옮겨 가고 `toDate` 날짜의 같은 종목 비자유 기록이 뒤에 있으면 그중 첫 번째 바로 앞에 서고(되돌리기가 가능하도록. `src/lib/domain/records.ts:36-49` `landingIndex`), 그 밖에는 대상 날짜의 마지막 뒤에 선다. 이 함수만 `record.date` 를 바꾼다. `completedAt`·`promotedTo`·`blockedBy` 등 다른 필드는 그대로 둔다. 입력 `state` 는 바꾸지 않고 새 `AppState` 를 돌려준다.
 - [x] FR-3: 다음 사유는 예외가 아니라 거부 결과로 돌려주고, 거부되면 `state` 는 그대로다.
   - `'future'`: `toDate > today`
   - `'same-date'`: `toDate` 가 기록의 현재 날짜와 같음
   - `'crosses-same-progression'`: 비자유 기록의 이동이 같은 종목의 다른 비자유 기록을 건너뜀
   - `'crosses-adjustment'`: 비자유 기록의 이동이 자기 종목의 `adjustedAtSessionIndex` 앵커를 건너뜀
+  - `'open-draft'` (UI 단계 거부, 도메인 함수는 돌려주지 않음): 오늘로 옮기는데 오늘 그 종목의 work·consolidation 진행 중 칸(draft)에 세트가 있음 (`src/lib/ui/history/moveGuard.ts` `openDraftBlocksMove`. `syncDoneDrafts` 가 자유 draft 로 바꾸기 때문, `src/lib/ui/today/done.ts:148,156`)
   - 잘못된 `recordIndex`(범위 밖·정수 아님) 또는 `toDate` 형식 오류 (사유 코드는 설계 단계에서 정한다)
 
   자유 운동(`kind: 'free'`)은 승급·유지·강등 판정에 쓰이지 않으므로 같은 종목 기록을 건너뛰는 제한이 없다. UI 는 거부 사유를 사실 문구로 보인다 (`data-record-move-error`).
@@ -84,7 +85,7 @@ Not applicable. 저장 스키마·기본값 변경이 없고 backfill 도 없다
 | FR | Partition | Case | Expected |
 |----|-----------|------|----------|
 | FR-2 | normal | 오늘 기록을 어제로 옮김 | `date` 변경, 배열 오름차순 유지. 어제는 수행, 오늘은 계획이 있으면 미수행으로 `reviewDay` 규칙대로 표시 |
-| FR-2 | boundary | 같은 날짜 기록들이 있는 날로 이동 | 대상 날짜의 마지막 뒤에 선다 (안정 위치) |
+| FR-2 | boundary | 같은 날짜 기록들이 있는 날로 이동 | 같은 종목 비자유 기록이 대상 날짜에 뒤에 있으면 그중 첫 번째 바로 앞, 아니면 대상 날짜의 마지막 뒤에 선다 (되돌리기 가능) |
 | FR-3 | boundary | 내일(`toDate > today`)로 이동 | `'future'` 거부 |
 | FR-3 | boundary | 현재 날짜와 같은 날짜로 이동 | `'same-date'` 거부 |
 | FR-3 | invalid | 범위 밖 인덱스, 잘못된 날짜 형식 | 거부, `state` 그대로 |
@@ -115,7 +116,7 @@ The following are explicitly NOT part of this work:
 - 옮길 날짜의 하한은 없다. 프로그램 구간 시작 전 날짜로 옮기면 그날은 프로그램 없는 날의 기록으로 표시된다 (`src/lib/ui/history/dayList.ts` `withNoStintPerformed`).
 - 같은 날 같은 종목 기록이 이미 있어도 순서만 안 바뀌면 허용한다. 둘 다 표시된다 (알려진 중복 한계).
 - 프로그램 구간 경계를 넘는 이동은 허용한다. 영향은 전환 제안 횟수 세기(`src/lib/domain/proposal.ts:60` `floorDate` 날짜 비교)뿐이며 이미 낸 제안은 바꾸지 않는다.
-- 진행 중 칸(draft)은 건드리지 않는다.
+- 진행 중 칸(draft)은 건드리지 않는다. 오늘로 옮기면 `syncDoneDrafts` 가 draft 를 자유 draft 로 바꾸므로, 그 경우 이동을 `'open-draft'` 로 거부해서 draft 가 그대로 남게 한다.
 - 확인 다이얼로그 없이 「옮기기」 버튼으로 바로 적용한다. 다시 옮기면 되돌릴 수 있다.
 
 전제:

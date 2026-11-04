@@ -29,6 +29,26 @@ function insertionIndex(rest: SessionRecord[], toDate: IsoDate): number {
 }
 
 /**
+ * 판정 기록을 앞으로 옮길 때, 그 날짜에 같은 종목 판정 기록이 뒤에 있으면 바로 앞에 앉는다.
+ * 뒤에 앉으면 그 기록을 건너뛰어 거부되므로, 같은 날로 합친 묶음이 되돌아오지 못한다.
+ * 앞에 앉으면 판정 순서도, 날짜 오름차순도 그대로다.
+ */
+function landingIndex(
+  history: SessionRecord[], rest: SessionRecord[], recordIndex: number, toDate: IsoDate,
+): number {
+  const moved = history[recordIndex];
+  if (moved.kind !== 'free' && toDate > moved.date) {
+    const next = history.findIndex((r, k) => (
+      k > recordIndex && r.kind !== 'free'
+      && r.progressionId === moved.progressionId && r.date === toDate
+    ));
+    // `next` 는 `history` 인덱스다. 옮긴 기록을 뺀 배열에서는 한 칸 앞이다.
+    if (next !== -1) return next - 1;
+  }
+  return insertionIndex(rest, toDate);
+}
+
+/**
  * 저장된 기록 하나를 판정을 바꾸지 않고 다른 날짜로 옮긴다 (FR-2, FR-3, FR-4).
  *
  * 판정은 종목별 앵커부터 `history` 를 배열 순서로 읽고 (`progress.ts`, `proposal.ts`),
@@ -49,7 +69,7 @@ export function moveRecordDate(
   if (toDate === moved.date) return { ok: false, reason: 'same-date' };
 
   const rest = history.filter((_, k) => k !== recordIndex);
-  const target = insertionIndex(rest, toDate);
+  const target = landingIndex(history, rest, recordIndex, toDate);
   const lo = Math.min(recordIndex, target);
   const hi = Math.max(recordIndex, target);
   // `lo` 와 `hi + 1` 의 앵커는 범위 안 기록 집합이 그대로다. 그 사이의 앵커만 밀린다.

@@ -3,9 +3,9 @@
    * 날짜별 목록 (FR-24). 창(30일) 여러 개를 이어 그린다.
    * DayRow 는 이 목록 안에서 최근 날짜부터 세로로 쌓인다 (UI-1).
    */
-  import type { MoveRecordResult } from '$lib/domain';
   import type { Catalog, IsoDate } from '$lib/domain/types';
   import type { DayRow as DayRowT } from './dayList';
+  import type { RecordMoveResult } from './moveGuard';
   import DayRow from './DayRow.svelte';
 
   interface Props {
@@ -13,7 +13,7 @@
     catalog: Catalog;
     today: IsoDate;
     moveGeneration: number;
-    onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult;
+    onMove: (recordIndex: number, toDate: IsoDate) => RecordMoveResult;
   }
   let { rows, catalog, today, moveGeneration, onMove }: Props = $props();
 </script>

@@ -10,9 +10,11 @@
    */
   import { moveRecordDate } from '$lib/domain';
   import type { AppState, Catalog, IsoDate } from '$lib/domain/types';
+  import { inProgress } from '$lib/ui/session/session.svelte';
   import { appState as appStateStore } from '$lib/ui/state/state.svelte';
   import { historyRange, windowsBack, type DateWindow } from './range';
   import { buildDayRows } from './dayList';
+  import { openDraftBlocksMove, type RecordMoveResult } from './moveGuard';
   import DayList from './DayList.svelte';
   import ProgressionTable from './ProgressionTable.svelte';
   import ExportBar from './ExportBar.svelte';
@@ -54,12 +56,15 @@
   // 옮기면 인덱스가 밀리므로, 세대를 올려 모든 날짜의 열린 폼을 다시 만든다.
   let moveGeneration = $state(0);
 
-  function moveRecord(recordIndex: number, toDate: IsoDate) {
+  function moveRecord(recordIndex: number, toDate: IsoDate): RecordMoveResult {
     const result = moveRecordDate(appState, recordIndex, toDate, today);
-    if (result.ok) {
-      appStateStore.apply(result.state);
-      moveGeneration += 1;
+    if (!result.ok) return result;
+    const { progressionId } = appState.history[recordIndex];
+    if (openDraftBlocksMove(inProgress.drafts, progressionId, toDate, today)) {
+      return { ok: false, reason: 'open-draft' };
     }
+    appStateStore.apply(result.state);
+    moveGeneration += 1;
     return result;
   }
 </script>

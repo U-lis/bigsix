@@ -32,7 +32,7 @@ export type MoveRecordResult = { ok: true; state: AppState } | { ok: false; reas
 **Rationale**: A deterministic order makes each reason independently testable and the UI message predictable.
 
 ### AD-3: Position rule, no global sort
-Remove the record at `i`. `j` = (last index in the remaining array whose `date <= toDate`) + 1, or `0` if none.
+Remove the record at `i`. `j` = (last index in the remaining array whose `date <= toDate`) + 1, or `0` if none. Reversibility refinement (`landingIndex`, `src/lib/domain/records.ts:36-49`): for a non-free record with `toDate` > its date, if a later non-free same-progression record is dated `toDate`, `j` is the index immediately before the first such record, so a move stays reversible on days with two same-exercise records.
 **Options Considered**: 1. Re-sort the whole history by date. 2. Positional insert (above).
 **Decision**: Option 2.
 **Rationale**: On ascending input the result is ascending and the record lands after the target date's last record (SPEC FR-2). Inverted input exists in practice (`session.ts:92` has no validation, `evaluate.ts:161` appends, `finish.ts:283,304` stale drafts); the rule adds no new inversion behind the moved record and leaves existing ones in place. `sort()` rejected: it reorders other records, changes judging, and breaks FR-4.
@@ -67,7 +67,7 @@ Add `recordIndices: number[]` to the `DayRow` interface (`dayList.ts:20-35`), al
 **Rejected**: `history.indexOf(r)` in the component (depends on `$state` proxy identity).
 
 ### AD-7: RecordMoveForm component
-`src/lib/ui/history/RecordMoveForm.svelte` (new). Props `{ date: IsoDate; recordIndex: number; today: IsoDate; onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult }`. Local `$state`: `open`, `toDate`, `error: MoveRecordRejection | null`. `toDate` is seeded to `date` in the open handler (no `$effect`). Success or cancel sets `open = false`, `error = null` (required because the `{#each ...(i)}` key at `DayRow.svelte:136` reuses instances). Collapse is CSS-only: `data-record-move-form={open ? 'open' : 'closed'}` with `[data-record-move-form='closed'] { display: none }` (precedents `ExerciseCard.svelte:419`, `settings/+page.svelte:396-405`). The trigger button is hidden by CSS while open. The error element uses `{#if}` (`ImportDialog.svelte:124`, `FreeExerciseForm.svelte:113`) with `data-record-move-error={error}`.
+`src/lib/ui/history/RecordMoveForm.svelte` (new). Props `{ date: IsoDate; recordIndex: number; today: IsoDate; onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult }`. Local `$state`: `open`, `toDate`, `error: MoveRecordRejection | null`. `toDate` is seeded to `date` in the open handler (no `$effect`). Cancel sets `open = false`, `error = null`. A successful move closes every open form by remounting: `moveGeneration` in HistoryView is bumped and DayRow wraps each form in `{#key}` (required because the `{#each ...(i)}` key at `DayRow.svelte:136` reuses instances). Collapse is CSS-only: `data-record-move-form={open ? 'open' : 'closed'}` with `[data-record-move-form='closed'] { display: none }` (precedents `ExerciseCard.svelte:419`, `settings/+page.svelte:396-405`). The trigger button is hidden by CSS while open. The error element uses `{#if}` (`ImportDialog.svelte:124`, `FreeExerciseForm.svelte:113`) with `data-record-move-error={error}`.
 
 ### AD-8: Rejection messages
 An exhaustive `switch` inside the component, no `default`, returning a string so `pnpm check` fails on a missing case (pattern `statusLabel`, `DayRow.svelte:21-28`).
@@ -79,7 +79,7 @@ An exhaustive `switch` inside the component, no `default`, returning a string so
 - crosses-adjustment: 이 종목의 단계 조정 시점을 건너뛸 수 없습니다.
 
 ### AD-9: Handler lives in HistoryView
-`HistoryView` calls `moveRecordDate(appState, index, toDate, today)` and `appStateStore.apply(r.state)` when `r.ok`, then returns `r`. Store import as `ExportBar.svelte:25,79`: `import { appState as appStateStore } from '$lib/ui/state/state.svelte'`. `today` comes from `todayClock.today` at `src/routes/history/+page.svelte:29`; the route file is not modified. `onMove` and `today` pass HistoryView -> DayList -> DayRow -> RecordMoveForm; each has one caller (`DayList.svelte:19`, `HistoryView.svelte:75`), so required props are safe.
+`HistoryView` calls `moveRecordDate(appState, index, toDate, today)` and `appStateStore.apply(r.state)` when `r.ok`, then returns `r` and bumps `moveGeneration` so all forms remount closed (see AD-7). Store import as `ExportBar.svelte:25,79`: `import { appState as appStateStore } from '$lib/ui/state/state.svelte'`. `today` comes from `todayClock.today` at `src/routes/history/+page.svelte:29`; the route file is not modified. `onMove` and `today` pass HistoryView -> DayList -> DayRow -> RecordMoveForm; each has one caller (`DayList.svelte:19`, `HistoryView.svelte:75`), so required props are safe.
 
 ### AD-10: No component-mount tests
 No precedent exists and `vitest.config.ts` is not set up for it. Logic is covered by unit tests; UI wiring by code-validator reading, `pnpm check`, and an orchestrator browser check.
@@ -188,6 +188,9 @@ Overall feature is complete when:
 - [ ] Code reviewed
 
 ---
+
+### AD-11: UI guard for open drafts
+`openDraftBlocksMove` (`src/lib/ui/history/moveGuard.ts`): a move to today is refused with `'open-draft'` when today's work or consolidation draft of that exercise has sets, because `syncDoneDrafts` (`src/lib/ui/today/done.ts:148,156`) would convert it to a free draft. This revises the SPEC assumption that drafts are untouched: they stay untouched because the move is refused. The refusal is UI-level; the domain function does not return it.
 
 ## Next Steps
 

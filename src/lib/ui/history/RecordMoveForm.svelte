@@ -6,25 +6,25 @@
    * 다시 만들므로, 여기서 닫거나 포커스를 옮기지 않는다.
    */
   import { tick } from 'svelte';
-  import type { MoveRecordRejection, MoveRecordResult } from '$lib/domain';
   import type { IsoDate } from '$lib/domain/types';
+  import type { RecordMoveError, RecordMoveResult } from './moveGuard';
 
   interface Props {
     date: IsoDate;
     recordIndex: number;
     today: IsoDate;
-    onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult;
+    onMove: (recordIndex: number, toDate: IsoDate) => RecordMoveResult;
   }
   let { date, recordIndex, today, onMove }: Props = $props();
 
   let open = $state(false);
   let toDate: IsoDate = $state('');
-  let error: MoveRecordRejection | null = $state(null);
+  let error: RecordMoveError | null = $state(null);
   let dateInput: HTMLInputElement | undefined = $state();
   let trigger: HTMLButtonElement | undefined = $state();
 
   // `default` 를 두지 않아 사유가 늘면 `pnpm check` 가 빠진 문구를 잡는다 (AD-8).
-  function rejectionText(reason: MoveRecordRejection): string {
+  function rejectionText(reason: RecordMoveError): string {
     switch (reason) {
       case 'invalid-index': return '기록을 찾을 수 없습니다.';
       case 'invalid-date': return '날짜가 올바르지 않습니다.';
@@ -32,6 +32,7 @@
       case 'same-date': return '지금과 같은 날짜입니다.';
       case 'crosses-same-progression': return '같은 종목의 다른 기록을 건너뛸 수 없습니다.';
       case 'crosses-adjustment': return '이 종목의 단계 조정 시점을 건너뛸 수 없습니다.';
+      case 'open-draft': return '오늘 진행 중인 이 종목 칸이 있습니다. 먼저 마치거나 버리세요.';
     }
   }
 

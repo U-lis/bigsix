@@ -190,6 +190,104 @@ describe('moveRecordDate: inverted input follows the position rule (AD-3)', () =
   });
 });
 
+describe('moveRecordDate: landing before a same-date same-progression record', () => {
+  const D10: IsoDate = '2026-09-10';
+  const D11: IsoDate = '2026-09-11';
+  const D12: IsoDate = '2026-09-12';
+  const D13: IsoDate = '2026-09-13';
+
+  it('abandoned then consolidation on one day goes out and comes back, judging equal throughout', () => {
+    const T: IsoDate = '2026-09-20';
+    const Y: IsoDate = addDays(T, -1);
+    const start = stateAt({}, [
+      pass('pushup', T, { outcome: 'abandoned' }),
+      pass('pushup', T, { kind: 'consolidation' }),
+    ]);
+    const before = judging(start);
+
+    const s1 = accepted(moveRecordDate(start, 0, Y, TODAY));
+    const s2 = accepted(moveRecordDate(s1, 1, Y, TODAY));
+    const s3 = accepted(moveRecordDate(s2, 1, T, TODAY));
+    const s4 = accepted(moveRecordDate(s3, 0, T, TODAY));
+
+    for (const s of [s1, s2, s3, s4]) {
+      assert.deepEqual(s.steps, start.steps);
+      assert.deepEqual(judging(s), before);
+    }
+    assert.deepEqual(s4.history, start.history);
+  });
+
+  it('lands immediately before the first such record, past other progressions', () => {
+    const state = stateAt({}, [
+      pass('pushup', D10), pass('squat', D11), pass('pushup', D12), pass('pushup', D12),
+      pass('squat', D12),
+    ]);
+    const next = accepted(moveRecordDate(state, 0, D12, TODAY));
+    assert.deepEqual(next.history.map((h) => h.progressionId), [
+      'squat', 'pushup', 'pushup', 'pushup', 'squat',
+    ]);
+    assert.deepEqual(datesOf(next), [D11, D12, D12, D12, D12]);
+    assert.equal(next.history[2], state.history[2]);
+  });
+
+  it('a same-progression record dated before the target in the span is still rejected', () => {
+    const state = stateAt({}, [pass('pushup', D10), pass('pushup', D11), pass('pushup', D12)]);
+    rejectedWith(moveRecordDate(state, 0, D12, TODAY), 'crosses-same-progression');
+  });
+
+  it('a free moved record keeps the old rule and lands after', () => {
+    const state = stateAt({}, [pass('pushup', D10, { kind: 'free' }), pass('pushup', D12)]);
+    const next = accepted(moveRecordDate(state, 0, D12, TODAY));
+    assert.equal(next.history[0], state.history[1]);
+    assert.equal(next.history[1].kind, 'free');
+  });
+
+  it('a free or other-progression record on the target date is not a landing point', () => {
+    const free = stateAt({}, [pass('pushup', D10), pass('pushup', D12, { kind: 'free' })]);
+    assert.equal(accepted(moveRecordDate(free, 0, D12, TODAY)).history[0], free.history[1]);
+    const other = stateAt({}, [pass('pushup', D10), pass('squat', D12)]);
+    assert.equal(accepted(moveRecordDate(other, 0, D12, TODAY)).history[0], other.history[1]);
+  });
+
+  it('a same-date record before the old index is not a landing point', () => {
+    const state = stateAt({}, [pass('pushup', D12), pass('pushup', D10)]);
+    const next = accepted(moveRecordDate(state, 1, D12, TODAY));
+    assert.equal(next.history[0], state.history[0]);
+    assert.deepEqual(datesOf(next), [D12, D12]);
+  });
+
+  it('a date-backward move keeps the old rule even when the record after it has the target date', () => {
+    const state = stateAt({}, [pass('pushup', D12), pass('pushup', D10)]);
+    rejectedWith(moveRecordDate(state, 0, D10, TODAY), 'crosses-same-progression');
+  });
+
+  describe('anchors use the final position', () => {
+    // 옮긴 기록은 인덱스 1 에 앉는다. 옛 규칙이라면 인덱스 2 까지 갔을 자리다.
+    const history = () => [pass('pushup', D10), pass('squat', D11), pass('pushup', D12), pass('squat', D13)];
+
+    it('own anchor between the new and the old position is not crossed and stays', () => {
+      const state: AppState = { ...stateAt({}, history()), adjustedAtSessionIndex: { pushup: 2 } };
+      const next = accepted(moveRecordDate(state, 0, D12, TODAY));
+      assert.deepEqual(next.adjustedAtSessionIndex, { pushup: 2 });
+      assert.deepEqual(judging(next), judging(state));
+    });
+
+    it('own anchor at the new position is rejected', () => {
+      const state: AppState = { ...stateAt({}, history()), adjustedAtSessionIndex: { pushup: 1 } };
+      rejectedWith(moveRecordDate(state, 0, D12, TODAY), 'crosses-adjustment');
+    });
+
+    it("another progression's anchor shifts only up to the new position", () => {
+      for (const [a, shifted] of [[1, 0], [2, 2]] as const) {
+        const state: AppState = { ...stateAt({}, history()), adjustedAtSessionIndex: { squat: a } };
+        const next = accepted(moveRecordDate(state, 0, D12, TODAY));
+        assert.deepEqual(next.adjustedAtSessionIndex, { squat: shifted });
+        assert.deepEqual(judging(next), judging(state));
+      }
+    });
+  });
+});
+
 describe('moveRecordDate: rejections (FR-3)', () => {
   const two = () => stateAt({}, [pass('pushup', '2026-09-10'), pass('squat', '2026-09-20')]);
 
@@ -435,15 +533,19 @@ describe('moveRecordDate: exhaustive FR-4 over a small fixture', () => {
     rec('squat', STEP, FAIL_SETS, { date: '2026-09-11' }),
     rec('pushup', 3, passSets('pushup', 3), { date: '2026-09-13' }),
     pass('squat', '2026-09-15'),
+    // 같은 날 같은 종목 묶음. 옮긴 기록이 이 앞에 내려앉는 경로를 전수로 지난다.
+    rec('pushup', 3, passSets('pushup', 3), { date: '2026-09-17', outcome: 'abandoned' }),
+    rec('pushup', 3, passSets('pushup', 3), { date: '2026-09-17', kind: 'consolidation' }),
   ];
   const ANCHORS: (number | undefined)[] = [undefined, ...HISTORY.keys(), HISTORY.length];
   // Before the first, on every date, and between every pair, after the last.
-  const TARGETS: IsoDate[] = Array.from({ length: 18 }, (_, k) => addDays('2026-08-31', k));
+  const TARGETS: IsoDate[] = Array.from({ length: 19 }, (_, k) => addDays('2026-08-31', k));
 
   it('every accepted move keeps streak, steps and maintenance count; both shift directions occur', () => {
     let acceptedCount = 0;
     let forwardShifts = 0;
     let backwardShifts = 0;
+    let sameDateLandings = 0;
     const reasons = new Set<MoveRecordRejection>();
 
     for (const pushupAnchor of ANCHORS) {
@@ -468,6 +570,11 @@ describe('moveRecordDate: exhaustive FR-4 over a small fixture', () => {
             const label: string = `i=${i} to=${toDate} anchors=${JSON.stringify(anchors)}`;
             assert.deepEqual(judging(r.state), before, label);
             assert.deepEqual(r.state.steps, state.steps, label);
+            const follower = r.state.history[r.state.history.findIndex((h) => !HISTORY.includes(h)) + 1];
+            if (HISTORY[i].kind !== 'free' && follower?.kind !== 'free' && follower?.date === toDate
+              && follower.progressionId === HISTORY[i].progressionId) {
+              sameDateLandings += 1;
+            }
             for (const id of ['pushup', 'squat'] as const) {
               const from = anchors[id];
               const to = r.state.adjustedAtSessionIndex?.[id];
@@ -484,6 +591,7 @@ describe('moveRecordDate: exhaustive FR-4 over a small fixture', () => {
     assert.ok(acceptedCount > 0);
     assert.ok(forwardShifts > 0);
     assert.ok(backwardShifts > 0);
+    assert.ok(sameDateLandings > 0);
     assert.deepEqual(
       [...reasons].sort(),
       ['crosses-adjustment', 'crosses-same-progression', 'same-date'],

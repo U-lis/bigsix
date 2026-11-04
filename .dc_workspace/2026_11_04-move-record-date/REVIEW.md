@@ -25,3 +25,16 @@ BLOCKERS: 0.
 | 7 | Minor | src/lib/ui/history/dayList.ts:37 | Comment overstated proxy behaviour | Fixed |
 
 Open: an import while a form is open keeps that form open (ExportBar.svelte:79 does not bump moveGeneration). Not fixed; reported in the release notes to the user.
+
+## Full diff
+
+BLOCKERS: 0.
+
+| # | Severity | Location | Finding | Disposition |
+|---|----------|----------|---------|-------------|
+| 1 | Major | src/lib/ui/today/done.ts:148,156 | syncDoneDrafts would convert today's draft to a free draft after a move to today | Fixed: `openDraftBlocksMove` guard refuses with 'open-draft' |
+| 2 | Major | src/lib/domain/records.ts:36-49 | Move was irreversible on days with two same-exercise records | Fixed: `landingIndex` |
+| 3 | Minor | year input | Year typo accepted (no lower bound; 1026 is reachable only through many 더 보기 presses; data still exports) | Accepted; reported to the user |
+| 4 | Minor | src/lib/ui/history/ExportBar.svelte:79 | Import leaves a form open with its old date; it acts on the displayed record | Reported to the user |
+| 5 | Minor | markers | Untracked | Noted |
+| 6 | Minor | tests | Test volume about 6x | Accepted |

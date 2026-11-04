@@ -8,8 +8,9 @@
   import type {
     Catalog, IsoDate, ProgressionId, SessionRecord, StandardLabel,
   } from '$lib/domain/types';
-  import { getProgram, getProgression, getStep, type MoveRecordResult } from '$lib/domain';
+  import { getProgram, getProgression, getStep } from '$lib/domain';
   import type { DayRow } from './dayList';
+  import type { RecordMoveResult } from './moveGuard';
   import { adjustmentText } from './progression';
   import RecordMoveForm from './RecordMoveForm.svelte';
 
@@ -18,7 +19,7 @@
     catalog: Catalog;
     today: IsoDate;
     moveGeneration: number;
-    onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult;
+    onMove: (recordIndex: number, toDate: IsoDate) => RecordMoveResult;
   }
   let { row, catalog, today, moveGeneration, onMove }: Props = $props();
 
