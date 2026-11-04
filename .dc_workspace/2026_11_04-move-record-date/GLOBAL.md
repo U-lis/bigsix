@@ -143,7 +143,7 @@ CLAUDE.md                                      # exception sentence (155-157), h
 | Phase | Description | Requirements | Status | Dependencies |
 |-------|-------------|--------------|--------|--------------|
 | 1 | Domain function `moveRecordDate` and its tests | FR-2, FR-4, NFR-1, NFR-3 | Complete | - |
-| 2 | History tab UI, view model, wiring, docs hooks | FR-1, FR-3, FR-5, NFR-2, NFR-4 | Not Started | Phase 1 |
+| 2 | History tab UI, view model, wiring, docs hooks | FR-1, FR-3, FR-5, NFR-2, NFR-4 | Complete | Phase 1 |
 
 FR-3 is split: the domain half (rejection reasons) is built and tested in Phase 1; the requirement is completed in Phase 2 (UI shows each reason, nothing applied on rejection).
 

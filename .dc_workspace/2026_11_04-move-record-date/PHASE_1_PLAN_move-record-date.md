@@ -41,7 +41,7 @@ Note: FR-3 domain half built here; completed in Phase 2 (see GLOBAL.md).
 
 ### Step 1: Create records.ts
 
-Create `src/lib/domain/records.ts`. Imports only `./date.ts` (for `addDays`) and `./types.ts`, relative paths with `.ts`; no `$lib`, no `Date.now`, no `new Date` (`tests/unit/structure.test.ts` enforces this).
+Create `src/lib/domain/records.ts`. Imports only `./date.ts` (for `addDays`) and `./types.ts`, relative paths with `.ts`; no `$lib`, no `Date.now`, no `new Date` (`tests/unit/structure.test.ts` enforces the import rules; it has no clock check, so `tests/unit/records.test.ts` checks the clock).
 
 **Files**: `src/lib/domain/records.ts`
 
@@ -74,7 +74,7 @@ Create `src/lib/domain/records.ts`. Imports only `./date.ts` (for `addDays`) and
 
 **Files**: `tests/unit/records.test.ts` (new), `tests/unit/history-roundtrip.test.ts`
 
-**Action**: Write `records.test.ts` using `catalog`, `stateAt`, `rec` from `tests/unit/helpers.ts:12,18,28`, fixed dates only. Cover every row of `PHASE_1_TEST.md`. Include a table-driven test for every AD-4 row (a=0 with j=0, a=n, a=i, a=j), computing `stepStreak` and `maintenanceCount` with the real functions, and an exhaustive test over a small fixture (all records, all anchors, all i/j targets, dates spread so each target position is reachable) asserting that every accepted move leaves `stepStreak` for all progressions, `state.steps` progression values apart from shifted anchors, and `maintenanceCount` equal. In `history-roundtrip.test.ts` (near lines 27-31) add a case: after moves on ascending input, export then `parseImport` returns `ok: true` and deep-equal state.
+**Action**: Write `records.test.ts` using `catalog`, `stateAt`, `rec` from `tests/unit/helpers.ts:12,18,28`, fixed dates only. Cover every row of `PHASE_1_TEST.md`. Include a table-driven test for every AD-4 row (a=0 with j=0, a=n, a=i, a=j), computing `stepStreak` and `maintenanceCount` with the real functions, and an exhaustive test over a small fixture (all records, all anchors, all i/j targets, dates spread so each target position is reachable) asserting that every accepted move leaves `stepStreak` for all progressions, `state.steps` (never touched by the move), and `maintenanceCount` equal. In `history-roundtrip.test.ts` (near lines 27-31) add a case: after moves on ascending input, export then `parseImport` returns `ok: true` and deep-equal state.
 
 ### Step 5: CLAUDE.md exception sentence
 
@@ -102,14 +102,14 @@ Free records never block and never reject but their progression's anchor shifts 
 - [x] `records.ts` exports `moveRecordDate(state, recordIndex, toDate, today)` and the two types; `index.ts` re-exports; no other domain file differs: verified in records.ts:38,86; index.ts:36
 - [x] Imports are relative with `.ts`, no `$lib`, no `Date.now` / `new Date`: verified in records.ts:1-2
 - [x] All six reason codes are returned in the AD-2 order; on rejection `ok: false` and the input state is unchanged: verified in records.ts:42-68
-- [x] Invalid inputs -1, `history.length`, 1.5, NaN, `''`, `2026-2-3`, `2026-02-30` are rejected: verified in records.test.ts:186,195
+- [x] Invalid inputs -1, `history.length`, 1.5, NaN, `''`, `2026-2-3`, `2026-02-30` are rejected: verified in records.test.ts:197,206
 - [x] Success changes only the moved record's `date`; `completedAt`, `promotedTo`, `blockedBy` preserved; input not mutated; other state fields preserved: verified in records.ts:72-73; records.test.ts:118
 - [x] Position follows AD-3 (after the target date's last record, forward and backward; `i === j` changes only the date): verified in records.ts:24-29,52,72
-- [x] Anchors shift per the AD-4 table, using exclusive `lo < a <= hi`; absent `adjustedAtSessionIndex` stays absent: verified in records.ts:56,76-84; records.test.ts:337,383
+- [x] Anchors shift per the AD-4 table, using exclusive `lo < a <= hi`; absent `adjustedAtSessionIndex` stays absent: verified in records.ts:56,76-84; records.test.ts:343,389
 - [x] `crosses-adjustment` applies only to a non-free moved record's own anchor; `crosses-same-progression` ignores free records and counts consolidation records: verified in records.ts:59-68
-- [x] Table-driven AD-4 test and exhaustive FR-4 test exist with real `stepStreak` / `maintenanceCount`: verified in records.test.ts:337,437
-- [x] Inverted-input cases `[d10, d9]` covered: verified in records.test.ts:154-174
-- [x] Ascending order kept after moves; export then `parseImport` round trip deep-equal; `CURRENT_SCHEMA_VERSION` unchanged: verified in history-roundtrip.test.ts:70
+- [x] Table-driven AD-4 test and exhaustive FR-4 test exist with real `stepStreak` / `maintenanceCount`: verified in records.test.ts:343,443
+- [x] Inverted-input cases `[d10, d9]` covered: verified in records.test.ts:156-176
+- [x] Ascending order kept after moves; export then `parseImport` round trip deep-equal; `CURRENT_SCHEMA_VERSION` unchanged: verified in history-roundtrip.test.ts:70, storage.test.ts:388
 - [x] CLAUDE.md exception sentence names the 0.5.1 scope: verified in CLAUDE.md:157-158
 
 ---

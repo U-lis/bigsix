@@ -6,17 +6,21 @@
    * 상태는 색이 아니라 문구가 함께 서서 알린다 (UI-5).
    */
   import type {
-    Catalog, ProgressionId, SessionRecord, StandardLabel,
+    Catalog, IsoDate, ProgressionId, SessionRecord, StandardLabel,
   } from '$lib/domain/types';
-  import { getProgram, getProgression, getStep } from '$lib/domain';
+  import { getProgram, getProgression, getStep, type MoveRecordResult } from '$lib/domain';
   import type { DayRow } from './dayList';
   import { adjustmentText } from './progression';
+  import RecordMoveForm from './RecordMoveForm.svelte';
 
   interface Props {
     row: DayRow;
     catalog: Catalog;
+    today: IsoDate;
+    moveGeneration: number;
+    onMove: (recordIndex: number, toDate: IsoDate) => MoveRecordResult;
   }
-  let { row, catalog }: Props = $props();
+  let { row, catalog, today, moveGeneration, onMove }: Props = $props();
 
   function statusLabel(status: DayRow['review']['status']): string {
     switch (status) {
@@ -152,6 +156,10 @@
             {#if promotionLabel(r)}<span class="promo" data-day-promoted>{promotionLabel(r)}</span>{/if}
             {#if blockedLabel(r)}<span class="blocked" data-day-blocked>{blockedLabel(r)}</span>{/if}
           </p>
+          <!-- 기록에 고유 id 가 없어 each 키로 못 묶는다. 세대가 바뀌면 입력값째 버린다. -->
+          {#key moveGeneration}
+            <RecordMoveForm date={row.review.date} recordIndex={row.recordIndices[i]} {today} {onMove} />
+          {/key}
         </li>
       {/each}
     </ul>

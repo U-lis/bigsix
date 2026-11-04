@@ -15,12 +15,12 @@ export type MoveRecordResult =
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** `addDays` normalizes overflow, so an impossible date such as 02-30 does not survive it. */
+/** `addDays` 는 넘친 날짜를 정규화하므로 02-30 같은 없는 날짜는 입력과 같아지지 않는다. */
 function isValidDate(date: string): boolean {
   return ISO_DATE.test(date) && addDays(date, 0) === date;
 }
 
-/** No sort: judging follows array order, so reordering other records would change it. */
+/** 정렬하지 않는다. 판정이 배열 순서를 따르므로 다른 기록을 재배열하면 판정이 바뀐다. */
 function insertionIndex(rest: SessionRecord[], toDate: IsoDate): number {
   for (let k = rest.length - 1; k >= 0; k -= 1) {
     if (rest[k].date <= toDate) return k + 1;
@@ -29,11 +29,11 @@ function insertionIndex(rest: SessionRecord[], toDate: IsoDate): number {
 }
 
 /**
- * Moves one saved record to another date without changing judging (FR-2, FR-3, FR-4).
+ * 저장된 기록 하나를 판정을 바꾸지 않고 다른 날짜로 옮긴다 (FR-2, FR-3, FR-4).
  *
- * Judging reads `history` by array order from each progression's anchor (`progress.ts`,
- * `proposal.ts`), and anchors are history indices. A move that changes a progression's judged
- * order or scope is therefore rejected, and anchors the move shifted are corrected.
+ * 판정은 종목별 앵커부터 `history` 를 배열 순서로 읽고 (`progress.ts`, `proposal.ts`),
+ * 앵커는 `history` 인덱스다. 그래서 종목의 판정 순서나 범위를 바꾸는 이동은 거부하고,
+ * 이동으로 밀린 앵커는 보정한다.
  */
 export function moveRecordDate(
   state: AppState, recordIndex: number, toDate: IsoDate, today: IsoDate,
@@ -52,10 +52,10 @@ export function moveRecordDate(
   const target = insertionIndex(rest, toDate);
   const lo = Math.min(recordIndex, target);
   const hi = Math.max(recordIndex, target);
-  // An anchor at `lo` keeps its record set; one at `hi + 1` does too. Only those between shift.
+  // `lo` 와 `hi + 1` 의 앵커는 범위 안 기록 집합이 그대로다. 그 사이의 앵커만 밀린다.
   const crossed = (anchor: number) => lo < anchor && anchor <= hi;
 
-  // Free records are never judged, so they neither block nor get blocked.
+  // 자유 운동은 판정에 쓰이지 않으므로 다른 기록을 막지 않고 막히지도 않는다.
   if (moved.kind !== 'free') {
     const passesSameProgression = history.some((r, k) => (
       k !== recordIndex && lo <= k && k <= hi
@@ -72,7 +72,7 @@ export function moveRecordDate(
   rest.splice(target, 0, { ...moved, date: toDate });
   const next: AppState = { ...state, history: rest };
 
-  // Absent stays absent: a state that never adjusted keeps the shape it had before the field.
+  // 없으면 없는 채로 둔다. 단계를 조정한 적 없는 상태의 모양을 바꾸지 않는다.
   if (state.adjustedAtSessionIndex !== undefined) {
     const anchors = { ...state.adjustedAtSessionIndex };
     const delta = recordIndex < target ? -1 : 1;

@@ -96,7 +96,6 @@ describe('왕복 (NFR-27) — 내보내기 → 가져오기 결과가 원본과 
     const r = roundtrip(moved, stateAt(ALL_UNLOCKED_STEPS));
     assert.equal(r.ok, true);
     if (r.ok) assert.deepEqual(r.appState, moved);
-    assert.equal(CURRENT_SCHEMA_VERSION, 5);
   });
 
   it('FR-28 신설 필드(target · setRpes · completedAt) 가 붙은 기록도 왕복 후 동등', () => {

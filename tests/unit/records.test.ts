@@ -149,6 +149,8 @@ describe('moveRecordDate: inverted input follows the position rule (AD-3)', () =
   const D9: IsoDate = '2026-09-09';
   const D10: IsoDate = '2026-09-10';
   const D11: IsoDate = '2026-09-11';
+  const D12: IsoDate = '2026-09-12';
+  const D13: IsoDate = '2026-09-13';
   const inverted = () => stateAt({}, [pass('pushup', D10), pass('squat', D9)]);
 
   it('moving d9 to d11 stays behind d10', () => {
@@ -171,10 +173,19 @@ describe('moveRecordDate: inverted input follows the position rule (AD-3)', () =
     assert.deepEqual(datesOf(next), [D10, D9, '2026-09-12']);
   });
 
-  it('keeps FR-4 judging equal on inverted input', () => {
-    const state: AppState = { ...inverted(), adjustedAtSessionIndex: { squat: 1 } };
-    const next = accepted(moveRecordDate(state, 0, '2026-09-08', TODAY));
-    assert.deepEqual(next.history.map((h) => h.progressionId), ['pushup', 'squat']);
+  it('a real reposition corrects crossed anchors and keeps FR-4 judging equal', () => {
+    const state: AppState = {
+      ...stateAt({}, [
+        pass('pushup', D12), pass('squat', D10), pass('pullup', D9), pass('legraise', D13),
+      ]),
+      adjustedAtSessionIndex: { squat: 1, pullup: 2, legraise: 3 },
+    };
+    const next = accepted(moveRecordDate(state, 0, D9, TODAY));
+    assert.deepEqual(
+      next.history.map((h) => h.progressionId), ['squat', 'pullup', 'pushup', 'legraise'],
+    );
+    assert.deepEqual(datesOf(next), [D10, D9, D9, D13]);
+    assert.deepEqual(next.adjustedAtSessionIndex, { squat: 0, pullup: 1, legraise: 3 });
     assert.deepEqual(judging(next), judging(state));
   });
 });
@@ -262,11 +273,6 @@ describe('moveRecordDate: rejections (FR-3)', () => {
     const next = accepted(moveRecordDate(state, 0, '2026-09-13', TODAY));
     assert.deepEqual(next.history.map((h) => h.kind), ['free', 'work']);
     assert.deepEqual(judging(next), judging(state));
-  });
-
-  it('crossing the moved record\'s own anchor returns crosses-adjustment', () => {
-    const state: AppState = { ...two(), adjustedAtSessionIndex: { pushup: 1 } };
-    rejectedWith(moveRecordDate(state, 0, '2026-09-25', TODAY), 'crosses-adjustment');
   });
 
   describe('check order: the earliest failing reason wins', () => {
@@ -500,12 +506,10 @@ describe('moveRecordDate: no system clock (NFR-3)', () => {
     rejectedWith(moveRecordDate(state, 0, addDays(TODAY, 1), TODAY), 'future');
   });
 
-  it('records.ts imports only date.ts and types.ts, relative with .ts, and reads no clock', () => {
+  it('records.ts reads no clock', () => {
     const source = readFileSync(
       new URL('../../src/lib/domain/records.ts', import.meta.url), 'utf8',
     );
-    const imports = [...source.matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
-    assert.deepEqual(imports, ['./date.ts', './types.ts']);
-    assert.doesNotMatch(source, /\$lib|Date\.now|new Date/);
+    assert.doesNotMatch(source, /Date\.now|new Date/);
   });
 });

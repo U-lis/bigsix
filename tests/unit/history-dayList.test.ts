@@ -3,7 +3,8 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { buildDayRows } from '../../src/lib/ui/history/dayList.ts';
+import { moveRecordDate } from '../../src/lib/domain/index.ts';
+import { buildDayRows, type DayRow } from '../../src/lib/ui/history/dayList.ts';
 import type {
   AppState, IsoDate, ProgramStint, SessionRecord, SwitchProposal,
 } from '../../src/lib/domain/types.ts';
@@ -152,5 +153,88 @@ describe('buildDayRows — 날짜별 목록 조합 (FR-24.2~6)', () => {
     const rows = buildDayRows(state, catalog, { from: TUE, to: TUE });
     assert.equal(rows.length, 1);
     assert.equal(rows[0].review.date, TUE);
+  });
+});
+
+describe('buildDayRows — recordIndices (AD-6)', () => {
+  function rowsByDate(state: AppState, from: IsoDate, to: IsoDate): Record<IsoDate, DayRow> {
+    const rows = buildDayRows(state, catalog, { from, to });
+    return Object.fromEntries(rows.map((r) => [r.review.date, r]));
+  }
+
+  /** 화면이 넘기는 인덱스가 곧 그 줄의 기록이어야 옮기기가 엉뚱한 기록을 건드리지 않는다. */
+  function assertAligned(state: AppState, rows: Record<IsoDate, DayRow>): void {
+    for (const row of Object.values(rows)) {
+      assert.equal(row.recordIndices.length, row.review.performed.length);
+      row.review.performed.forEach((r, k) => {
+        assert.equal(r, state.history[row.recordIndices[k]]);
+      });
+    }
+  }
+
+  it('같은 날 여러 기록이 서로 다른 인덱스를 저장 순서대로 받는다', () => {
+    const state = stateAt(
+      ALL_UNLOCKED_STEPS,
+      [rec(MON, 'pushup'), rec(TUE, 'pushup'), rec(TUE, 'squat'), rec(WED, 'squat')],
+      [stintAt('good_behavior', MON, MON)],
+    );
+    const rows = rowsByDate(state, MON, THU);
+    assert.deepEqual(rows[MON].recordIndices, [0]);
+    assert.deepEqual(rows[TUE].recordIndices, [1, 2]);
+    assert.deepEqual(rows[WED].recordIndices, [3]);
+    assert.deepEqual(rows[THU].recordIndices, []);
+    assertAligned(state, rows);
+  });
+
+  it('프로그램 미선택 기간의 자유 운동만 있는 날도 인덱스가 맞다 (EC-66)', () => {
+    const state = stateAt(
+      ALL_UNLOCKED_STEPS,
+      [rec(MON, 'squat', [8], { kind: 'free' }), rec(TUE, 'pushup', [8], { kind: 'free' })],
+      [],
+    );
+    const rows = rowsByDate(state, MON, TUE);
+    assert.deepEqual(rows[TUE].recordIndices, [1]);
+    assertAligned(state, rows);
+  });
+
+  it('날짜가 뒤집힌 history 에서도 각 기록의 실제 인덱스를 가리킨다', () => {
+    const state = stateAt(
+      ALL_UNLOCKED_STEPS,
+      [rec(WED, 'pushup'), rec(TUE, 'squat'), rec(WED, 'pullup')],
+      [stintAt('good_behavior', MON, MON)],
+    );
+    const rows = rowsByDate(state, TUE, WED);
+    assert.deepEqual(rows[WED].recordIndices, [0, 2]);
+    assert.deepEqual(rows[TUE].recordIndices, [1]);
+    assertAligned(state, rows);
+  });
+
+  it('옮긴 뒤 원래 날과 옮겨 간 날의 표시가 함께 바뀐다 (FR-5)', () => {
+    // 자정을 넘겨 월요일 계획(푸시업 · 레그레이즈)이 화요일 기록으로 들어간 경우.
+    const state = stateAt(
+      ALL_UNLOCKED_STEPS,
+      [rec(TUE, 'pushup'), rec(TUE, 'legraise')],
+      [stintAt('good_behavior', MON, MON)],
+    );
+    const before = rowsByDate(state, MON, TUE);
+    assert.equal(before[MON].review.status, 'missed');
+    assert.deepEqual(before[TUE].recordIndices, [0, 1]);
+
+    // 화면과 같은 경로: 그 줄의 recordIndices 로 고른 기록을 옮긴다.
+    const first = moveRecordDate(state, before[TUE].recordIndices[0], MON, FRI);
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    const partial = rowsByDate(first.state, MON, TUE);
+    assert.equal(partial[MON].review.status, 'partial');
+    assert.deepEqual(partial[MON].review.performed.map((p) => p.progressionId), ['pushup']);
+    assert.deepEqual(partial[TUE].review.performed.map((p) => p.progressionId), ['legraise']);
+    assertAligned(first.state, partial);
+
+    const second = moveRecordDate(first.state, partial[TUE].recordIndices[0], MON, FRI);
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    const done = rowsByDate(second.state, MON, TUE);
+    assert.equal(done[MON].review.status, 'done');
+    assert.deepEqual(done[TUE].review.performed, []);
   });
 });

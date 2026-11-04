@@ -90,17 +90,17 @@ CSS-only collapse keeps hydration and focus stable (CLAUDE.md "접기는 CSS 로
 
 ## Completion Checklist
 
-- [ ] `DayRow` view model has `recordIndices` aligned with `review.performed`: `DayRow` in `src/lib/ui/history/dayList.ts`, `buildDayRows`
-- [ ] Tests for same-day multiple records, a no-stint free record, inverted history, and `review.performed[k] === state.history[recordIndices[k]]`: `tests/unit/history-dayList.test.ts`
-- [ ] `RecordMoveForm` has hooks `data-record-move` (text 날짜 옮기기), `data-record-move-form` (open/closed), `data-record-move-date` (`type=date`, `max={today}`), `data-record-move-apply` (옮기기), `data-record-move-cancel` (취소), `data-record-move-error` (value = reason): `src/lib/ui/history/RecordMoveForm.svelte`
-- [ ] Collapse is CSS-only; the form root is not inside `{#if}`: `src/lib/ui/history/RecordMoveForm.svelte`
-- [ ] Cancel closes, clears error, and does not call `onMove`: `RecordMoveForm.svelte` cancel handler
-- [ ] Each session `li` renders the form with `recordIndex={row.recordIndices[i]}` and `date={row.review.date}`: `src/lib/ui/history/DayRow.svelte`
-- [ ] `DayRow` does not import the store or `moveRecordDate`: `src/lib/ui/history/DayRow.svelte`
-- [ ] `HistoryView` calls `moveRecordDate` with the `today` prop and applies only when `ok`; no `todayClock` or system time in new UI code: `src/lib/ui/history/HistoryView.svelte`
-- [ ] All six rejection reasons covered by an exhaustive `switch` without `default`; on rejection nothing is applied and the text shows: `RecordMoveForm.svelte`, `HistoryView.svelte`
-- [ ] 44px min-height, text labels, `app.css` tokens only, runes only, factual text: `RecordMoveForm.svelte`
-- [ ] CLAUDE.md hook list has the 0.5.1 block with six hooks after line 127, and the document map has the 0.5.1 row: `CLAUDE.md`
+- [x] `DayRow` view model has `recordIndices` aligned with `review.performed`: `DayRow` in `src/lib/ui/history/dayList.ts`, `buildDayRows` - verified in dayList.ts:39,62
+- [x] Tests for same-day multiple records, a no-stint free record, inverted history, and `review.performed[k] === state.history[recordIndices[k]]`: `tests/unit/history-dayList.test.ts` - verified in history-dayList.test.ts:159-215
+- [x] `RecordMoveForm` has hooks `data-record-move` (text 날짜 옮기기), `data-record-move-form` (open/closed), `data-record-move-date` (`type=date`, `max={today}`), `data-record-move-apply` (옮기기), `data-record-move-cancel` (취소), `data-record-move-error` (value = reason): `src/lib/ui/history/RecordMoveForm.svelte` - verified in RecordMoveForm.svelte:60-73
+- [x] Collapse is CSS-only; the form root is not inside `{#if}`: `src/lib/ui/history/RecordMoveForm.svelte` - verified in RecordMoveForm.svelte:60 (form root outside {#if}; only error under {#if} at :65)
+- [x] Cancel closes, clears error, and does not call `onMove`: `RecordMoveForm.svelte` cancel handler - verified in RecordMoveForm.svelte:46-51,69
+- [x] Each session `li` renders the form with `recordIndex={row.recordIndices[i]}` and `date={row.review.date}`: `src/lib/ui/history/DayRow.svelte` - verified in DayRow.svelte:160-161 (inside `{#key moveGeneration}`)
+- [x] `DayRow` does not import the store or `moveRecordDate`: `src/lib/ui/history/DayRow.svelte` - verified in DayRow.svelte:9-15 (no store or moveRecordDate import)
+- [x] `HistoryView` calls `moveRecordDate` with the `today` prop and applies only when `ok`; no `todayClock` or system time in new UI code: `src/lib/ui/history/HistoryView.svelte` - verified in HistoryView.svelte:58-62
+- [x] All six rejection reasons covered by an exhaustive `switch` without `default`; on rejection nothing is applied and the text shows: `RecordMoveForm.svelte`, `HistoryView.svelte` - verified in RecordMoveForm.svelte:27-36,55,66; HistoryView.svelte:58-62
+- [x] 44px min-height, text labels, `app.css` tokens only, runes only, factual text: `RecordMoveForm.svelte` - verified in RecordMoveForm.svelte:83-135
+- [x] CLAUDE.md hook list has the 0.5.1 block with six hooks after line 127, and the document map has the 0.5.1 row: `CLAUDE.md` - verified in CLAUDE.md:23,129-133
 
 ---
 
