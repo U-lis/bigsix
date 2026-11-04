@@ -6,9 +6,9 @@ worktree_path: ../bigsix-feature-move-record-date
 doc_dir: 2026_11_04-move-record-date
 target_version: 0.5.1
 github_issue: 15
-stage: design
-approved_at: 2026-11-04T06:25:10Z
-approved_hash: 8857954e68ff8108381d65649bf7d28043858414fc87721f797e9260e828b5e9
+stage: code
+approved_at: 2026-11-04T06:34:16Z
+approved_hash: 6e93be44408be4f24458d00a02c973926d2a92d4606c098083be562860f43d2d
 decisions: ["user-go-through-release"]
 handoff: ""
 -->
@@ -119,14 +119,14 @@ The following are explicitly NOT part of this work:
 - 확인 다이얼로그 없이 「옮기기」 버튼으로 바로 적용한다. 다시 옮기면 되돌릴 수 있다.
 
 전제:
-- 달력 표시(`src/lib/ui/history/calendar.ts:88`)의 `performed` 는 `history` 원소 참조이므로, 새 `AppState` 를 적용하면 파생이 다시 계산된다.
+- 달력 표시(`src/lib/domain/calendar.ts:88`)의 `performed` 는 `history` 원소 참조이므로, 새 `AppState` 를 적용하면 파생이 다시 계산된다.
 
 ---
 
 ## Open Questions
 
-- [ ] 잘못된 인덱스·날짜 형식 거부의 사유 코드 이름 (예: `'invalid-index'`, `'invalid-date'`) 은 설계 단계에서 정한다.
-- [ ] 반환 형태 (`{ ok: true, state } | { ok: false, reason }` 등) 는 설계 단계에서 코드베이스의 기존 결과 타입 관례에 맞춰 정한다.
+- [x] 잘못된 인덱스·날짜 형식 거부의 사유 코드 이름 (예: `'invalid-index'`, `'invalid-date'`) 은 설계 단계에서 정한다. (GLOBAL AD-1 에서 결정)
+- [x] 반환 형태 (`{ ok: true, state } | { ok: false, reason }` 등) 는 설계 단계에서 코드베이스의 기존 결과 타입 관례에 맞춰 정한다. (GLOBAL AD-1 에서 결정)
 
 ---
 
@@ -141,7 +141,7 @@ The following are explicitly NOT part of this work:
 - GitHub issue #15
 - `src/lib/ui/history/DayRow.svelte:137` (세션 `li`), `DayList.svelte`, `HistoryView.svelte`
 - `src/lib/domain/progress.ts:94,98`, `src/lib/domain/steps.ts:49-51`, `src/lib/domain/proposal.ts:60`
-- `src/lib/ui/history/importJson.ts:45`, `src/lib/ui/history/calendar.ts:88`
+- `src/lib/ui/history/importJson.ts:45`, `src/lib/domain/calendar.ts:88`
 - `src/lib/ui/session/ExerciseCard.svelte:103`, `src/lib/ui/session/finish.ts:283`
 - `src/routes/steps/+page.svelte:81` (`appState.apply` 사용례)
 - `/home/ulismoon/Documents/bigsix/CLAUDE.md` (화면·도메인 규약)
