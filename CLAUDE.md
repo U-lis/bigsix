@@ -19,8 +19,8 @@ adapter-static. **서버가 없다** — 전부 프리렌더한 정적 파일이
 | `.dc_workspace/2026_09_25-push-notification/GLOBAL.md` | SPEC4 ADR·데이터 모델·페이즈 — 이력 |
 | `.dc_workspace/2026_10_08-session-flow/SPEC.md` | SPEC5 세션 흐름 요구·수용 기준 — 이력 |
 | `.dc_workspace/2026_10_08-session-flow/GLOBAL.md` | SPEC5 ADR·데이터 모델·페이즈 — 이력 |
-| `.dc_workspace/2026_10_29-custom-program/SPEC.md` | **이번 개정 (0.5.0)** 커스텀 프로그램(#13) · 단계 조정 이력(#4) 결정·데이터 모델 |
-| `.dc_workspace/2026_11_04-move-record-date/SPEC.md` | 0.5.1 기록 날짜 옮기기 요구·수용 기준 |
+| `.dc_workspace/2026_10_29-custom-program/SPEC.md` | 0.5.0 커스텀 프로그램(#13) · 단계 조정 이력(#4) 결정·데이터 모델 |
+| `.dc_workspace/2026_11_04-move-record-date/SPEC.md` | **이번 개정 (0.5.1)** 기록 날짜 옮기기 요구·수용 기준 |
 | `docs/PROGRESSIONS.md` | 기준 수치표와 진급 판정 규칙 |
 | `docs/LOGIC.md` | 조정 가능한 상수 |
 

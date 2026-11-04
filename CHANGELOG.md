@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-04
+
+### Added
+- Move a record's date (#15): the History by-date view has a "날짜 옮기기" action on every session. Pick a past date to move the saved record there, e.g. a workout whose first set was entered after midnight and was recorded on the next day, leaving the previous day shown as missed
+
+### Changed
+- A move that would cross another record of the same exercise, or that exercise's step-adjustment point, is refused with a message, because promotion judging depends on record order. Steps and streaks do not change when a record is moved. No storage schema change
+
 ## [0.5.0] - 2026-10-30
 
 ### Added

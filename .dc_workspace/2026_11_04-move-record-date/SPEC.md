@@ -6,7 +6,7 @@ worktree_path: ../bigsix-feature-move-record-date
 doc_dir: 2026_11_04-move-record-date
 target_version: 0.5.1
 github_issue: 15
-stage: code
+stage: local_test
 approved_at: 2026-11-04T06:34:16Z
 approved_hash: 6e93be44408be4f24458d00a02c973926d2a92d4606c098083be562860f43d2d
 decisions: ["user-go-through-release"]
