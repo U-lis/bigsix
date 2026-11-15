@@ -1,6 +1,6 @@
 # 홈서버 배포
 
-`https://bigsix.siot-ieung.duckdns.org` 로 서빙한다. 정적 앱 + 1분 cron 하나 (`cron/push.ts`,
+`https://bigsix.aool.family` 로 서빙한다. 정적 앱 + 1분 cron 하나 (`cron/push.ts`,
 systemd 템플릿 유닛 `bigsix-push@.service` · `bigsix-push@.timer`). SvelteKit 서버 기능은 없다.
 
 ## 작업 중 브랜치의 임시 배포
@@ -22,7 +22,7 @@ git push origin <브랜치>
 ## dev 릴레이로 배포하기
 
 `DEPLOY_MODE=dev` 를 넘기면 `vite build --mode development` 가 돌아 `.env.development` 를 읽는다.
-`PUBLIC_PUSH_RELAY_URL` 이 dev 릴레이(`https://push-dev.siot-ieung.duckdns.org`)로 박히고, 배포 후
+`PUBLIC_PUSH_RELAY_URL` 이 dev 릴레이(`https://push-dev.aool.family`)로 박히고, 배포 후
 검증은 `bigsix-push@dev.timer` 가 활성 상태인지 본다.
 
 ```bash
@@ -192,11 +192,11 @@ Chrome/Safari 로 위 주소를 열고 "홈 화면에 추가". 업데이트는 �
 | 리포 | `~/apps/bigsix` — 서버가 직접 클론 |
 | docroot | `/var/www/bigsix` — `ulismoon` 소유라 배포에 root 불필요 |
 | vhost | `/etc/nginx/sites-available/bigsix.conf` (리포의 `deploy/nginx/bigsix.conf`) |
-| 인증서 | `/etc/nginx/ssl/bigsix/` — acme.sh 가 DuckDNS DNS-01 로 발급 |
+| 인증서 | `/etc/nginx/ssl/aool/` — `aool.family` + `*.aool.family` 공용 와일드카드 (acme.sh, dns_porkbun) |
 | Node | nvm 24 (`~/.nvm`), pnpm 은 corepack |
 | 접속 | Tailscale (tailnet `tailafb1ca.ts.net`). 서버 `100.98.237.31` |
 
-DuckDNS 는 `*.siot-ieung.duckdns.org` 를 전부 같은 IP 로 응답하므로 서브도메인에
+Porkbun DNS 에 `*.aool.family` CNAME 이 집 IP 의 DuckDNS 이름을 가리키므로 서브도메인에
 별도 DNS 설정이 필요 없다. 라우터 헤어핀 NAT 가 되므로 집 안에서도 도메인으로 붙는다.
 
 ## 외부에서 배포하기
@@ -284,7 +284,6 @@ import json,sys; print(json.load(sys.stdin)["Self"].get("KeyExpiry","만료 없�
 
 ```bash
 sudo install -d -o ulismoon -g ulismoon -m 755 /var/www/bigsix
-sudo install -d -o ulismoon -g ulismoon -m 700 /etc/nginx/ssl/bigsix
 
 # acme.sh 가 cron 에서 nginx 를 reload 할 수 있게 한다. reload 하나만 연다.
 echo "ulismoon ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx" \
@@ -297,16 +296,8 @@ sudo ln -sf /etc/nginx/sites-available/bigsix.conf /etc/nginx/sites-enabled/bigs
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-인증서 발급과 설치:
-
-```bash
-~/.acme.sh/acme.sh --issue --dns dns_duckdns -d bigsix.siot-ieung.duckdns.org \
-  --dnssleep 60 --server letsencrypt
-~/.acme.sh/acme.sh --install-cert -d bigsix.siot-ieung.duckdns.org --ecc \
-  --fullchain-file /etc/nginx/ssl/bigsix/fullchain.pem \
-  --key-file      /etc/nginx/ssl/bigsix/key.pem \
-  --reloadcmd     "sudo systemctl reload nginx"
-```
+인증서: 앱별 인증서는 쓰지 않는다. 공용 와일드카드 `/etc/nginx/ssl/aool/{fullchain,key}.pem`
+(`aool.family` + `*.aool.family`, acme.sh `dns_porkbun`, cron 으로 자동 갱신)을 vhost 가 참조한다.
 
 ## 인증서가 만료됐을 때
 
@@ -323,7 +314,7 @@ bigsix 도 같은 acme.sh · 같은 sudoers · 같은 cron 위에 얹혀 있으�
 
 ```bash
 # 실제 서빙되는 인증서 (이게 정본)
-openssl s_client -connect 172.30.1.54:443 -servername bigsix.siot-ieung.duckdns.org \
+openssl s_client -connect 172.30.1.54:443 -servername bigsix.aool.family \
   </dev/null 2>/dev/null | openssl x509 -noout -dates
 
 # acme.sh 가 들고 있는 것

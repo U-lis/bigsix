@@ -16,7 +16,7 @@ const ENV = {
   PUSH_RELAY_KEY: 'prk_test',
 } as NodeJS.ProcessEnv;
 
-const APP = 'https://bigsix.siot-ieung.duckdns.org';
+const APP = 'https://bigsix.aool.family';
 
 const SEOUL = {
   v: 1 as const,

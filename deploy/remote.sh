@@ -71,14 +71,14 @@ pnpm run build --mode "$VITE_MODE" >/dev/null
 # 멈춘다 — `PUBLIC_PUSH_RELAY_URL` 은 `src/pwa-sw.ts` 가 import 해 sw.js 로 리터럴로 흘러
 # 들어가므로 어느 `.env.*` 가 쓰였는지 산출물에서 바로 확인된다.
 case "$DEPLOY_MODE" in
-	prod) EXPECT_RELAY="https://push.siot-ieung.duckdns.org" ;;
-	dev)  EXPECT_RELAY="https://push-dev.siot-ieung.duckdns.org" ;;
+	prod) EXPECT_RELAY="https://push.aool.family" ;;
+	dev)  EXPECT_RELAY="https://push-dev.aool.family" ;;
 esac
 echo "==> sw.js relay URL 대조 (예상: $EXPECT_RELAY)"
 if ! grep -q -F "$EXPECT_RELAY" "$REPO/build/sw.js"; then
 	echo "    build/sw.js 에서 '$EXPECT_RELAY' 를 못 찾았다 — DEPLOY_MODE=$DEPLOY_MODE 로 빌드되지 않았다." >&2
 	echo "    실제로 들어 있는 relay URL:" >&2
-	grep -oE 'https://push[^"`]*siot-ieung[^"`]*' "$REPO/build/sw.js" | head -3 >&2 || true
+	grep -oE 'https://push[^"`]*aool\.family[^"`]*' "$REPO/build/sw.js" | head -3 >&2 || true
 	exit 1
 fi
 echo "    확인"

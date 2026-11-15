@@ -3,7 +3,7 @@
 // `pnpm build` 결과 `build/sw.js` 에
 //   (1) `importScripts(` 호출이 정확히 한 번,
 //   (2) 그 호출이 `try { ... } catch {}` 로 감싸져 있고,
-//   (3) 운영 릴레이 URL `https://push.siot-ieung.duckdns.org/sw.js` 가 인라인된다
+//   (3) 운영 릴레이 URL `https://push.aool.family/sw.js` 가 인라인된다
 // 를 확인한다.
 //
 // `.env.production` 이 커밋되어 있으므로 `vite build` 는 운영 URL 을 인라인한다 (ADR-31).
@@ -51,7 +51,7 @@ describe('빌드 산출물: sw.js importScripts (Phase 3 / FR-32.1·2)', { timeo
       // 이미 build/sw.js 가 있어도 dev 모드 빌드 산출물이면 운영 URL 이 없어 테스트가
       // 실패한다 (e.g. DEPLOY_MODE=dev 로 마지막 빌드를 했을 때). prod URL 존재 여부로
       // 판단해 dev 빌드라면 새로 운영 모드 빌드를 트리거한다.
-      const PROD_URL = 'https://push.siot-ieung.duckdns.org';
+      const PROD_URL = 'https://push.aool.family';
       const isDevBuild = (): boolean => {
         if (!existsSync(swPath)) return false;
         const content = readFileSync(swPath, 'utf8');
@@ -88,7 +88,7 @@ describe('빌드 산출물: sw.js importScripts (Phase 3 / FR-32.1·2)', { timeo
 
       // dev URL 은 들어가면 안 된다.
       assert.ok(
-        !sw.includes('push-dev.siot-ieung.duckdns.org'),
+        !sw.includes('push-dev.aool.family'),
         'dev 릴레이 URL 이 운영 산출물에 섞여 들어갔다',
       );
 

@@ -149,11 +149,11 @@ describe('errorToLabel', () => {
 
 describe('isDevRelay', () => {
   it('dev 주소와 정확히 같으면 true', () => {
-    assert.equal(isDevRelay('https://push-dev.siot-ieung.duckdns.org'), true);
+    assert.equal(isDevRelay('https://push-dev.aool.family'), true);
   });
 
   it('운영 주소면 false', () => {
-    assert.equal(isDevRelay('https://push.siot-ieung.duckdns.org'), false);
+    assert.equal(isDevRelay('https://push.aool.family'), false);
   });
 
   it('빈 문자열이면 false', () => {
@@ -161,7 +161,7 @@ describe('isDevRelay', () => {
   });
 
   it('임의 다른 호스트면 false', () => {
-    assert.equal(isDevRelay('https://push-dev.siot-ieung.duckdns.org/'), false);
-    assert.equal(isDevRelay('http://push-dev.siot-ieung.duckdns.org'), false);
+    assert.equal(isDevRelay('https://push-dev.aool.family/'), false);
+    assert.equal(isDevRelay('http://push-dev.aool.family'), false);
   });
 });

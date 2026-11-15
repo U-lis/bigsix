@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 env:
-  SITE: https://bigsix.siot-ieung.duckdns.org
+  SITE: https://bigsix.aool.family
   # 인증서가 이 일수 아래로 남으면 실패시킨다. Let's Encrypt 는 90일짜리이고
   # acme.sh 는 만료 30일 전부터 갱신하므로, 14일이면 "갱신이 안 되고 있다" 는 뜻이다.
   MIN_CERT_DAYS: 14

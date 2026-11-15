@@ -41,7 +41,7 @@ vi.mock('../../../src/lib/ui/push/storage', () => ({
 // ── PushRelay 전역 ──────────────────────────────────────────────────────────
 //
 // 실제 relay `client.js` 는 세 메서드 모두 `async function` 이다 (연동 문서 §2,
-// https://push-dev.siot-ieung.duckdns.org/client.js). 과거 이 파일의 `stateMock`
+// https://push-dev.aool.family/client.js). 과거 이 파일의 `stateMock`
 // 은 동기 반환이어서 코드가 `relay.state()` 결과를 await 없이 비교해도 테스트는
 // 통과했고, Android PWA 에서만 조용히 깨졌다. 이번 리라이트는 세 mock 를 모두
 // Promise 로 되돌리게 해 그 미스매치를 다시 못 숨기도록 한다.

@@ -11,7 +11,7 @@
 import type { PushErrorCode, PushState } from './types';
 
 /** dev 릴레이 공개 주소 (FR-33.11). isDevRelay 가 정확 일치로 비교한다. */
-const DEV_RELAY_URL = 'https://push-dev.siot-ieung.duckdns.org';
+const DEV_RELAY_URL = 'https://push-dev.aool.family';
 
 /**
  * `PushState` 를 알림 섹션 상태 문구로 바꾼다 (FR-33.2(a)).

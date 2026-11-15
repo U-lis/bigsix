@@ -19,7 +19,7 @@ set -euo pipefail
 HOST="${DEPLOY_HOST:-homeserver}"
 REPO="${DEPLOY_REPO:-$HOME/apps/bigsix}"   # 서버상의 경로
 DOCROOT="${DEPLOY_DOCROOT:-/var/www/bigsix}"
-URL="${DEPLOY_URL:-https://bigsix.siot-ieung.duckdns.org}"
+URL="${DEPLOY_URL:-https://bigsix.aool.family}"
 # prod → `.env.production` → prod 릴레이 URL. dev → `.env.development` → dev 릴레이 URL.
 # `remote.sh` 가 이 값을 `vite build --mode <...>` 에 넘긴다. 배포 후 검증은
 # `bigsix-push@${DEPLOY_MODE}.timer` 가 활성 상태인지 본다 (FR-36.5).
