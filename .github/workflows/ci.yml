@@ -35,6 +35,11 @@ jobs:
       - name: 타입 검사
         run: pnpm run check
 
+      # build/ 를 먼저 만든다. 없으면 precache-parity 와 sw-importscripts 두 테스트가
+      # 각자 vite build 를 병렬로 돌리다 .svelte-kit/output 을 두고 경합해 깨진다.
+      - name: 빌드
+        run: pnpm build
+
       - name: 단위 테스트
         run: pnpm test
 
