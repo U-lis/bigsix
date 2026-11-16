@@ -11,7 +11,7 @@ async function freshMod(): Promise<typeof import('../../src/lib/ui/shell/install
 }
 
 function fireBeforeInstallPrompt(promptImpl: () => Promise<unknown>): Event {
-  const e: Event & { prompt?: () => Promise<unknown> } = new Event('beforeinstallprompt');
+  const e: Event & { prompt?: () => Promise<unknown> } = new Event('beforeinstallprompt', { cancelable: true });
   e.prompt = promptImpl;
   window.dispatchEvent(e);
   return e;
@@ -37,6 +37,13 @@ describe('install — FR-16.2 / EC-31 / EC-32', () => {
     mod.install.start();
     fireBeforeInstallPrompt(async () => undefined);
     assert.equal(mod.install.available, true);
+  });
+
+  it('preventDefault 하지 않는다 — 브라우저 자동 설치 안내를 막지 않는다', async () => {
+    const mod = await freshMod();
+    mod.install.start();
+    const e = fireBeforeInstallPrompt(async () => undefined);
+    assert.equal(e.defaultPrevented, false);
   });
 
   it('EC-32: prompt() 호출 즉시 보관분을 비운다 (available false)', async () => {

@@ -49,6 +49,7 @@
 
     // 상단 바가 소비할 룬들의 리스너 초기화 (FR-16.2 / FR-16.5).
     wakeLock.start();
+    // 버튼은 설정 화면에 있다. 이벤트는 앱 어디서 오든 받아야 하므로 리스너는 여기서 건다.
     install.start();
 
     // 첫 실행이면 시작 단계 선택 화면(steps) 으로 (FR-3.5, FR-3.6). 이미 그 화면이면 유지.
@@ -82,10 +83,6 @@
 <div class="shell">
   <!-- FR-16.1 상단 바 -->
   <div class="bar">
-    {#if install.available}
-      <!-- FR-16.2 / EC-31 — 프롬프트가 없으면 아예 안 그린다 (NFR-22). -->
-      <button type="button" data-install onclick={() => void install.prompt()}>설치</button>
-    {/if}
     {#if wakeLock.supported}
       <!-- 세션 도중 세트를 세느라 화면에 손이 안 닿아 꺼진다 (FR-16.5 / EC-33).
            enabled(켜두겠다) 와 held(실제로 잡혔다) 를 구분한다 (FR-16.7 / EC-34). -->
@@ -280,11 +277,6 @@
     justify-content: flex-end;
     gap: 0.4rem;
     padding: 0.4rem 0.9rem 0;
-  }
-  /* 설치 버튼은 설치 가능할 때만 나타난다. 눈에 띄어야 하지만 강요하지 않는다. */
-  .bar button[data-install] {
-    color: var(--accent);
-    border-color: var(--accent);
   }
   /* 켜져 있는 토글은 색으로 알린다. 아이콘만으로는 상태가 안 읽힌다. */
   .bar button.on {
