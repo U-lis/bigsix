@@ -75,6 +75,8 @@ case "$DEPLOY_MODE" in
 	dev)  EXPECT_RELAY="https://push-dev.aool.family" ;;
 esac
 echo "==> sw.js relay URL 대조 (예상: $EXPECT_RELAY)"
+# 아래 grep 정규식의 백틱은 문자 클래스 안의 리터럴이다 (명령 치환 아님).
+# shellcheck disable=SC2016
 if ! grep -q -F "$EXPECT_RELAY" "$REPO/build/sw.js"; then
 	echo "    build/sw.js 에서 '$EXPECT_RELAY' 를 못 찾았다 — DEPLOY_MODE=$DEPLOY_MODE 로 빌드되지 않았다." >&2
 	echo "    실제로 들어 있는 relay URL:" >&2
