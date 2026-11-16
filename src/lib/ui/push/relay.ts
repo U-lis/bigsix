@@ -17,7 +17,7 @@ import { PUBLIC_PUSH_RELAY_URL } from '$env/static/public';
  * 릴레이 `client.js` 의 전역 API. 로드 뒤 `window.PushRelay` 로 노출된다.
  *
  * 세 메서드 모두 **비동기** — 실제 `client.js` 소스
- * (https://push-dev.siot-ieung.duckdns.org/client.js) 가 `async function` 으로
+ * (https://push-dev.aool.family/client.js) 가 `async function` 으로
  * 정의한다. 연동 문서 §2 도 `await PushRelay.state()` 로 적는다. 과거 이 파일은
  * `state()` 를 동기로 타입했는데, 그러면 `relay.state()` 가 Promise 를 돌려주어
  * 호출자가 await 없이 비교하면 늘 거짓이 됐다 — Android PWA 에서 「알림 켜기」

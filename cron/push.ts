@@ -32,7 +32,7 @@ import {
 import type { CronMessage } from './message.ts';
 
 /** 운영 인스턴스 공개 주소 — icon 절대 URL 조립에 쓴다 (IR-6 우회). */
-const APP_BASE_URL = 'https://bigsix.siot-ieung.duckdns.org';
+const APP_BASE_URL = 'https://bigsix.aool.family';
 
 /** 알림 하나는 JSON 3072 바이트 이하 (push-relay §6, send-request.json). */
 const MESSAGE_BYTE_LIMIT = 3072;

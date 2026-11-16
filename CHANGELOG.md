@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Changed
+- 서비스 주소를 `bigsix.siot-ieung.duckdns.org` 에서 `bigsix.aool.family` 로, 푸시 릴레이 주소를 `push.aool.family` / `push-dev.aool.family` 로 옮겼다
+- 사용자 영향: 기록은 브라우저 저장소에 있어 새 주소에서는 비어 보인다. 옛 주소에서 JSON 내보내기 후 새 주소에서 가져오면 된다. PWA 는 새 주소에서 다시 설치하고, 알림 권한도 다시 허용해야 한다
+
 ## [0.5.1] - 2026-11-04
 
 ### Added

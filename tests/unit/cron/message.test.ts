@@ -11,7 +11,7 @@ import {
 } from '../../../cron/message.ts';
 import type { DecideResult, ValidMeta } from '../../../cron/decide.ts';
 
-const APP = 'https://bigsix.siot-ieung.duckdns.org';
+const APP = 'https://bigsix.aool.family';
 
 const SEOUL: ValidMeta = {
   v: 1,
@@ -50,13 +50,13 @@ describe('buildMessage — FR-35.3', () => {
 
   it('notification.icon 이 /icon-192.png 로 끝나는 절대 HTTPS URL (IR-6 우회)', () => {
     const msg = buildMessage(makeResult(SEOUL), APP, MON_SEOUL_1900_UTC);
-    assert.equal(msg.notification.icon, 'https://bigsix.siot-ieung.duckdns.org/icon-192.png');
+    assert.equal(msg.notification.icon, 'https://bigsix.aool.family/icon-192.png');
     assert.match(msg.notification.icon, /^https:\/\/[^/]+\/icon-192\.png$/);
   });
 
   it('notification.badge 가 /badge-96.png 절대 HTTPS URL (상태바 기본 종 모양 대체)', () => {
     const msg = buildMessage(makeResult(SEOUL), APP, MON_SEOUL_1900_UTC);
-    assert.equal(msg.notification.badge, 'https://bigsix.siot-ieung.duckdns.org/badge-96.png');
+    assert.equal(msg.notification.badge, 'https://bigsix.aool.family/badge-96.png');
   });
 
   it('dedupKey 가 구독 타임존 기준 오늘 날짜 YYYY-MM-DD (ADR-38)', () => {
@@ -156,8 +156,8 @@ describe('buildTestMessage — FR-35.8', () => {
     assert.equal(msg.notification.title, 'BigSix');
     assert.equal(msg.notification.url, '/');
     assert.equal(msg.notification.tag, 'bigsix-workday');
-    assert.equal(msg.notification.icon, 'https://bigsix.siot-ieung.duckdns.org/icon-192.png');
-    assert.equal(msg.notification.badge, 'https://bigsix.siot-ieung.duckdns.org/badge-96.png');
+    assert.equal(msg.notification.icon, 'https://bigsix.aool.family/icon-192.png');
+    assert.equal(msg.notification.badge, 'https://bigsix.aool.family/badge-96.png');
   });
 
   it('같은 초의 두 번 호출은 같은 dedupKey (릴레이 dedup 으로 1건만 발송)', () => {
