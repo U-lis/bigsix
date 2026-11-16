@@ -20,6 +20,7 @@
   import { onMount } from 'svelte';
 
   import { appState } from '$lib/ui/state/state.svelte';
+  import { install } from '$lib/ui/shell/install.svelte';
   import { catalogFor } from '$lib/data/catalog';
   import { currentStint } from '$lib/domain';
 
@@ -241,6 +242,18 @@
   <title>설정 · bigsix</title>
 </svelte:head>
 
+<!--
+  앱 설치. Chrome(Android)은 설치 안내를 스스로 띄우므로 상단 바에서 내렸다.
+  안내를 닫은 사람이 나중에 설치할 수 있게 여기 둔다. 설치할 수 없거나
+  이미 설치됐으면 이벤트가 오지 않아 섹션을 접는다 (EC-31 / NFR-22).
+-->
+<section class="install" class:hidden={!install.available} aria-labelledby="install-h">
+  <h2 id="install-h">앱 설치</h2>
+  <button type="button" class="btn" data-install onclick={() => void install.prompt()}>
+    홈 화면에 설치
+  </button>
+</section>
+
 <section class="push" data-push-state={pushState} aria-labelledby="push-h">
   <h2 id="push-h">알림</h2>
 
@@ -316,6 +329,7 @@
 <style>
   /* 색 토큰은 `$lib/styles/app.css` 한 곳에서 가져온다 — 이 파일에 hex 없음. */
 
+  .install,
   .push {
     display: flex;
     flex-direction: column;
