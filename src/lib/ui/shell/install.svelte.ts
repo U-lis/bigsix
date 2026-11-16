@@ -4,8 +4,9 @@
  * CubeStudy 의 +layout.svelte 에서 installPrompt / install() 로직을 발췌 · 별도
  * 모듈로 분리했다 (참조: ~/Documents/cube-study/src/routes/+layout.svelte:46~60).
  *
- * 브라우저는 설치 팝업을 스스로 띄우지 않는다. `beforeinstallprompt` 를 잡아
- * 보관했다가 사용자가 「설치」 를 눌렀을 때 `prompt()` 를 부른다.
+ * Chrome(Android)은 설치 조건을 만족하면 설치 안내(mini-infobar)를 스스로 띄운다.
+ * 그래서 `preventDefault()` 를 부르지 않는다 — 부르면 그 자동 안내가 막힌다.
+ * 이벤트는 보관해 두고, 안내를 닫은 사용자도 「설치」 로 `prompt()` 를 부를 수 있게 한다.
  * 조건 미달·이미 설치·iOS Safari 는 이벤트 자체가 오지 않는다 → `available === false`
  * → 버튼도 안 그린다 (EC-31 / NFR-22).
  *
@@ -29,8 +30,6 @@ class Install {
   start(): void {
     if (!browser) return;
     window.addEventListener('beforeinstallprompt', (e) => {
-      // 막지 않으면 브라우저가 제 타이밍에 처리해 버린다.
-      e.preventDefault();
       this.#deferred = e as unknown as DeferredPrompt;
       this.available = true;
     });
